@@ -1,6 +1,9 @@
 # 用途懂得都懂
 
 只在m2芯片mbp上测试，应该适用于所有m芯片arm macos程序
+
+前往 [release](https://github.com/kekeimiku/ups/releases) 页面下载此程序
+
 ```
 ./ups --help
 Usage: ups [OPTIONS]
@@ -24,9 +27,3 @@ Example
 ```
 
 如何使用扫描结果的例子: https://github.com/kekeimiku/dumpkey/blob/0bb96d7636e0e1480d2746a0476609843724e3af/src/main.rs#L8
-
-# todo
-- [ ] 优化命令行解析
-- [ ] 可选多线程支持
-- [ ] 支持直接扫描dump文件（这代表应该可以扫描大多数平台，例如pc和游戏机）
-- [ ] 过滤一堆垃圾结果
