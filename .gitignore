@@ -1,0 +1,10 @@
+Cargo.*
+
+*.txt
+*.toml
+*.sh
+*.plist
+
+/target
+/tests
+/src
