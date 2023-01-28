@@ -6,15 +6,18 @@
 
 ```
 ./ups --help
-Usage: ups [OPTIONS]
+Usage: ups -p <pid> -t <target> [-o <offset>] [-d <depth>]
+
+(macos) dynamic pointer path scanner.
+version 0.0.1
+author: kk <kekelanact@gmail.com>
 
 Options:
-  -p, --pid <pid>        process id, type int32
-  -t, --target <target>  target address, type uint64-hex
-  -d, --depth <depth>    scan depth, default 7, type uint8
-  -o, --offset <offset>  scan offset, default -128:128, type int16:int16
-  -h, --help             Print help
-  -V, --version          Print version
+  -p, --pid         process id, type int32
+  -t, --target      target address, type uint64-hex
+  -o, --offset      scan offset, default -128:128, type int16:int16
+  -d, --depth       scan depth, default 7, type uint8
+  --help            display usage information
 
 Example
 ./ups -p 24579 -t 0x600002da16e0
