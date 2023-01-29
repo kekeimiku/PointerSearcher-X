@@ -5,16 +5,16 @@
 前往 [release](https://github.com/kekeimiku/ups/releases) 页面下载此程序
 
 ```
-./ups --help
 Usage: ups -p <pid> -t <target> [-o <offset>] [-d <depth>] [-s <start>]
 
 (macos) dynamic pointer path scanner.
-version 0.0.2
+version 0.0.3
 author: kk <kekelanact@gmail.com>
 
 Options:
   -p, --pid         process id, type int32
-  -t, --target      target address, type uint64-hex
+  -t, --target      target address, type uint64-hex-list, use '-' to separate
+                    multiple parameters
   -o, --offset      scan offset, default -128:128, type int16:int16
   -d, --depth       scan depth, default 7, type uint8
   -s, --start       start from specified address, type uint64-hex-list, use '-'
