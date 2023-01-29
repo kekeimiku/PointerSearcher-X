@@ -8,3 +8,8 @@ Cargo.*
 /target
 /tests
 /src
+
+.cargo/
+vendor/
+
+ups

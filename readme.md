@@ -6,10 +6,10 @@
 
 ```
 ./ups --help
-Usage: ups -p <pid> -t <target> [-o <offset>] [-d <depth>]
+Usage: ups -p <pid> -t <target> [-o <offset>] [-d <depth>] [-s <start>]
 
 (macos) dynamic pointer path scanner.
-version 0.0.1
+version 0.0.2
 author: kk <kekelanact@gmail.com>
 
 Options:
@@ -17,6 +17,9 @@ Options:
   -t, --target      target address, type uint64-hex
   -o, --offset      scan offset, default -128:128, type int16:int16
   -d, --depth       scan depth, default 7, type uint8
+  -s, --start       start from specified address, type uint64-hex-list, use '-'
+                    to separate multiple parameters, for example:
+                    0x111-0x222-0x333
   --help            display usage information
 
 Example
