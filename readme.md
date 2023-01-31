@@ -32,4 +32,4 @@ Example
 ... ...
 ```
 
-如何使用扫描结果的例子: https://github.com/kekeimiku/dumpkey/blob/0bb96d7636e0e1480d2746a0476609843724e3af/src/main.rs#L8
+如何使用扫描结果的例子: https://github.com/kekeimiku/dumpkey/blob/689ccfb190e533edc43c9fe9caf3b167d28f345b/src/main.rs#L8
