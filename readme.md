@@ -2,21 +2,21 @@
 
 只在m2芯片mbp上测试，应该适用于所有m芯片arm macos程序
 
-前往 [release](https://github.com/kekeimiku/ups/releases) 页面下载此程序
+前往 [release](https://github.com/kekeimiku/ups/releases) 页面下载此程序，前往 [changelog](https://github.com/kekeimiku/ups/blob/main/changelog.md)(重要) 查看更改日志。
 
 ```
 Usage: ups -p <pid> -t <target> [-o <offset>] [-d <depth>] [-s <start>]
 
 (macos) dynamic pointer path scanner.
-version 0.0.3
+version 0.0.4-beta
 author: kk <kekelanact@gmail.com>
 
 Options:
   -p, --pid         process id, type int32
   -t, --target      target address, type uint64-hex-list, use '-' to separate
                     multiple parameters
-  -o, --offset      scan offset, default -128:128, type int16:int16
-  -d, --depth       scan depth, default 7, type uint8
+  -o, --offset      scan offset, default 0:64, type int16:int16
+  -d, --depth       scan depth, default 7, max 11 , type uint8
   -s, --start       start from specified address, type uint64-hex-list, use '-'
                     to separate multiple parameters, for example:
                     0x111-0x222-0x333
