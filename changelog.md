@@ -1,3 +1,7 @@
+# v0.0.5-beta1
+
+优化扫描规则，现在可以正确扫描动态库 [#5](https://github.com/kekeimiku/ups/issues/5)
+
 # v0.0.4
 
 格式化输出扫描结果的一些微小性能提升
