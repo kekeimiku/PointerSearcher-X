@@ -1,14 +1,16 @@
 # 用途懂得都懂
 
-只在m2芯片mbp上测试，应该适用于所有m芯片arm macos程序
+暂时只在m2芯片mbp上测试，应该适用于所有m芯片arm macos程序，最终会跨平台。
 
-前往 [release](https://github.com/kekeimiku/ups/releases) 页面下载此程序，前往 [changelog](https://github.com/kekeimiku/ups/blob/main/changelog.md)(重要) 查看更改日志。
+前往 [release](https://github.com/kekeimiku/ups/releases) 页面下载此程序。
+
+早期开发中，使用方法随时可能有较大变化，可能 `--help` 更新不及时，建议关注 [changelog](https://github.com/kekeimiku/ups/blob/main/changelog.md) 查看更改日志。
 
 ```
 Usage: ups -p <pid> -t <target> [-o <offset>] [-d <depth>] [-s <start>]
 
 (macos) dynamic pointer path scanner.
-version 0.0.5-beta1
+version 0.0.5-beta2
 author: kk <kekelanact@gmail.com>
 
 Options:
@@ -33,3 +35,7 @@ Example
 ```
 
 如何使用扫描结果的例子: https://github.com/kekeimiku/dumpkey/blob/689ccfb190e533edc43c9fe9caf3b167d28f345b/src/main.rs#L8
+
+# TL;DR
+
+本工具暂时闭源（防止 unsafe ptsd 小子乱叫）。
