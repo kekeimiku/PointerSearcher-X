@@ -10,7 +10,7 @@
 Usage: ups -p <pid> -t <target> [-o <offset>] [-d <depth>] [-s <start>]
 
 (macos) dynamic pointer path scanner.
-version 0.0.5-beta2
+version 0.0.5
 author: kk <kekelanact@gmail.com>
 
 Options:
