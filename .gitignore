@@ -13,3 +13,5 @@ Cargo.*
 vendor/
 
 ups
+aarch64-apple-darwin-ups-cli
+x86_64-unknown-linux-musl-ups-cli
