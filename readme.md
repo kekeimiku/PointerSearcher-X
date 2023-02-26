@@ -1,6 +1,6 @@
 # 这是什么？
 
-这是一个指针扫描器，帮助人们找到想要的地址路径以及破解aslr [tutorial](tutorial.md)
+这是一个指针扫描器，帮助人们找到想要的地址路径以及破解aslr [tutorial](tutorial.md) 。
 
 前往 [release](https://github.com/kekeimiku/ups/releases) 页面下载此程序。
 
