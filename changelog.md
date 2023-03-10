@@ -1,3 +1,27 @@
+# v0.0.7
+
+## 变化
+
+现在最大 depth 提高到 13， 最大 offset 提高到 N+N <= 4096
+
+现在使用二进制格式储存扫描结果，每条结果都占用48个字节
+
+其中 0..16 是名字， 16..24 是offset， 24..last b'e' 每两字节转换为i16然后反转是路径。
+
+扫描成本是 O(NN*D) (D:Max Depth,N:Offset Num)
+
+本次更改稍微增加了较低情况下的开销，改善了较高情况下 (D>9 or N>1024) 的性能。
+
+虽然改善了较高情况下的性能，但依然推荐使用较低且合理的 Depth or Offset ，除非你给定了起始地址
+
+添加了几个工具
+
+`ups-get` 用于验证整条路径所指向的地址 `ups-get $(pgrep hello) "libhello.dylib+0x804c0->0->1808->552->-144"`
+
+`ups-diff` 用于对比两个结果 `ups-diff hello-600001008050.bin hello-600001c0c050.bin`
+
+`ups-show` 用于查看结果 `ups-show xxx.bin`
+
 # v0.0.6
 
 添加了自动对比两次扫描结果的工具

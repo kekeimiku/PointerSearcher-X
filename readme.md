@@ -35,6 +35,8 @@ Options:
 
 - [ ] dump (内存转储文件)
 
+在这里查看详细开发计划 [开发计划](dev.md)
+
 # TL;DR
 
 本工具暂时闭源（防止 unsafe ptsd 小子乱叫）。
