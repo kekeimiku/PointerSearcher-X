@@ -1,0 +1,19 @@
+[package]
+name = "ups-cli"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.inquire]
+version = "0.6.0"
+default-features = false
+features = ["crossterm"]
+
+[dependencies.argh]
+version = "0.1.10"
+default-features = false
+
+[profile.release]
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

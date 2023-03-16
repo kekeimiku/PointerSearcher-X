@@ -1,17 +1,5 @@
-Cargo.*
-
-*.txt
-*.toml
-*.sh
-*.plist
+Cargo.lock
 
 /target
 /tests
-/src
-
 .cargo/
-vendor/
-
-ups
-aarch64-apple-darwin-ups-cli
-x86_64-unknown-linux-musl-ups-cli
