@@ -1,0 +1,27 @@
+[package]
+name = "vmmap"
+version = "0.1.8"
+edition = "2021"
+authors = ["kk <kekelanact@gmail.com>"]
+description = "Easy access to memory maps"
+keywords = ["proc_maps", "virtualquery", "process_memory"]
+license = "MIT"
+repository = "https://github.com/kekeimiku/ups"
+readme = "README.md"
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+version = "0.45.0"
+default-features = false
+features = [
+    "Win32_Foundation",
+    "Win32_System_Diagnostics_Debug",
+    "Win32_System_Memory",
+    "Win32_System_ProcessStatus",
+    "Win32_System_Threading",
+    "Win32_System_Environment",
+]
+
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies.mach2]
+git = "https://github.com/kekeimiku/mach2/"
+branch = "dev"
+default-features = false

@@ -1,0 +1,11 @@
+[build]
+target = "aarch64-unknown-linux-musl"
+# target = "aarch64-apple-darwin"
+# target = "x86_64-pc-windows-gnu"
+
+[registries.crates-io]
+protocol = "sparse"
+
+[target.aarch64-unknown-linux-musl]
+linker = "/Users/keke/.local/cross/aarch64-unknown-linux-musl/bin/aarch64-unknown-linux-musl-gcc"
+ar = "/Users/keke/.local/cross/aarch64-unknown-linux-musl/bin/aarch64-unknown-linux-musl-ar"

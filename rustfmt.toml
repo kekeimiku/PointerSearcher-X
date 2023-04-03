@@ -1,0 +1,6 @@
+max_width = 120
+fn_call_width = 110
+attr_fn_like_width = 95
+imports_granularity = "Crate"
+struct_lit_single_line = true
+struct_lit_width = 65
