@@ -1,11 +1,17 @@
 use std::{
-    fs, io,
+    fs::{self, File},
+    io::{self, BufReader},
     io::{BufWriter, Write},
     path::Path,
 };
 
 use bincode::{Decode, Encode};
-use cli::{create_map::create_map, pointer_map::PointerMap, Map};
+
+use cli::{
+    consts::{BIN_CONFIG, MAX_BUF_SIZE},
+    pointer_map::PointerMap,
+    Map,
+};
 
 #[derive(Encode, Decode)]
 pub struct PointerMapCache {
@@ -13,26 +19,37 @@ pub struct PointerMapCache {
     pub region: Vec<Map>,
 }
 
-fn main() {
-    
-}
+fn main() {}
 
-pub fn show_map_info<P: AsRef<Path>>(path: P) -> Result<(), io::Error> {
-    let name = path.as_ref().file_stem().map(|s| s.to_string_lossy()).unwrap();
-    let size = path
+pub fn show_map_info<P: AsRef<Path>>(ptr_path: P, maps_path: P) -> Result<(), io::Error> {
+    let size = ptr_path
         .as_ref()
         .extension()
         .and_then(|s| s.to_str().and_then(|s| s.parse::<usize>().ok()))
         .unwrap();
 
-    let data = fs::read(path.as_ref())?;
+    let file = File::open(maps_path)?;
+    let mut reader = BufReader::with_capacity(MAX_BUF_SIZE, file);
+    let maps: Vec<Map> = bincode::decode_from_std_read(&mut reader, BIN_CONFIG).unwrap();
 
-    let mut buffer = BufWriter::new(std::io::stdout());
+    let data = fs::read(ptr_path.as_ref())?;
+
+    let mut stdout = BufWriter::new(std::io::stdout());
 
     for bin in data.chunks(size) {
         let (offset, path) = parse_line(bin);
         let path = path.map(|s| s.to_string()).collect::<Vec<_>>().join("->");
-        writeln!(buffer, "{name}+{:#x}->{path}", offset)?;
+        for map in &maps {
+            let name = map
+                .path
+                .as_ref()
+                .and_then(|n| n.file_name())
+                .map(|n| n.to_string_lossy())
+                .unwrap_or_else(|| "err".into());
+            if (map.start..map.end).contains(&offset) {
+                writeln!(stdout, "{name}+{:#x}->{path}", offset - map.start)?;
+            }
+        }
     }
 
     Ok(())

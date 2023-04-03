@@ -1,10 +1,9 @@
 use std::{fs::OpenOptions, io::BufWriter, mem, path::PathBuf};
 
-use dialoguer::{theme::SimpleTheme, MultiSelect};
 use vmmap::{Pid, Process, ProcessInfo, VirtualQuery};
 
 use crate::{
-    consts::{BIN_CONFIG, DLL, MAX_BUF_SIZE},
+    consts::{BIN_CONFIG, MAX_BUF_SIZE},
     pointer_map::{create_pointer_map, PointerMap},
     Map,
 };
@@ -19,28 +18,18 @@ pub fn create_map(pid: Pid) {
 
     // 根据一些规则默认选中一些区域
     let app_path = proc.app_path();
-    let mut defaults = vec![false; bases.len()];
-    bases
-        .iter()
+
+    let selections = bases
+        .into_iter()
         .filter(|m| {
-            m.path.as_ref().map_or(false, |path| {
-                let is_dll = path.extension().map_or(false, |ext| ext.eq(DLL));
-                let starts_with_usr = path.starts_with("/usr");
-                let is_app_path = path == app_path;
-                !(starts_with_usr || (!is_dll && !is_app_path))
-            }) || m.is_heap && m.is_stack
+            m.path
+                .as_ref()
+                .map_or(false, |path| path.file_name().map_or(false, |f| f.eq("libhl.so")))
+                || m.path.is_none()
         })
-        .enumerate()
-        .for_each(|(k, _)| defaults[k] = true);
+        .collect::<Vec<_>>();
 
-    let selections = MultiSelect::with_theme(&SimpleTheme)
-        .with_prompt("选择需要扫描的区域")
-        .items(&bases[..])
-        .defaults(&defaults[..])
-        .interact()
-        .unwrap();
-
-    let selections = selections.into_iter().map(|k| bases[k].to_owned()).collect::<Vec<_>>();
+    selections.iter().for_each(|m| println!("{m}"));
 
     // 要扫描的区域
     let scan_region = selections.iter().map(|m| (m.start, m.size)).collect::<Vec<_>>();

@@ -10,17 +10,17 @@ use crate::{
     Map,
 };
 
-pub fn scan(pointer_path: &Path, maps_path: &Path) -> Result<(), io::Error> {
-    let target = 0x60000271c124;
-    let max_depth = 11;
-    let offset = (128, 128);
+pub fn scan<P: AsRef<Path>>(pointer_path: P, maps_path: P) -> Result<(), io::Error> {
+    let target = 0x76747de8;
+    let max_depth = 7;
+    let offset = (0, 800);
 
-    
     let max_size = max_depth * 2 + 9;
 
     let file = File::open(maps_path)?;
     let mut reader = BufReader::with_capacity(MAX_BUF_SIZE, file);
     let maps: Vec<Map> = bincode::decode_from_std_read(&mut reader, BIN_CONFIG).unwrap();
+    maps.iter().for_each(|m| println!("{m}"));
 
     let file = File::open(pointer_path)?;
     let mut reader = BufReader::with_capacity(MAX_BUF_SIZE, file);
@@ -31,6 +31,8 @@ pub fn scan(pointer_path: &Path, maps_path: &Path) -> Result<(), io::Error> {
         .copied()
         .filter(|a| maps.iter().any(|m| (m.start..m.end).contains(a)))
         .collect::<Vec<_>>();
+
+    println!("len {}", startpoints.len());
 
     let path = Path::new("./")
         .with_file_name(target.to_string())

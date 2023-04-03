@@ -19,7 +19,3 @@ default-features = false
 version = "2.0.0-rc.3"
 default-features = false
 features = ["derive", "std"]
-
-[dependencies.dialoguer]
-version = "0.10.3"
-default-features = false
