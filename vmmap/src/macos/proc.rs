@@ -1,5 +1,4 @@
 use core::mem;
-
 use std::{
     ffi::OsStr,
     os::unix::prelude::OsStrExt,
@@ -19,7 +18,7 @@ use mach2::{
     vm_types::{mach_vm_address_t, mach_vm_size_t},
 };
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
 
 const MAX_PATH: usize = (PROC_PIDPATHINFO_MAXSIZE - 1) as _;
 
@@ -64,6 +63,17 @@ impl ProcessInfo for Process {
     fn app_path(&self) -> &Path {
         &self.pathname
     }
+
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_> {
+        let mut buf = [0_u8; MAX_PATH];
+        Box::new(MapIter::new(self.task).map(move |m| Map {
+            addr: m.addr,
+            size: m.size,
+            count: m.count,
+            info: m.info,
+            pathname: proc_regionfilename(self.pid, m.addr, &mut buf).ok(),
+        }))
+    }
 }
 
 impl Process {
@@ -81,22 +91,10 @@ impl Process {
         let pathname = proc_pidpath(pid, &mut buf)?;
         Ok(Self { pid, task, pathname })
     }
-
-    pub fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + Clone + '_> {
-        let mut buf = [0_u8; MAX_PATH];
-        MapIter::new(self.task).map(move |m| Map {
-            addr: m.addr,
-            size: m.size,
-            count: m.count,
-            info: m.info,
-            pathname: proc_regionfilename(self.pid, m.addr, &mut buf).ok(),
-        })
-    }
 }
 
 #[allow(dead_code)]
-#[derive(Clone)]
-struct Map {
+pub struct Map {
     addr: mach_vm_address_t,
     size: mach_vm_size_t,
     count: mach_msg_type_number_t,
@@ -105,16 +103,16 @@ struct Map {
 }
 
 impl VirtualQuery for Map {
-    fn size(&self) -> usize {
-        self.size as _
-    }
-
     fn start(&self) -> usize {
         self.addr as _
     }
 
     fn end(&self) -> usize {
         (self.addr + self.size) as _
+    }
+
+    fn size(&self) -> usize {
+        self.size as _
     }
 
     fn is_read(&self) -> bool {
@@ -129,16 +127,18 @@ impl VirtualQuery for Map {
         self.info.protection & VM_PROT_EXECUTE != 0
     }
 
-    fn is_stack(&self) -> bool {
-        self.info.user_tag == 30
-    }
-
-    fn is_heap(&self) -> bool {
-        matches!(self.info.user_tag, 1..=4 | 7..=11)
-    }
-
     fn path(&self) -> Option<&Path> {
         self.pathname.as_deref()
+    }
+}
+
+impl VirtualQueryExt for Map {
+    fn tag(&self) -> u32 {
+        self.info.user_tag
+    }
+
+    fn is_reserve(&self) -> bool {
+        self.start() == 0xfc0000000 || self.start() == 0x1000000000
     }
 }
 

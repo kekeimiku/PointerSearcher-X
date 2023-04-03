@@ -1,0 +1,20 @@
+[package]
+name = "dumper"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "ptrsx-dumper"
+path = "src/main.rs"
+
+[dependencies.vmmap]
+path = "../vmmap"
+default-features = false
+
+[dependencies.consts]
+path = "../consts"
+default-features = false
+
+[dependencies.argh]
+version = "0.1.10"
+default-features = false

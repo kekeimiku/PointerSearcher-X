@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
 
 #[derive(Clone)]
 pub struct Process<T> {
@@ -19,6 +19,7 @@ pub struct Process<T> {
 
 impl VirtualMemoryRead for Process<Arc<File>> {
     type Error = Error;
+
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, Self::Error> {
         self.handle.read_at(buf, offset as _).map_err(Error::ReadMemory)
     }
@@ -26,6 +27,7 @@ impl VirtualMemoryRead for Process<Arc<File>> {
 
 impl VirtualMemoryWrite for Process<Arc<File>> {
     type Error = Error;
+
     fn write_at(&self, offset: usize, buf: &[u8]) -> Result<(), Self::Error> {
         self.handle
             .write_at(buf, offset as _)
@@ -42,6 +44,10 @@ impl<T> ProcessInfo for Process<T> {
     fn app_path(&self) -> &Path {
         &self.pathname
     }
+
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_> {
+        Box::new(MapIter::new(&self.maps))
+    }
 }
 
 impl Process<Arc<File>> {
@@ -55,14 +61,9 @@ impl Process<Arc<File>> {
         let handle = Arc::new(File::open(format!("/proc/{pid}/mem"))?);
         Ok(Self { pid, pathname, maps, handle })
     }
-
-    pub fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + Clone + '_> {
-        MapIter::new(&self.maps)
-    }
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
 pub struct Map<'a> {
     start: usize,
     end: usize,
@@ -98,17 +99,15 @@ impl VirtualQuery for Map<'_> {
         &self.flags[2..3] == "x"
     }
 
-    fn is_stack(&self) -> bool {
-        self.pathname == "[stack]"
-    }
-
-    fn is_heap(&self) -> bool {
-        self.pathname == "[heap]"
-    }
-
     fn path(&self) -> Option<&Path> {
         let path = Path::new(&self.pathname);
         path.exists().then_some(path)
+    }
+}
+
+impl VirtualQueryExt for Map<'_> {
+    fn name(&self) -> &str {
+        self.pathname
     }
 }
 
@@ -122,6 +121,7 @@ impl<'a> MapIter<'a> {
 
 impl<'a> Iterator for MapIter<'a> {
     type Item = Map<'a>;
+
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let line = self.0.next()?;

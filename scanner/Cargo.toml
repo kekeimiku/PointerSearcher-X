@@ -1,0 +1,16 @@
+[package]
+name = "ptrsx-scanner"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.consts]
+path = "../consts"
+default-features = false
+
+[dependencies.argh]
+version = "0.1.10"
+default-features = false
+
+[dependencies.terminal_size]
+version = "0.2.6"
+default-features = false
