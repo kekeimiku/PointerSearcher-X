@@ -42,7 +42,7 @@ pub fn calc_pointer_path<P: AsRef<Path>>(
     spinner.stop("指针缓存加载完成");
 
     let path = Path::new("./")
-        .with_file_name(target.to_string())
+        .with_file_name(format!("{target:#x}"))
         .with_extension(max_size.to_string());
     let file = OpenOptions::new().write(true).append(true).create(true).open(path)?;
     let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, file);
