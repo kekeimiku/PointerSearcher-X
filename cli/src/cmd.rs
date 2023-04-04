@@ -3,8 +3,6 @@ use std::{ops::Deref, path::PathBuf};
 use argh::{FromArgValue, FromArgs};
 use vmmap::Pid;
 
-use crate::consts::Address;
-
 #[derive(FromArgs)]
 #[argh(description = "Top-level command.")]
 pub struct Commands {
@@ -16,7 +14,7 @@ pub struct Commands {
 #[argh(subcommand)]
 pub enum CommandEnum {
     CreatePointerMap(SubCommandCPM),
-    CaltPointerPath(SubCommandCPP),
+    CalcPointerPath(SubCommandCPP),
     ShowPointerPath(SubCommandSPP),
     ShowPointerPathValue(SubCommandSPV),
 }
@@ -41,6 +39,24 @@ pub struct SubCommandCPP {
     pub depth: usize,
     #[argh(option, default = "Offset((0, 800))", description = "offset")]
     pub offset: Offset,
+}
+
+pub struct Address(crate::consts::Address);
+
+impl FromArgValue for Address {
+    fn from_arg_value(value: &str) -> Result<Self, String> {
+        let value = value.trim_start_matches("0x");
+        let address = crate::consts::Address::from_str_radix(value, 16).map_err(|e| e.to_string())?;
+        Ok(Self(address))
+    }
+}
+
+impl Deref for Address {
+    type Target = crate::consts::Address;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
 }
 
 pub struct Offset((usize, usize));

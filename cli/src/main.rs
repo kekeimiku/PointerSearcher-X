@@ -26,8 +26,8 @@ fn main() {
     let args: Commands = argh::from_env();
     match args.nested {
         CommandEnum::CreatePointerMap(args) => create_map(args.pid),
-        CommandEnum::CaltPointerPath(args) => {
-            calc_pointer_path(args.pf, args.mf, args.target, args.depth, *args.offset).unwrap();
+        CommandEnum::CalcPointerPath(args) => {
+            calc_pointer_path(args.pf, args.mf, *args.target, args.depth, *args.offset).unwrap();
         }
         CommandEnum::ShowPointerPath(args) => show_map_info(args.rf, args.mf).unwrap(),
         CommandEnum::ShowPointerPathValue(args) => show_pointer_value(args.pid, &args.path),
