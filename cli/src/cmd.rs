@@ -79,7 +79,7 @@ impl Deref for Offset {
 }
 
 #[derive(FromArgs)]
-#[argh(subcommand, name = "spp", description = "Show Pointer Path.")]
+#[argh(subcommand, name = "spp", description = "View `CPP` result file")]
 pub struct SubCommandSPP {
     #[argh(option, description = "result file path")]
     pub rf: PathBuf,
