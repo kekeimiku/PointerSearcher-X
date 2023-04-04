@@ -1,5 +1,4 @@
 use std::{
-    ffi::OsStr,
     fs::{self, File},
     io,
     io::{BufWriter, Write},
@@ -7,7 +6,7 @@ use std::{
 };
 
 use bincode::{Decode, Encode};
-use cli::{consts::BIN_CONFIG, create_map::create_map, pointer_map::PointerMap, scanner_map::scan, Map};
+use cli::{consts::BIN_CONFIG, pointer_map::PointerMap, Map};
 
 #[derive(Encode, Decode)]
 pub struct PointerMapCache {
