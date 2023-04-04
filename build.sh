@@ -2,9 +2,9 @@
 
 set -e
 
-# cargo +nightly clippy --fix --allow-dirty --allow-staged
+cargo +nightly clippy --fix --allow-dirty --allow-staged
 
-# cargo +nightly fmt
+cargo +nightly fmt
 
 cargo build --target aarch64-apple-darwin --release
 
