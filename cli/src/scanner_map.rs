@@ -12,7 +12,7 @@ use crate::{
     Map,
 };
 
-pub fn scan<P: AsRef<Path>>(
+pub fn calc_pointer_path<P: AsRef<Path>>(
     pointer_path: P,
     maps_path: P,
     target: Address,

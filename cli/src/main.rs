@@ -6,7 +6,15 @@ use std::{
 };
 
 use bincode::{Decode, Encode};
-use cli::{consts::BIN_CONFIG, pointer_map::PointerMap, Map};
+use cli::{
+    cmd::{CommandEnum, Commands},
+    consts::BIN_CONFIG,
+    create_map::create_map,
+    pointer_map::PointerMap,
+    pointer_path::show_pointer_value,
+    scanner_map::calc_pointer_path,
+    Map,
+};
 
 #[derive(Encode, Decode)]
 pub struct PointerMapCache {
@@ -14,7 +22,17 @@ pub struct PointerMapCache {
     pub region: Vec<Map>,
 }
 
-fn main() {}
+fn main() {
+    let args: Commands = argh::from_env();
+    match args.nested {
+        CommandEnum::CreatePointerMap(args) => create_map(args.pid),
+        CommandEnum::CaltPointerPath(args) => {
+            calc_pointer_path(args.pf, args.mf, args.target, args.depth, *args.offset).unwrap();
+        }
+        CommandEnum::ShowPointerPath(args) => show_map_info(args.rf, args.mf).unwrap(),
+        CommandEnum::ShowPointerPathValue(args) => show_pointer_value(args.pid, &args.path),
+    }
+}
 
 pub fn show_map_info<P: AsRef<Path>>(path: P, maps_path: P) -> Result<(), io::Error> {
     let size = path
