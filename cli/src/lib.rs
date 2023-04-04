@@ -2,9 +2,12 @@ pub mod cmd;
 pub mod consts;
 pub mod create_map;
 pub mod pointer_map;
+pub mod pointer_path;
 pub mod scanner_map;
+pub mod spinner;
 
-use std::path::PathBuf;
+use consts::EXE;
+use std::{array::TryFromSliceError, ffi::OsStr, fs::File, io::Read, path::PathBuf};
 use vmmap::VirtualQuery;
 
 #[derive(Default, Clone, Debug, bincode::Encode, bincode::Decode)]
@@ -24,29 +27,14 @@ impl core::fmt::Display for Map {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "{:#x}-{:#x} {} {}",
-            self.start,
-            self.end,
-            perm(self.is_read, self.is_write, self.is_exec),
+            "{}",
             self.path
                 .as_ref()
-                .map(|n| n.to_string_lossy().to_string())
-                .unwrap_or_else(|| {
-                    if self.is_stack {
-                        String::from("[stack]")
-                    } else if self.is_heap {
-                        String::from("[heap]")
-                    } else {
-                        String::from("misc")
-                    }
-                })
+                .and_then(|f| f.file_name())
+                .unwrap_or_else(|| OsStr::new("[misc]"))
+                .to_string_lossy()
         )
     }
-}
-
-#[inline]
-fn perm(r: bool, w: bool, x: bool) -> String {
-    format!("{}{}{}", if r { "r" } else { "-" }, if w { "w" } else { "-" }, if x { "x" } else { "-" })
 }
 
 impl<T> From<T> for Map
@@ -65,5 +53,33 @@ where
             is_heap: value.is_heap(),
             path: value.path().map(PathBuf::from),
         }
+    }
+}
+
+impl Map {
+    pub fn is_exe(&self) -> bool {
+        let Some(path) = &self.path else {
+        return false;
+    };
+
+        if let Ok(mut file) = File::open(path) {
+            let mut buf = [0; 4];
+            if file.read_exact(&mut buf).is_ok() {
+                return EXE.eq(&buf);
+            }
+        }
+        false
+    }
+}
+
+pub fn bytes_to_usize(buf: &[u8]) -> Result<usize, String> {
+    Ok(usize::from_le_bytes(buf.try_into().map_err(|e: TryFromSliceError| e.to_string())?))
+}
+
+pub const fn wrap_add(u: usize, i: i16) -> Option<usize> {
+    if i.is_negative() {
+        u.checked_sub(i.wrapping_abs() as usize)
+    } else {
+        u.checked_add(i as usize)
     }
 }

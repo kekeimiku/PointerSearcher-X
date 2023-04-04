@@ -18,7 +18,7 @@ where
     for &(start, size) in region {
         for off in (0..size).step_by(CHUNK_SIZE) {
             let Ok (size) = proc.read_at(start + off, buf.as_mut_slice()) else {
-                println!("skip {start:#x}-{:#x} read_err",start+size);
+                // println!("skip {start:#x}-{:#x} read_err",start+size);
                 break;
             };
             for (o, buf) in buf[..size].windows(POINTER_SIZE).enumerate() {
