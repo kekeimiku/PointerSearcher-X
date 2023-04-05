@@ -139,6 +139,10 @@ impl VirtualQuery for Map {
     fn path(&self) -> Option<&Path> {
         self.pathname.as_deref()
     }
+
+    fn name(&self) -> &str {
+        self.path().and_then(|n| n.to_str()).unwrap_or_default()
+    }
 }
 
 #[inline(always)]

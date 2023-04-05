@@ -64,7 +64,7 @@ pub fn select_module(items: &[Map]) -> Result<Vec<Map>, ParseIntError> {
         .iter()
         .filter(|m| m.path.is_some())
         .enumerate()
-        .map(|(k, v)| format!("[{k}]: {v} "))
+        .map(|(k, v)| format!("[{k}: {v}] "))
         .collect();
     println!("{show}");
     println!("Select your module, separated by spaces");

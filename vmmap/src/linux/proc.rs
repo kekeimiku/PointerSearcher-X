@@ -112,6 +112,10 @@ impl VirtualQuery for Map<'_> {
         let path = Path::new(&self.pathname);
         path.exists().then_some(path)
     }
+
+    fn name(&self) -> &str {
+        self.pathname
+    }
 }
 
 pub struct MapIter<'a>(core::str::Lines<'a>);

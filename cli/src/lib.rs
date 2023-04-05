@@ -23,6 +23,7 @@ pub struct Map {
     pub is_stack: bool,
     pub is_heap: bool,
     pub path: Option<PathBuf>,
+    pub name: String,
 }
 
 impl core::fmt::Display for Map {
@@ -54,15 +55,33 @@ where
             is_stack: value.is_stack(),
             is_heap: value.is_heap(),
             path: value.path().map(PathBuf::from),
+            name: value.name().to_string(),
         }
     }
 }
 
 impl Map {
     pub fn is_exe(&self) -> bool {
+        if !self.is_read {
+            return false;
+        }
+
         let Some(path) = &self.path else {
         return false;
     };
+
+        #[cfg(target_os = "linux")]
+        if path.starts_with("/dev") || path.starts_with("/usr")
+        // || matches!(self.name.as_str(), "[vvar]" | "[vdso]" | "[vsyscall]")
+        {
+            // println!("{} {}", self.start, self.name);
+            return false;
+        }
+
+        #[cfg(target_os = "macos")]
+        if path.starts_with("/usr") {
+            return false;
+        }
 
         if let Ok(mut file) = File::open(path) {
             let mut buf = [0; 4];
