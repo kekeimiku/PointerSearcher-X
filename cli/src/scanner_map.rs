@@ -6,8 +6,8 @@ use std::{
 };
 
 use crate::{
-    consts::{Address, BIN_CONFIG, MAX_BUF_SIZE},
-    pointer_map::{convert_rev_map, path_find_helpers, PointerMap},
+    consts::{Address, PointerMap, BIN_CONFIG, MAX_BUF_SIZE},
+    scanner::PointerSeacher,
     spinner::Spinner,
     Map,
 };
@@ -48,8 +48,11 @@ pub fn calc_pointer_path<P: AsRef<Path>>(
     let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, file);
 
     spinner.start("Start calc pointer...");
-    let rev_map = convert_rev_map(pointer);
-    path_find_helpers(rev_map, target, &mut out, offset, max_depth, &startpoints).unwrap();
+
+    let mut ps = PointerSeacher::default();
+    ps.load_map(pointer);
+    ps.path_find_helpers(target, &mut out, offset, max_depth, &startpoints)
+        .unwrap();
     spinner.stop("Calc finished");
 
     Ok(())
@@ -63,7 +66,7 @@ pub fn select_module(items: &[Map]) -> Result<Vec<Map>, ParseIntError> {
         .map(|(k, v)| format!("[{k}]: {v} "))
         .collect();
     println!("{show}");
-    println!("选择你关心的区域");
+    println!("Select your module, separated by spaces");
 
     let mut selected_items = vec![];
     let mut input = String::new();
@@ -79,6 +82,10 @@ pub fn select_module(items: &[Map]) -> Result<Vec<Map>, ParseIntError> {
             break;
         }
         selected_items.push(items[k].to_owned())
+    }
+
+    if selected_items.is_empty() {
+        panic!("Select at least one")
     }
 
     Ok(selected_items)

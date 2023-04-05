@@ -3,8 +3,8 @@ use std::{fs::OpenOptions, io::BufWriter, mem, path::PathBuf};
 use vmmap::{Pid, Process, ProcessInfo, VirtualQuery};
 
 use crate::{
-    consts::{BIN_CONFIG, MAX_BUF_SIZE},
-    pointer_map::{create_pointer_map, PointerMap},
+    consts::{PointerMap, BIN_CONFIG, MAX_BUF_SIZE},
+    pointer_map::create_pointer_map,
     spinner::Spinner,
     Map,
 };

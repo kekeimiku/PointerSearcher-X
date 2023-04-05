@@ -1,3 +1,5 @@
+use std::collections::BTreeMap;
+
 #[cfg(target_os = "linux")]
 pub const CHUNK_SIZE: usize = 0x100000;
 
@@ -17,3 +19,7 @@ pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
 #[cfg(target_os = "macos")]
 pub const EXE: [u8; 4] = [0xCF, 0xFA, 0xED, 0xFE];
+
+pub type PointerMap = BTreeMap<Address, Address>;
+
+pub type ReversePointerMap = BTreeMap<Address, Vec<Address>>;

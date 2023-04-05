@@ -8,9 +8,8 @@ use std::{
 use bincode::{Decode, Encode};
 use cli::{
     cmd::{CommandEnum, Commands},
-    consts::BIN_CONFIG,
+    consts::{PointerMap, BIN_CONFIG},
     create_map::create_map,
-    pointer_map::PointerMap,
     pointer_path::show_pointer_value,
     scanner_map::calc_pointer_path,
     Map,

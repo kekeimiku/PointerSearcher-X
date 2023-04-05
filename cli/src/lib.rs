@@ -3,6 +3,7 @@ pub mod consts;
 pub mod create_map;
 pub mod pointer_map;
 pub mod pointer_path;
+pub mod scanner;
 pub mod scanner_map;
 pub mod spinner;
 

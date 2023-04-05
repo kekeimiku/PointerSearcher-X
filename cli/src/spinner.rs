@@ -1,16 +1,16 @@
 use std::{
-    io::{self, Write},
+    io,
+    io::Write,
     ops::Add,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    thread::{self, JoinHandle},
-    time::{self, Duration},
+    thread, time,
 };
 
 pub struct Spinner {
-    thread_handle: Option<JoinHandle<()>>,
+    thread_handle: Option<thread::JoinHandle<()>>,
     still_spinning: Arc<AtomicBool>,
 }
 
@@ -33,9 +33,9 @@ impl Spinner {
         let handle = thread::spawn(move || {
             while still_spinning.load(Ordering::Relaxed) {
                 spinner_chars.iter().for_each(|char| {
-                    write!(stdout, "\r{} {msg}  Time: {}s", char, ins.elapsed().as_secs().add(1)).unwrap();
+                    write!(stdout, "\r[{}] {msg}  Time: {}s", char, ins.elapsed().as_secs().add(1)).unwrap();
                     stdout.flush().unwrap();
-                    thread::sleep(Duration::from_millis(100));
+                    thread::sleep(time::Duration::from_millis(100));
                 })
             }
         });
@@ -48,6 +48,6 @@ impl Spinner {
             self.still_spinning.store(false, Ordering::Relaxed);
             handle.join().unwrap();
         }
-        println!("\n{msg}")
+        println!("\n[*] {msg}")
     }
 }
