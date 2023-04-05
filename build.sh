@@ -10,8 +10,8 @@ cargo build --target aarch64-apple-darwin --release
 
 # cargo +nightly build -Z build-std=std,panic_abort -Z build-std-features=panic_immediate_abort --target aarch64-apple-darwin --release
 
-cp target/aarch64-apple-darwin/release/ups-cli build
+cp target/aarch64-apple-darwin/release/ptrsx build
 
-codesign -s kk.ups build/ups-cli
+codesign -s kk.ups build/ptrsx
 
-ldid -Sentitlements.plist build/ups-cli
+ldid -Sentitlements.plist build/ptrsx

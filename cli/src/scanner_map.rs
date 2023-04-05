@@ -47,6 +47,7 @@ pub fn calc_pointer_path<P: AsRef<Path>>(
     let file = OpenOptions::new().write(true).append(true).create(true).open(path)?;
     let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, file);
 
+    let mut spinner = Spinner::default();
     spinner.start("Start calc pointer...");
 
     let mut ps = PointerSeacher::default();
