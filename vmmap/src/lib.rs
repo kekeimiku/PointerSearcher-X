@@ -20,9 +20,9 @@ pub type Pid = i32;
 pub type Pid = u32;
 
 mod error;
-pub use error::Error;
-
 use std::path::Path;
+
+pub use error::Error;
 
 pub trait VirtualMemoryRead {
     type Error;

@@ -13,7 +13,7 @@ pub fn create_map(pid: Pid) {
     let proc = Process::open(pid).unwrap();
 
     let mut spinner = Spinner::default();
-    spinner.start("开始创建指针缓存");
+    spinner.start("Create pointer map...");
 
     let region = proc
         .get_maps()
@@ -51,7 +51,7 @@ pub fn create_map(pid: Pid) {
         .unwrap();
     let mut writer = BufWriter::with_capacity(MAX_BUF_SIZE, file);
     bincode::encode_into_std_write(out_map, &mut writer, BIN_CONFIG).unwrap();
-    spinner.stop("创建完成");
+    spinner.stop("Create finished");
 }
 
 pub fn merge_bases(mut bases: Vec<Map>) -> Vec<Map> {

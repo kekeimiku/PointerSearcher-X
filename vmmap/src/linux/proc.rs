@@ -19,6 +19,7 @@ pub struct Process<T> {
 
 impl VirtualMemoryRead for Process<Arc<File>> {
     type Error = Error;
+
     fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, Self::Error> {
         self.handle.read_at(buf, offset as _).map_err(Error::ReadMemory)
     }
@@ -26,6 +27,7 @@ impl VirtualMemoryRead for Process<Arc<File>> {
 
 impl VirtualMemoryWrite for Process<Arc<File>> {
     type Error = Error;
+
     fn write_at(&self, offset: usize, buf: &[u8]) -> Result<(), Self::Error> {
         self.handle
             .write_at(buf, offset as _)
@@ -122,6 +124,7 @@ impl<'a> MapIter<'a> {
 
 impl<'a> Iterator for MapIter<'a> {
     type Item = Map<'a>;
+
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         let line = self.0.next()?;

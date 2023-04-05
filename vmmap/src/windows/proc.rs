@@ -1,10 +1,9 @@
+use core::{mem, ptr};
 use std::{
     ffi::OsString,
     os::windows::prelude::OsStringExt,
     path::{Path, PathBuf},
 };
-
-use core::{mem, ptr};
 
 use windows_sys::Win32::{
     Foundation::{GetLastError, FALSE, HANDLE, MAX_PATH},

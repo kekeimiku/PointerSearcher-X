@@ -1,5 +1,4 @@
 use core::mem;
-
 use std::{
     ffi::OsStr,
     os::unix::prelude::OsStrExt,

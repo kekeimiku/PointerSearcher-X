@@ -27,7 +27,7 @@ pub fn calc_pointer_path<P: AsRef<Path>>(
     let maps = select_module(&maps).unwrap();
 
     let mut spinner = Spinner::default();
-    spinner.start("加载指针缓存");
+    spinner.start("Load pointer map...");
 
     let file = File::open(pointer_path)?;
     let mut reader = BufReader::with_capacity(MAX_BUF_SIZE, file);
@@ -39,7 +39,7 @@ pub fn calc_pointer_path<P: AsRef<Path>>(
         .filter(|a| maps.iter().any(|m| (m.start..m.end).contains(a)))
         .collect::<Vec<_>>();
 
-    spinner.stop("指针缓存加载完成");
+    spinner.stop("load finished");
 
     let path = Path::new("./")
         .with_file_name(format!("{target:#x}"))
@@ -47,10 +47,10 @@ pub fn calc_pointer_path<P: AsRef<Path>>(
     let file = OpenOptions::new().write(true).append(true).create(true).open(path)?;
     let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, file);
 
-    spinner.start("开始查找路径");
+    spinner.start("Start calc pointer...");
     let rev_map = convert_rev_map(pointer);
     path_find_helpers(rev_map, target, &mut out, offset, max_depth, &startpoints).unwrap();
-    spinner.stop("路径查找完成");
+    spinner.stop("Calc finished");
 
     Ok(())
 }

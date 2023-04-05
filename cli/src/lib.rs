@@ -6,8 +6,9 @@ pub mod pointer_path;
 pub mod scanner_map;
 pub mod spinner;
 
-use consts::EXE;
 use std::{array::TryFromSliceError, ffi::OsStr, fs::File, io::Read, path::PathBuf};
+
+use consts::EXE;
 use vmmap::VirtualQuery;
 
 #[derive(Default, Clone, Debug, bincode::Encode, bincode::Decode)]
