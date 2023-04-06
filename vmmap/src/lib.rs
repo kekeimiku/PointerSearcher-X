@@ -46,7 +46,7 @@ pub trait VirtualQuery {
     fn is_stack(&self) -> bool;
     fn is_heap(&self) -> bool;
     fn path(&self) -> Option<&Path>;
-    fn name(&self)-> &str;
+    fn name(&self) -> &str;
 }
 
 pub trait ProcessInfo {

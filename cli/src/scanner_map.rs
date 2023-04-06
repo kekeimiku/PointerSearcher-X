@@ -26,8 +26,7 @@ pub fn calc_pointer_path<P: AsRef<Path>>(
     let maps: Vec<Map> = bincode::decode_from_std_read(&mut reader, BIN_CONFIG).unwrap();
     let maps = select_module(&maps).unwrap();
 
-    let mut spinner = Spinner::default();
-    spinner.start("Load pointer map...");
+    let mut spinner = Spinner::start("Load pointer map...");
 
     let file = File::open(pointer_path)?;
     let mut reader = BufReader::with_capacity(MAX_BUF_SIZE, file);
@@ -47,8 +46,7 @@ pub fn calc_pointer_path<P: AsRef<Path>>(
     let file = OpenOptions::new().write(true).append(true).create(true).open(path)?;
     let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, file);
 
-    let mut spinner = Spinner::default();
-    spinner.start("Start calc pointer...");
+    let mut spinner = Spinner::start("Start calc pointer...");
 
     let mut ps = PointerSeacher::default();
     ps.load_map(pointer);

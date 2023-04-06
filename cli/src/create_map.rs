@@ -12,8 +12,7 @@ use crate::{
 pub fn create_map(pid: Pid) {
     let proc = Process::open(pid).unwrap();
 
-    let mut spinner = Spinner::default();
-    spinner.start("Create pointer map...");
+    let mut spinner = Spinner::start("Create pointer map...");
 
     let region = proc
         .get_maps()

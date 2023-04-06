@@ -14,24 +14,16 @@ pub struct Spinner {
     still_spinning: Arc<AtomicBool>,
 }
 
-impl Default for Spinner {
-    fn default() -> Self {
-        Self {
-            thread_handle: None,
-            still_spinning: Arc::new(AtomicBool::new(true)),
-        }
-    }
-}
-
 impl Spinner {
-    pub fn start(&mut self, msg: &'static str) {
+    pub fn start(msg: &'static str) -> Self {
         let ins = time::Instant::now();
-        let still_spinning = self.still_spinning.clone();
+        let still_spinning = Arc::new(AtomicBool::new(true));
         let mut stdout = io::stdout();
         let spinner_chars = ['-', '\\', '|', '/'];
 
+        let ssp = still_spinning.clone();
         let handle = thread::spawn(move || {
-            while still_spinning.load(Ordering::Relaxed) {
+            while ssp.load(Ordering::Relaxed) {
                 spinner_chars.iter().for_each(|char| {
                     write!(stdout, "\r[{}] {msg}  Time: {}s", char, ins.elapsed().as_secs().add(1)).unwrap();
                     stdout.flush().unwrap();
@@ -40,7 +32,7 @@ impl Spinner {
             }
         });
 
-        self.thread_handle = Some(handle);
+        Self { thread_handle: Some(handle), still_spinning }
     }
 
     pub fn stop(&mut self, msg: &'static str) {
