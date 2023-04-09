@@ -1,4 +1,4 @@
-use std::{array::TryFromSliceError, io, mem, num::ParseIntError, path::PathBuf};
+use std::{array::TryFromSliceError, io, num::ParseIntError, path::PathBuf};
 
 pub fn bytes_to_usize(buf: &[u8]) -> Result<usize, String> {
     Ok(usize::from_le_bytes(buf.try_into().map_err(|e: TryFromSliceError| e.to_string())?))
@@ -12,8 +12,7 @@ pub const fn wrap_add(u: usize, i: i16) -> Option<usize> {
     }
 }
 
-pub fn select_module(items: Vec<(usize, usize, PathBuf)>) -> Result<Vec<(usize, usize, PathBuf)>, ParseIntError> {
-    #[cfg(target_os = "macos")]
+pub fn select_module(items: Vec<(usize, usize, PathBuf)>) -> Result<Vec<(usize, usize, PathBuf)>, ParseIntError> {    
     let items = crate::utils::merge_bases(items);
 
     let show: String = items
@@ -48,10 +47,9 @@ pub fn select_module(items: Vec<(usize, usize, PathBuf)>) -> Result<Vec<(usize, 
     Ok(selected_items)
 }
 
-#[cfg(target_os = "macos")]
 pub fn merge_bases(mut bases: Vec<(usize, usize, PathBuf)>) -> Vec<(usize, usize, PathBuf)> {
     let mut aom = Vec::new();
-    let mut current = mem::take(&mut bases[0]);
+    let mut current = core::mem::take(&mut bases[0]);
     for map in bases.into_iter().skip(1) {
         if map.2 == current.2 {
             current.1 = map.1;

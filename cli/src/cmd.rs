@@ -194,7 +194,6 @@ impl SubCommandSPP {
         let data = fs::read(rf)?;
         let mf = File::open(mf)?;
         let maps: Vec<(usize, usize, PathBuf)> = ptrsx_decode_maps(mf)?;
-        #[cfg(target_os = "macos")]
         let maps = crate::utils::merge_bases(maps);
 
         let mut buffer = BufWriter::new(std::io::stdout());

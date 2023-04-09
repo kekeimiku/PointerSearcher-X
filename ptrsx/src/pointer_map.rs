@@ -3,7 +3,8 @@ use std::{cmp::Ordering, collections::BTreeMap, io, path::PathBuf};
 use vmmap::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 use crate::{
-    consts::{check_exe, Address, BIN_CONFIG, CHUNK_SIZE, POINTER_SIZE},
+    check::check_region,
+    consts::{Address, BIN_CONFIG, CHUNK_SIZE, POINTER_SIZE},
     error::Result,
 };
 
@@ -15,7 +16,7 @@ where
     let region = proc
         .get_maps()
         .filter(|m| m.is_read())
-        .filter(|m| check_exe(m) || m.is_stack() || m.is_heap() || m.path().is_none())
+        .filter(check_region)
         .collect::<Vec<_>>();
 
     let scan_region = region.iter().map(|m| (m.start(), m.size())).collect::<Vec<_>>();
