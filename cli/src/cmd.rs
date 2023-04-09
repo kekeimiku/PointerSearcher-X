@@ -56,7 +56,7 @@ pub struct SubCommandCPP {
     pub mf: PathBuf,
     #[argh(option, default = "7", description = "depth")]
     pub depth: usize,
-    #[argh(option, default = "Offset((0, 800))", description = "offset")]
+    #[argh(option, default = "Offset((0, 600))", description = "offset")]
     pub offset: Offset,
     #[argh(option, default = "PathBuf::default()", description = "out path dir")]
     pub dir: PathBuf,

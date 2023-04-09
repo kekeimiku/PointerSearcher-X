@@ -15,7 +15,7 @@ deadcells.maps      deadcells.pointers
 假设金币地址为 0x754db988。然后我们可以直接关闭游戏。
 
 ```shell
-ptrsx cpp --target 0x754db988 --pf deadcells.pointers --mf deadcells.maps --offset 0:800 --depth 7
+ptrsx cpp --target 0x754db988 --pf deadcells.pointers --mf deadcells.maps --offset 0:600 --depth 7
 # 这里会提示选择哪些模块 例如 [0: deadcells] [1: steamclient.so] [2: libsteam_api.so] [3: steam.hdll] [4: libopenal.so.1] [5: openal.hdll] [6: libmbedcrypto.so.1] [7: libmbedx509.so.0] [8: libmbedtls.so.10] [9: ssl.hdll] [10: libsndio.so.6.1] [11: libSDL2-2.0.so.0] [12: sdl.hdll] [13: libuv.so.1] [14: uv.hdll] [15: libturbojpeg.so.0] [16: fmt.hdll] [17: ui.hdll] [18: libhl.so] ...
 # 我们输入对应的数字 选择多个用空格分隔 这里我选择了 deadcells 和 libhl.so，对应数字是 0 和 18
 # 执行完成后会输出一份文件
@@ -65,6 +65,6 @@ PS: 对比两次的结果是为了确保游戏每次运行金币都会在这条�
 
 PS: 如果你不急，可以把文件放到服务器上面慢慢计算。写一个脚本算完了发个通知。
 
-PS: 扫描成本是 O(NN*D) (D:Max Depth,N:Offset Num)，offset和depth最好都不要太高。(本示例中(D:7,O:+800)只需要不到10s，这对多数游戏基本已经足够)
+PS: 扫描成本是 O(NN*D) (D:Max Depth,N:Offset Num)，offset和depth最好都不要太高。(本示例中(D:7,O:+600)只需要不到10s，可能对于多数程序基本已经足够)
 
 PS: 这个程序也支持负offset，不过它不算特别常见，建议正offset无效的时候尝试。
