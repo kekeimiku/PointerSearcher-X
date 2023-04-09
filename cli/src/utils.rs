@@ -12,7 +12,7 @@ pub const fn wrap_add(u: usize, i: i16) -> Option<usize> {
     }
 }
 
-pub fn select_module(items: Vec<(usize, usize, PathBuf)>) -> Result<Vec<(usize, usize, PathBuf)>, ParseIntError> {    
+pub fn select_module(items: Vec<(usize, usize, PathBuf)>) -> Result<Vec<(usize, usize, PathBuf)>, ParseIntError> {
     let items = crate::utils::merge_bases(items);
 
     let show: String = items

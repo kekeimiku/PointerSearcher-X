@@ -3,7 +3,7 @@ use std::{
     io::{BufReader, BufWriter, Write},
     num::ParseIntError,
     ops::Deref,
-    path::{Path, PathBuf},
+    path::PathBuf,
     str::FromStr,
 };
 
@@ -42,6 +42,8 @@ pub enum CommandEnum {
 pub struct SubCommandCPM {
     #[argh(option, short = 'p', description = "process id")]
     pub pid: Pid,
+    #[argh(option, default = "PathBuf::default()", description = "out path dir")]
+    pub dir: PathBuf,
 }
 
 #[derive(FromArgs)]
@@ -57,6 +59,8 @@ pub struct SubCommandCPP {
     pub depth: usize,
     #[argh(option, default = "Offset((0, 800))", description = "offset")]
     pub offset: Offset,
+    #[argh(option, default = "PathBuf::default()", description = "out path dir")]
+    pub dir: PathBuf,
 }
 
 pub struct Target(Address);
@@ -120,7 +124,7 @@ pub struct SubCommandSPV {
 
 impl SubCommandCPP {
     pub fn init(self) -> Result<()> {
-        let SubCommandCPP { target, pf, mf, depth, offset } = self;
+        let SubCommandCPP { target, pf, mf, depth, offset, dir } = self;
         let m_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(mf)?);
         let maps: Vec<(usize, usize, PathBuf)> = ptrsx_decode_maps(m_read)?;
 
@@ -133,9 +137,7 @@ impl SubCommandCPP {
 
         let p_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(pf)?);
         let size = depth * 2 + 9;
-        let out = Path::new("./")
-            .with_file_name(target.to_string())
-            .with_extension(size.to_string());
+        let out = dir.with_file_name(target.to_string()).with_extension(size.to_string());
         let mut out =
             BufWriter::with_capacity(MAX_BUF_SIZE, OpenOptions::new().write(true).append(true).create(true).open(out)?);
 
@@ -161,11 +163,12 @@ impl SubCommandCPM {
     pub fn init(self) -> Result<()> {
         let mut spinner = Spinner::start("create ptrs cache...");
 
-        let SubCommandCPM { pid } = self;
+        let SubCommandCPM { pid, dir: path } = self;
+
         let proc = Process::open(pid)?;
         let app_name = proc.app_path().file_name().unwrap();
-        let p_path = Path::new("./").with_file_name(app_name).with_extension("ptrs");
-        let m_path = Path::new("./").with_file_name(app_name).with_extension("maps");
+        let p_path = path.with_file_name(app_name).with_extension("ptrs");
+        let m_path = path.with_file_name(app_name).with_extension("maps");
 
         let p_out = BufWriter::with_capacity(
             MAX_BUF_SIZE,
