@@ -3,7 +3,7 @@ use std::{collections::BTreeMap, io, ops::Range};
 use crate::{
     consts::{Address, BIN_CONFIG},
     engine::PointerSeacher,
-    error::Result,
+    Result,
 };
 
 pub struct PathFindEngine<'a, W> {

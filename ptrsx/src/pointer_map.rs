@@ -5,7 +5,7 @@ use vmmap::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 use crate::{
     check::check_region,
     consts::{Address, BIN_CONFIG, CHUNK_SIZE, POINTER_SIZE},
-    error::Result,
+    Result,
 };
 
 pub fn ptrsx_create_pointer_map<W, P>(proc: P, mut p_out: W, mut m_out: W) -> Result<()>

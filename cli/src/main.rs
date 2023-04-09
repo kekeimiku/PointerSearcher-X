@@ -1,11 +1,11 @@
-use cli::cmd::{CommandEnum, Commands};
+use cli::{CommandEnum, Commands};
 
-fn main() {
+fn main() -> cli::Result<()> {
     let args: Commands = argh::from_env();
     match args.cmds {
-        CommandEnum::CreatePointerMap(args) => args.init().unwrap(),
-        CommandEnum::CalcPointerPath(args) => args.init().unwrap(),
-        CommandEnum::ShowPointerPath(args) => args.init().unwrap(),
-        CommandEnum::ShowPointerPathValue(args) => args.init().unwrap(),
+        CommandEnum::CreatePointerMap(args) => args.init(),
+        CommandEnum::CalcPointerPath(args) => args.init(),
+        CommandEnum::ShowPointerPath(args) => args.init(),
+        CommandEnum::ShowPointerPathValue(args) => args.init(),
     }
 }

@@ -1,5 +1,5 @@
 use std::{
-    fs::{self, File, OpenOptions},
+    fs::{File, OpenOptions},
     io::{BufReader, BufWriter, Write},
     num::ParseIntError,
     ops::Deref,
@@ -16,9 +16,8 @@ use ptrsx::{
 use vmmap::{Pid, Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 use crate::{
-    error::Result,
-    spinner::Spinner,
     utils::{bytes_to_usize, select_module, wrap_add},
+    Result, Spinner,
 };
 
 #[derive(FromArgs)]
@@ -194,7 +193,7 @@ impl SubCommandSPP {
             .and_then(|s| s.to_str().and_then(|s| s.parse::<usize>().ok()))
             .unwrap();
 
-        let data = fs::read(rf)?;
+        let data = std::fs::read(rf)?;
         let mf = File::open(mf)?;
         let maps: Vec<(usize, usize, PathBuf)> = ptrsx_decode_maps(mf)?;
         let maps = crate::utils::merge_bases(maps);
