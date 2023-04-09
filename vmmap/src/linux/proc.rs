@@ -44,6 +44,10 @@ impl<T> ProcessInfo for Process<T> {
     fn app_path(&self) -> &Path {
         &self.pathname
     }
+
+    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_> {
+        MapIter::new(&self.maps)
+    }
 }
 
 impl Process<Arc<File>> {
@@ -56,10 +60,6 @@ impl Process<Arc<File>> {
         let pathname = fs::read_link(format!("/proc/{pid}/exe"))?;
         let handle = Arc::new(File::open(format!("/proc/{pid}/mem"))?);
         Ok(Self { pid, pathname, maps, handle })
-    }
-
-    pub fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + Clone + '_> {
-        MapIter::new(&self.maps)
     }
 }
 

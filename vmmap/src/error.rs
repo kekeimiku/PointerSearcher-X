@@ -19,3 +19,17 @@ pub enum Error {
     #[cfg(target_os = "windows")]
     WriteMemory(windows_sys::Win32::Foundation::WIN32_ERROR),
 }
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s = match self {
+            Error::OpenProcess(e) => format!("OpenProcess {}", e),
+            Error::ReadMemory(e) => format!("OpenProcess {}", e),
+            Error::WriteMemory(e) => format!("WriteMemory {}", e),
+        };
+
+        write!(f, "{}", s)
+    }
+}
+
+impl std::error::Error for Error {}

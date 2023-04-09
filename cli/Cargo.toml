@@ -11,11 +11,10 @@ path = "src/main.rs"
 path = "../vmmap"
 default-features = false
 
+[dependencies.libptrsx]
+path = "../libptrsx"
+default-features = false
+
 [dependencies.argh]
 version = "0.1.10"
 default-features = false
-
-[dependencies.bincode]
-version = "2.0.0-rc.3"
-default-features = false
-features = ["derive", "std"]

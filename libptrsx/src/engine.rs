@@ -16,16 +16,9 @@ fn signed_diff(a: Address, b: Address) -> i16 {
     a.checked_sub(b).map(|a| a as i16).unwrap_or_else(|| -((b - a) as i16))
 }
 
-#[derive(Default)]
-pub struct PointerSeacher(BTreeMap<Address, Vec<Address>>);
+pub struct PointerSeacher(pub BTreeMap<Address, Vec<Address>>);
 
 impl PointerSeacher {
-    pub fn load_map(&mut self, map: BTreeMap<Address, Address>) {
-        for (k, v) in map {
-            self.0.entry(v).or_default().push(k);
-        }
-    }
-
     fn walk_down<W>(
         &self,
         params: WalkParams<W>,
@@ -74,33 +67,33 @@ impl PointerSeacher {
         Ok(())
     }
 
-    pub fn path_find_helpers<W>(
+    pub(crate) fn path_find_helpers<W>(
         &self,
         target: Address,
         out: &mut W,
         range: (usize, usize),
-        max_lv: usize,
+        depth: usize,
+        size: usize,
         startpoints: &[Address],
     ) -> Result<(), io::Error>
     where
         W: io::Write,
     {
-        let params = WalkParams { target, out, range, lv: 1, max_lv, startpoints };
-        let size = max_lv * 2 + 9;
-        self.walk_down(params, (&mut Vec::with_capacity(max_lv), &mut Vec::with_capacity(size)))
+        let params = WalkParams { target, out, range, lv: 1, max_lv: depth, startpoints };
+        self.walk_down(params, (&mut Vec::with_capacity(depth), &mut Vec::with_capacity(size)))
     }
 }
 
 #[test]
 fn test_path_find_helpers() {
-    let map = BTreeMap::from([
+    let ptrs = BTreeMap::from([
         (0x104B28008, 0x125F040A0),
         (0x104B28028, 0x125F04090),
         (0x104B281B0, 0x125F040E0),
         (0x125F04090, 0x125F04080),
     ]);
 
-    let startpoints = map
+    let startpoints = ptrs
         .keys()
         .copied()
         .filter(|a| (0x104B18000..0x104B38000).contains(a))
@@ -108,18 +101,21 @@ fn test_path_find_helpers() {
 
     let target = 0x125F04080;
     let range = (0, 16);
-    let max_lv = 5;
-    let max_size = max_lv * 2 + 9;
+    let depth = 5;
+    let size = depth * 2 + 9;
+
+    let mut map: BTreeMap<Address, Vec<Address>> = BTreeMap::new();
+    for (k, v) in ptrs {
+        map.entry(v).or_default().push(k);
+    }
 
     let mut out = vec![];
-
-    let mut ps = PointerSeacher::default();
-    ps.load_map(map);
-    ps.path_find_helpers(target, &mut out, range, max_lv, &startpoints)
+    let ps = PointerSeacher(map);
+    ps.path_find_helpers(target, &mut out, range, depth, size, &startpoints)
         .unwrap();
 
     let mut aout = vec![];
-    for v in out.chunks(max_size) {
+    for v in out.chunks(size) {
         let (start, path) = v.split_at(8);
         let start = usize::from_le_bytes(start.try_into().unwrap()) - 0x104B18000;
         aout.extend(start.to_le_bytes());

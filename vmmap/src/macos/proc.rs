@@ -63,6 +63,17 @@ impl ProcessInfo for Process {
     fn app_path(&self) -> &Path {
         &self.pathname
     }
+
+    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_> {
+        let mut buf = [0_u8; MAX_PATH];
+        MapIter::new(self.task).map(move |m| Map {
+            addr: m.addr,
+            size: m.size,
+            count: m.count,
+            info: m.info,
+            pathname: proc_regionfilename(self.pid, m.addr, &mut buf).ok(),
+        })
+    }
 }
 
 impl Process {
@@ -79,17 +90,6 @@ impl Process {
         }
         let pathname = proc_pidpath(pid, &mut buf)?;
         Ok(Self { pid, task, pathname })
-    }
-
-    pub fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + Clone + '_> {
-        let mut buf = [0_u8; MAX_PATH];
-        MapIter::new(self.task).map(move |m| Map {
-            addr: m.addr,
-            size: m.size,
-            count: m.count,
-            info: m.info,
-            pathname: proc_regionfilename(self.pid, m.addr, &mut buf).ok(),
-        })
     }
 }
 
