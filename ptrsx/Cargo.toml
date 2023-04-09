@@ -1,11 +1,7 @@
 [package]
-name = "libptrsx"
+name = "ptrsx"
 version = "0.1.0"
 edition = "2021"
-
-# [lib]
-# name = "ptrsx"
-# crate-type = ["cdylib"]
 
 [dependencies.vmmap]
 path = "../vmmap"

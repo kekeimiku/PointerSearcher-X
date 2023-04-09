@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["vmmap", "cli", "libptrsx"]
+members = ["vmmap", "cli", "ptrsx"]
 
 [profile.release]
 lto = true

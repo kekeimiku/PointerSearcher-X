@@ -4,15 +4,15 @@ version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "ptrsx"
+name = "ptrsx-cli"
 path = "src/main.rs"
 
 [dependencies.vmmap]
 path = "../vmmap"
 default-features = false
 
-[dependencies.libptrsx]
-path = "../libptrsx"
+[dependencies.ptrsx]
+path = "../ptrsx"
 default-features = false
 
 [dependencies.argh]

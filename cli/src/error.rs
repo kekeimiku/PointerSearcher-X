@@ -19,8 +19,8 @@ impl From<&'static str> for Error {
     }
 }
 
-impl From<libptrsx::error::Error> for Error {
-    fn from(value: libptrsx::error::Error) -> Self {
+impl From<ptrsx::Error> for Error {
+    fn from(value: ptrsx::Error) -> Self {
         Self(value.to_string())
     }
 }

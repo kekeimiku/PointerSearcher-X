@@ -8,7 +8,7 @@ use std::{
 };
 
 use argh::{FromArgValue, FromArgs};
-use libptrsx::{
+use ptrsx::{
     consts::{Address, MAX_BUF_SIZE},
     pointer_map::{ptrsx_create_pointer_map, ptrsx_decode_maps},
     pointer_path::{ptrsx_init_engine, PathFindParams},
@@ -17,6 +17,7 @@ use vmmap::{Pid, Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 use crate::{
     error::Result,
+    spinner::Spinner,
     utils::{bytes_to_usize, select_module, wrap_add},
 };
 
@@ -120,11 +121,17 @@ pub struct SubCommandSPV {
 impl SubCommandCPP {
     pub fn init(self) -> Result<()> {
         let SubCommandCPP { target, pf, mf, depth, offset } = self;
-        let p_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(pf)?);
         let m_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(mf)?);
         let maps: Vec<(usize, usize, PathBuf)> = ptrsx_decode_maps(m_read)?;
 
-        let filter = select_module(maps)?.iter().map(|m| (m.0..m.1)).collect();
+        let filter = select_module(maps)?
+            .into_iter()
+            .map(|(start, end, _)| (start..end))
+            .collect();
+
+        let mut spinner = Spinner::start("load ptrs cache...");
+
+        let p_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(pf)?);
         let size = depth * 2 + 9;
         let out = Path::new("./")
             .with_file_name(target.to_string())
@@ -141,13 +148,19 @@ impl SubCommandCPP {
             startpoints: None,
         };
         let engine = ptrsx_init_engine(p_read, params)?;
+
+        spinner.stop("load ptrs cache ok");
+        let mut spinner = Spinner::start("start calc ptr path...");
         engine.find_pointer_path()?;
+        spinner.stop("cacl ptr path ok");
         Ok(())
     }
 }
 
 impl SubCommandCPM {
     pub fn init(self) -> Result<()> {
+        let mut spinner = Spinner::start("create ptrs cache...");
+
         let SubCommandCPM { pid } = self;
         let proc = Process::open(pid)?;
         let app_name = proc.app_path().file_name().unwrap();
@@ -165,7 +178,7 @@ impl SubCommandCPM {
         );
 
         ptrsx_create_pointer_map(proc, p_out, m_out)?;
-
+        spinner.stop("create ptrs cache ok");
         Ok(())
     }
 }
