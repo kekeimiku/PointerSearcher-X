@@ -1,9 +1,9 @@
 use std::{
-    fs::{File, OpenOptions},
+    fs::{self, File, OpenOptions},
     io::{BufReader, BufWriter, Write},
     num::ParseIntError,
     ops::Deref,
-    path::PathBuf,
+    path::{Path, PathBuf},
     str::FromStr,
 };
 
@@ -11,7 +11,7 @@ use argh::{FromArgValue, FromArgs};
 use ptrsx::{
     consts::{Address, MAX_BUF_SIZE},
     pointer_map::{ptrsx_create_pointer_map, ptrsx_decode_maps},
-    pointer_path::{ptrsx_init_engine, PathFindParams},
+    pointer_path::{ptrsx_init_engine, Filter, PathFindParams},
 };
 use vmmap::{Pid, Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
@@ -19,6 +19,10 @@ use crate::{
     utils::{bytes_to_usize, select_module, wrap_add},
     Result, Spinner,
 };
+
+const PTRS: &str = "PTRS";
+const MAPS: &str = "MAPS";
+const DATA: &str = "DATA";
 
 #[derive(FromArgs)]
 #[argh(description = "Commands.")]
@@ -41,8 +45,6 @@ pub enum CommandEnum {
 pub struct SubCommandCPM {
     #[argh(option, short = 'p', description = "process id")]
     pub pid: Pid,
-    #[argh(option, default = "PathBuf::default()", description = "out path dir")]
-    pub dir: PathBuf,
 }
 
 #[derive(FromArgs)]
@@ -50,16 +52,12 @@ pub struct SubCommandCPM {
 pub struct SubCommandCPP {
     #[argh(option, description = "target address")]
     pub target: Target,
-    #[argh(option, description = "pointer file path")]
-    pub pf: PathBuf,
-    #[argh(option, description = "maps file path")]
-    pub mf: PathBuf,
+    #[argh(option, description = "dir")]
+    pub dir: PathBuf,
     #[argh(option, default = "7", description = "depth")]
     pub depth: usize,
     #[argh(option, default = "Offset((0, 600))", description = "offset")]
     pub offset: Offset,
-    #[argh(option, default = "PathBuf::default()", description = "out path dir")]
-    pub dir: PathBuf,
 }
 
 pub struct Target(Address);
@@ -102,11 +100,8 @@ impl Deref for Offset {
 #[derive(FromArgs)]
 #[argh(subcommand, name = "spp", description = "View `CPP` result file")]
 pub struct SubCommandSPP {
-    #[argh(option, description = "result file path")]
-    pub rf: PathBuf,
-
-    #[argh(option, description = "maps file path")]
-    pub mf: PathBuf,
+    #[argh(option, description = "dir")]
+    pub dir: PathBuf,
 
     #[argh(option, default = "30", short = 'n', description = "ppecify the number of data to view")]
     pub num: usize,
@@ -123,30 +118,44 @@ pub struct SubCommandSPV {
 
 impl SubCommandCPP {
     pub fn init(self) -> Result<()> {
-        let SubCommandCPP { target, pf, mf, depth, offset, dir } = self;
-        let m_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(mf)?);
+        let SubCommandCPP { target, dir, depth, offset } = self;
+        let m_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(dir.join(MAPS))?);
         let maps: Vec<(usize, usize, PathBuf)> = ptrsx_decode_maps(m_read)?;
-
-        let filter = select_module(maps)?
-            .into_iter()
-            .map(|(start, end, _)| (start..end))
-            .collect();
+        let select = select_module(maps.clone())?;
 
         let mut spinner = Spinner::start("load ptrs cache...");
 
-        let p_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(pf)?);
-        let size = depth * 2 + 9;
-        let out = dir.with_file_name(target.to_string()).with_extension(size.to_string());
-        let mut out =
-            BufWriter::with_capacity(MAX_BUF_SIZE, OpenOptions::new().write(true).append(true).create(true).open(out)?);
+        let p_read = BufReader::with_capacity(MAX_BUF_SIZE, File::open(dir.join(PTRS))?);
+
+        let dir = PathBuf::from(format!("{:#x}", *target));
+        fs::create_dir(&dir)?;
+
+        let mut m_out = BufWriter::with_capacity(
+            MAX_BUF_SIZE,
+            OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create(true)
+                .open(dir.join(MAPS))?,
+        );
+
+        let mut p_out = BufWriter::with_capacity(
+            MAX_BUF_SIZE,
+            OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create(true)
+                .open(dir.join(DATA))?,
+        );
 
         let params = PathFindParams {
             target: *target,
             depth,
             offset: *offset,
-            out: &mut out,
-            filter: Some(filter),
-            startpoints: None,
+            pout: &mut p_out,
+            mout: &mut m_out,
+            maps,
+            filter: Some(Filter::Range(select)),
         };
         let engine = ptrsx_init_engine(p_read, params)?;
 
@@ -162,24 +171,26 @@ impl SubCommandCPM {
     pub fn init(self) -> Result<()> {
         let mut spinner = Spinner::start("create ptrs cache...");
 
-        let SubCommandCPM { pid, dir: path } = self;
+        let SubCommandCPM { pid } = self;
 
         let proc = Process::open(pid)?;
-        let app_name = proc.app_path().file_name().unwrap();
-        let p_path = path.with_file_name(app_name).with_extension("ptrs");
-        let m_path = path.with_file_name(app_name).with_extension("maps");
+        let app_name = proc.app_path().file_name().map(Path::new).unwrap();
+        fs::create_dir(app_name)?;
+
+        let p_path = app_name.join(PTRS);
+        let m_path = app_name.join(MAPS);
 
         let p_out = BufWriter::with_capacity(
             MAX_BUF_SIZE,
             OpenOptions::new().write(true).append(true).create(true).open(p_path)?,
         );
-
         let m_out = BufWriter::with_capacity(
             MAX_BUF_SIZE,
             OpenOptions::new().write(true).append(true).create(true).open(m_path)?,
         );
 
         ptrsx_create_pointer_map(proc, p_out, m_out)?;
+
         spinner.stop("create ptrs cache ok");
         Ok(())
     }
@@ -187,14 +198,12 @@ impl SubCommandCPM {
 
 impl SubCommandSPP {
     pub fn init(self) -> Result<()> {
-        let SubCommandSPP { rf, mf, num: _ } = self;
-        let size = rf
-            .extension()
-            .and_then(|s| s.to_str().and_then(|s| s.parse::<usize>().ok()))
-            .unwrap();
+        let SubCommandSPP { dir, num: _ } = self;
 
-        let data = std::fs::read(rf)?;
-        let mf = File::open(mf)?;
+        let binding = std::fs::read(dir.join(DATA))?;
+        let (size, data) = binding.split_at(8);
+        let size = usize::from_le_bytes(size.try_into().unwrap());
+        let mf = File::open(dir.join(MAPS))?;
         let maps: Vec<(usize, usize, PathBuf)> = ptrsx_decode_maps(mf)?;
         let maps = crate::utils::merge_bases(maps);
 

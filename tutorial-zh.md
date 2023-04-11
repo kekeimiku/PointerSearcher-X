@@ -8,24 +8,24 @@
 
 ```shell
 ptrsx cpm -p (pid)
-# 这会创建两个文件
-deadcells.maps      deadcells.pointers
+# 这会创建一个目录
+deadcells
 ```
 
 假设金币地址为 0x754db988。然后我们可以直接关闭游戏。
 
 ```shell
-ptrsx cpp --target 0x754db988 --pf deadcells.pointers --mf deadcells.maps --offset 0:600 --depth 7
+ptrsx cpp --target 0x754db988 --dir deadcells --offset 0:600 --depth 7
 # 这里会提示选择哪些模块 例如 [0: deadcells] [1: steamclient.so] [2: libsteam_api.so] [3: steam.hdll] [4: libopenal.so.1] [5: openal.hdll] [6: libmbedcrypto.so.1] [7: libmbedx509.so.0] [8: libmbedtls.so.10] [9: ssl.hdll] [10: libsndio.so.6.1] [11: libSDL2-2.0.so.0] [12: sdl.hdll] [13: libuv.so.1] [14: uv.hdll] [15: libturbojpeg.so.0] [16: fmt.hdll] [17: ui.hdll] [18: libhl.so] ...
 # 我们输入对应的数字 选择多个用空格分隔 这里我选择了 deadcells 和 libhl.so，对应数字是 0 和 18
-# 执行完成后会输出一份文件
-0x754db988.23
+# 执行完成后会输出一个目标
+0x754db988
 ```
 
-0x754db988.23 就是计算结果，使用下面的命令查看结果
+0x754db988 储存的就是计算结果，使用下面的命令查看结果
 
 ```shell
-ptrsx spp --rf 0x754db988.23 --mf deadcells.maps
+ptrsx spp --dir 0x754db988
 # 输出
 libhl.so+0x27c8c0->0->64->312->664->32->136->72
 libhl.so+0x27c8c0->0->288->312->152->480->136->72
