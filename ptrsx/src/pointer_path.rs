@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, io, path::PathBuf};
+use std::{collections::BTreeMap, io, ops::Bound::Included, path::PathBuf};
 
 use crate::{
     consts::{Address, BIN_CONFIG},
@@ -63,9 +63,9 @@ pub fn ptrsx_init_engine<R: io::Read, W: io::Write>(
             }
             Filter::Range(range) => {
                 bincode::encode_into_std_write(&range, mout, BIN_CONFIG)?;
-                ptrs.keys()
-                    .copied()
-                    .filter(|a| range.iter().any(|&(start, end, _)| (start..end).contains(a)))
+                range
+                    .iter()
+                    .flat_map(|&(start, end, _)| ptrs.range((Included(start), Included(end))).map(|(&k, _)| k))
                     .collect()
             }
         },

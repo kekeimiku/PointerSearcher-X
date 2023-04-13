@@ -44,7 +44,7 @@ fn create_pointer_map<P>(proc: &P, region: &[(Address, Address)], out: &mut BTre
 where
     P: VirtualMemoryRead,
 {
-    let mut buf = vec![0; CHUNK_SIZE];
+    let mut buf = [0; CHUNK_SIZE];
     let mut arr = [0; POINTER_SIZE];
 
     'inner: for &(start, size) in region {
