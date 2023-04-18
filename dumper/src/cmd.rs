@@ -15,6 +15,7 @@ pub struct Commands {
 pub enum CommandEnum {
     WithNet(SubCommandNet),
     WithDisk(SubCommandDisk),
+    TestPtrs(SubCommandTest),
 }
 
 #[derive(FromArgs)]
@@ -23,8 +24,8 @@ pub struct SubCommandDisk {
     #[argh(option, short = 'p', description = "process id")]
     pub pid: Pid,
 
-    #[argh(option, default = "PathBuf::new()", description = "out dir path")]
-    pub dir: PathBuf,
+    #[argh(option, description = "out dir path")]
+    pub out: Option<PathBuf>,
 }
 
 #[derive(FromArgs)]
@@ -35,4 +36,14 @@ pub struct SubCommandNet {
 
     #[argh(option, description = "out url address")]
     pub url: SocketAddr,
+}
+
+#[derive(FromArgs)]
+#[argh(subcommand, name = "test", description = "test ptr path")]
+pub struct SubCommandTest {
+    #[argh(option, short = 'p', description = "process id")]
+    pub pid: Pid,
+
+    #[argh(option, description = "ptrs")]
+    pub path: String,
 }

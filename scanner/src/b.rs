@@ -1,13 +1,12 @@
 use std::{
     collections::BTreeMap,
-    fs::{File, OpenOptions},
+    fs::File,
     io,
-    io::{BufWriter, Write},
     os::unix::prelude::{FileExt, MetadataExt},
     path::Path,
 };
 
-use consts::{Address, MAX_BUF_SIZE, POINTER_SIZE};
+use consts::{Address, POINTER_SIZE};
 
 use crate::map::{Map, MapIter};
 
@@ -24,7 +23,6 @@ pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address
     let mut buf = vec![0; size];
     file.read_exact_at(&mut buf, seek)?;
     seek += size as u64;
-    println!("{}", seek);
     assert_eq!((file.metadata()?.size() - seek) % 16, 0);
 
     let m = MapIter(String::from_utf8_lossy(&buf).lines()).collect();
@@ -48,16 +46,7 @@ pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address
     Ok((map, m))
 }
 
-pub fn convert_bin_to_txt<P: AsRef<Path>>(path: P) -> io::Result<()> {
-    let mut buffer = BufWriter::with_capacity(
-        MAX_BUF_SIZE,
-        OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create(true)
-            .open(path.as_ref().with_extension("txt"))?,
-    );
-
+pub fn convert_bin_to_txt<P: AsRef<Path>, W: io::Write>(path: P, mut out: W) -> Result<(), Box<dyn std::error::Error>> {
     let file = File::open(path)?;
     let mut seek = 0;
 
@@ -86,12 +75,12 @@ pub fn convert_bin_to_txt<P: AsRef<Path>>(path: P) -> io::Result<()> {
         seek += n as u64;
 
         for bin in buf.chunks(size) {
-            let (off, path) = parse_line(bin).ok_or("err").unwrap();
+            let (off, path) = wrap_parse_line(bin)?;
             let ptr = path.map(|s| s.to_string()).collect::<Vec<_>>().join("->");
             for Map { start, end, path } in m.iter() {
                 if (start..end).contains(&&off) {
                     let name = path.file_name().unwrap().to_string_lossy();
-                    writeln!(buffer, "{name}+{:#x}->{ptr}", off - start).unwrap();
+                    writeln!(out, "{name}+{:#x}->{ptr}", off - start)?;
                 }
             }
         }
@@ -101,7 +90,12 @@ pub fn convert_bin_to_txt<P: AsRef<Path>>(path: P) -> io::Result<()> {
 }
 
 #[inline(always)]
-pub fn parse_line(bin: &[u8]) -> Option<(Address, impl Iterator<Item = i16> + '_)> {
+pub fn wrap_parse_line(bin: &[u8]) -> Result<(Address, impl Iterator<Item = i16> + '_), &'static str> {
+    parse_line(bin).ok_or("parse error")
+}
+
+#[inline(always)]
+fn parse_line(bin: &[u8]) -> Option<(Address, impl Iterator<Item = i16> + '_)> {
     let line = bin.rsplitn(2, |&n| n == 101).nth(1)?;
     let (off, path) = line.split_at(8);
     let off = Address::from_le_bytes(off.try_into().ok()?);

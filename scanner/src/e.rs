@@ -5,7 +5,7 @@ use consts::Address;
 struct WalkParams<'a, W> {
     target: Address,
     out: &'a mut W,
-    range: (usize, usize),
+    range: (Address, Address),
     lv: usize,
     max_lv: usize,
     startpoints: &'a [Address],
@@ -71,7 +71,7 @@ impl PointerSeacher {
         &self,
         target: Address,
         out: &mut W,
-        range: (usize, usize),
+        range: (Address, Address),
         depth: usize,
         size: usize,
         startpoints: &[Address],
