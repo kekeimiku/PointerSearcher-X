@@ -1,18 +1,18 @@
 [package]
-name = "cli"
+name = "dumper"
 version = "0.1.0"
 edition = "2021"
 
 [[bin]]
-name = "ptrsx-cli"
+name = "ptrsx-dumper"
 path = "src/main.rs"
 
 [dependencies.vmmap]
 path = "../vmmap"
 default-features = false
 
-[dependencies.ptrsx]
-path = "../ptrsx"
+[dependencies.consts]
+path = "../consts"
 default-features = false
 
 [dependencies.argh]

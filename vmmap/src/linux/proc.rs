@@ -7,7 +7,7 @@ use std::{
     sync::Arc,
 };
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
 
 #[derive(Clone)]
 pub struct Process<T> {
@@ -45,8 +45,8 @@ impl<T> ProcessInfo for Process<T> {
         &self.pathname
     }
 
-    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_> {
-        MapIter::new(&self.maps)
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_> {
+        Box::new(MapIter::new(&self.maps))
     }
 }
 
@@ -64,7 +64,6 @@ impl Process<Arc<File>> {
 }
 
 #[allow(dead_code)]
-#[derive(Debug, Clone)]
 pub struct Map<'a> {
     start: usize,
     end: usize,
@@ -100,19 +99,13 @@ impl VirtualQuery for Map<'_> {
         &self.flags[2..3] == "x"
     }
 
-    fn is_stack(&self) -> bool {
-        self.pathname == "[stack]"
-    }
-
-    fn is_heap(&self) -> bool {
-        self.pathname == "[heap]"
-    }
-
     fn path(&self) -> Option<&Path> {
         let path = Path::new(&self.pathname);
         path.exists().then_some(path)
     }
+}
 
+impl VirtualQueryExt for Map<'_> {
     fn name(&self) -> &str {
         self.pathname
     }

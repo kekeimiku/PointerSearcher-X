@@ -1,20 +1,17 @@
-#![allow(incomplete_features)]
-#![feature(return_position_impl_trait_in_trait)]
-
 #[cfg(target_os = "windows")]
 mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::proc::Process;
 
 #[cfg(target_os = "macos")]
-mod macos;
+pub mod macos;
 #[cfg(target_os = "macos")]
-pub use macos::proc::Process;
+pub use macos::proc::{Map, Process};
 
 #[cfg(target_os = "linux")]
-mod linux;
+pub mod linux;
 #[cfg(target_os = "linux")]
-pub use linux::proc::Process;
+pub use linux::proc::{Map, Process};
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub type Pid = i32;
@@ -46,14 +43,11 @@ pub trait VirtualQuery {
     fn is_read(&self) -> bool;
     fn is_write(&self) -> bool;
     fn is_exec(&self) -> bool;
-    fn is_stack(&self) -> bool;
-    fn is_heap(&self) -> bool;
     fn path(&self) -> Option<&Path>;
-    fn name(&self) -> &str;
 }
 
 pub trait ProcessInfo {
     fn pid(&self) -> Pid;
     fn app_path(&self) -> &Path;
-    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_>;
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_>;
 }

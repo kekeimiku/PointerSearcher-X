@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io, ops::Bound::Included};
 
-use crate::consts::Address;
+use consts::Address;
 
 struct WalkParams<'a, W> {
     target: Address,
@@ -67,7 +67,7 @@ impl PointerSeacher {
         Ok(())
     }
 
-    pub(crate) fn path_find_helpers<W>(
+    pub fn path_find_helpers<W>(
         &self,
         target: Address,
         out: &mut W,

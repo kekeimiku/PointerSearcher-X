@@ -1,57 +1,44 @@
-use std::{cmp::Ordering, collections::BTreeMap, io, path::PathBuf};
+use std::{cmp::Ordering, io};
 
+use consts::{Address, CHUNK_SIZE, POINTER_SIZE};
 use vmmap::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
-use crate::{
-    check::check_region,
-    consts::{Address, BIN_CONFIG, CHUNK_SIZE, POINTER_SIZE},
-    Result,
-};
+use super::check::check_region;
 
-pub fn ptrsx_create_pointer_map<W, P>(proc: P, mut p_out: W, mut m_out: W) -> Result<()>
+pub fn create_pointer_map_helper<W, P>(proc: P, mut out: W) -> io::Result<()>
 where
     P: ProcessInfo + VirtualMemoryRead,
     W: io::Write,
 {
-    let region = proc
-        .get_maps()
-        .filter(|m| m.is_read())
-        .filter(check_region)
-        .collect::<Vec<_>>();
+    let region = proc.get_maps().filter(check_region).collect::<Vec<_>>();
 
     let scan_region = region.iter().map(|m| (m.start(), m.size())).collect::<Vec<_>>();
-    let base_region = region
+
+    let map = region
         .into_iter()
         .filter_map(|m| Some((m.start(), m.end(), m.path().map(|f| f.to_path_buf())?)))
-        .collect::<Vec<_>>();
+        .map(|(start, end, path)| format!("{start}-{end}-{}\n", path.to_string_lossy()))
+        .collect::<String>();
 
-    bincode::encode_into_std_write(base_region, &mut m_out, BIN_CONFIG)?;
+    let size = map.len();
+    out.write_all(&size.to_le_bytes())?;
+    out.write_all(map.as_bytes())?;
 
-    let mut out = BTreeMap::new();
-
-    create_pointer_map(&proc, &scan_region, &mut out);
-
-    bincode::encode_into_std_write(out, &mut p_out, BIN_CONFIG)?;
-
-    Ok(())
+    create_pointer_map(proc, &scan_region, &mut out)
 }
 
-pub fn ptrsx_decode_maps<R: io::Read>(mut read: R) -> Result<Vec<(Address, Address, PathBuf)>> {
-    Ok(bincode::decode_from_std_read(&mut read, BIN_CONFIG)?)
-}
-
-fn create_pointer_map<P>(proc: &P, region: &[(Address, Address)], out: &mut BTreeMap<Address, Address>)
+fn create_pointer_map<P, W>(proc: P, region: &[(Address, Address)], mut out: W) -> io::Result<()>
 where
     P: VirtualMemoryRead,
+    W: io::Write,
 {
     let mut buf = [0; CHUNK_SIZE];
     let mut arr = [0; POINTER_SIZE];
 
-    'inner: for &(start, size) in region {
+    for &(start, size) in region {
         for off in (0..size).step_by(CHUNK_SIZE) {
             let Ok (size) = proc.read_at(start + off, buf.as_mut_slice()) else {
-                println!(" skip {start:#x}-{:#x} read_err",start+size);
-                break 'inner;
+                break;
             };
             for (o, buf) in buf[..size].windows(POINTER_SIZE).enumerate() {
                 let addr = start + off + o;
@@ -67,9 +54,12 @@ where
                     })
                     .is_ok()
                 {
-                    out.insert(addr, out_addr);
+                    out.write_all(&addr.to_le_bytes())?;
+                    out.write_all(&out_addr.to_le_bytes())?;
                 }
             }
         }
     }
+
+    Ok(())
 }
