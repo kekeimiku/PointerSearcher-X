@@ -97,7 +97,7 @@ impl Commands {
         }
         .find_pointer_path()?;
 
-        convert_bin_to_txt(path.with_extension("txt"))
+        convert_bin_to_txt(path)
     }
 }
 

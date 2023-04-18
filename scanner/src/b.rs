@@ -1,13 +1,13 @@
 use std::{
     collections::BTreeMap,
-    fs::File,
+    fs::{File, OpenOptions},
     io,
     io::{BufWriter, Write},
     os::unix::prelude::{FileExt, MetadataExt},
     path::Path,
 };
 
-use consts::{Address, POINTER_SIZE};
+use consts::{Address, MAX_BUF_SIZE, POINTER_SIZE};
 
 use crate::map::{Map, MapIter};
 
@@ -49,7 +49,14 @@ pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address
 }
 
 pub fn convert_bin_to_txt<P: AsRef<Path>>(path: P) -> io::Result<()> {
-    let mut buffer = BufWriter::new(std::io::stdout());
+    let mut buffer = BufWriter::with_capacity(
+        MAX_BUF_SIZE,
+        OpenOptions::new()
+            .write(true)
+            .append(true)
+            .create(true)
+            .open(path.as_ref().with_extension("txt"))?,
+    );
 
     let file = File::open(path)?;
     let mut seek = 0;
