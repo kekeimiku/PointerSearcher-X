@@ -79,7 +79,7 @@ pub fn convert_bin_to_txt<P: AsRef<Path>, W: io::Write>(path: P, mut out: W) -> 
             let ptr = path.map(|s| s.to_string()).collect::<Vec<_>>().join("->");
             for Map { start, end, path } in m.iter() {
                 if (start..end).contains(&&off) {
-                    let name = path.file_name().unwrap().to_string_lossy();
+                    let name = path.file_name().ok_or("get file name error")?.to_string_lossy();
                     writeln!(out, "{name}+{:#x}->{ptr}", off - start)?;
                 }
             }

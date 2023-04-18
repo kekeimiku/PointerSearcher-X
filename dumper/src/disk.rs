@@ -3,7 +3,7 @@ use std::{fs::OpenOptions, io::BufWriter};
 use consts::MAX_BUF_SIZE;
 use vmmap::{Process, ProcessInfo};
 
-use super::{a::create_pointer_map_helper, cmd::SubCommandDisk};
+use super::{cmd::SubCommandDisk, dump::create_pointer_map_helper};
 
 impl SubCommandDisk {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
