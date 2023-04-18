@@ -50,6 +50,7 @@ fn parse_path(path: &str) -> Option<(&str, usize, Vec<i16>, i16)> {
     Some((name, off1, offv, last))
 }
 
+#[inline(always)]
 pub fn wrap_add(u: usize, i: i16) -> Result<usize, &'static str> {
     add(u, i).ok_or("pointer overflow")
 }

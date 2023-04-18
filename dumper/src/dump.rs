@@ -40,8 +40,8 @@ where
             let Ok (size) = proc.read_at(start + off, buf.as_mut_slice()) else {
                 break;
             };
-            for (o, buf) in buf[..size].windows(POINTER_SIZE).enumerate() {
-                let addr = start + off + o;
+            for (k, buf) in buf[..size].windows(POINTER_SIZE).enumerate() {
+                let addr = start + off + k;
                 arr[0..POINTER_SIZE].copy_from_slice(buf);
                 let out_addr = Address::from_le_bytes(arr);
                 if region
