@@ -64,7 +64,7 @@ pub fn convert_bin_to_txt<P: AsRef<Path>, W: io::Write>(path: P, mut out: W) -> 
 
     assert_eq!((file.metadata()?.size() - seek) % size as u64, 0);
 
-    let m = MapIter(String::from_utf8_lossy(&mbuf).lines()).collect::<Vec<_>>();
+    let m = MapIter(String::from_utf8(mbuf)?.lines()).collect::<Vec<_>>();
     let mut buf = vec![0; size * 1000];
 
     loop {
@@ -74,12 +74,12 @@ pub fn convert_bin_to_txt<P: AsRef<Path>, W: io::Write>(path: P, mut out: W) -> 
         }
         seek += n as u64;
 
-        for bin in buf.chunks(size) {
+        for bin in buf[..n].chunks(size) {
             let (off, path) = wrap_parse_line(bin)?;
             let ptr = path.map(|s| s.to_string()).collect::<Vec<_>>().join("->");
             for Map { start, end, path } in m.iter() {
                 if (start..end).contains(&&off) {
-                    let name = path.file_name().ok_or("get file name error")?.to_string_lossy();
+                    let name = path.file_name().and_then(|f| f.to_str()).ok_or("get file name error")?;
                     writeln!(out, "{name}+{:#x}->{ptr}", off - start)?;
                 }
             }
@@ -98,8 +98,10 @@ pub fn wrap_parse_line(bin: &[u8]) -> Result<(Address, impl Iterator<Item = i16>
 fn parse_line(bin: &[u8]) -> Option<(Address, impl Iterator<Item = i16> + '_)> {
     let line = bin.rsplitn(2, |&n| n == 101).nth(1)?;
     let (off, path) = line.split_at(8);
-    let off = Address::from_le_bytes(off.try_into().ok()?);
+    // let off = Address::from_le_bytes(unsafe { *(off.as_ptr() as *const [u8; 8]) });
+    let off = Address::from_le_bytes(off.try_into().unwrap());
     let path = path.chunks(2).rev().map(|x| i16::from_le_bytes(x.try_into().unwrap()));
+    // .map(|x| i16::from_le_bytes(unsafe { *(x.as_ptr() as *const [u8; 2]) }));
 
     Some((off, path))
 }

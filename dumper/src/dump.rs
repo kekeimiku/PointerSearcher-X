@@ -17,7 +17,7 @@ where
     let map = region
         .into_iter()
         .filter_map(|m| Some((m.start(), m.end(), m.path().map(|f| f.to_path_buf())?)))
-        .map(|(start, end, path)| format!("{start}-{end}-{}\n", path.to_string_lossy()))
+        .map(|(start, end, path)| format!("{start} {end} {}\n", path.to_string_lossy()))
         .collect::<String>();
 
     let size = map.len();

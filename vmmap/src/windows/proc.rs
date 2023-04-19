@@ -19,7 +19,7 @@ use windows_sys::Win32::{
     },
 };
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
 
 #[derive(Debug, Clone)]
 pub struct Process {
@@ -99,6 +99,10 @@ impl ProcessInfo for Process {
     fn app_path(&self) -> &Path {
         &self.pathname
     }
+
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_> {
+        Box::new(MapIter::new(self.handle))
+    }
 }
 
 #[derive(Debug, Clone)]
@@ -141,14 +145,6 @@ impl VirtualQuery for Map {
         self.flags & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY) != 0
     }
 
-    fn is_stack(&self) -> bool {
-        todo!()
-    }
-
-    fn is_heap(&self) -> bool {
-        todo!()
-    }
-
     fn path(&self) -> Option<&Path> {
         self.pathname.as_deref()
     }
@@ -175,22 +171,19 @@ impl Iterator for MapIter {
 
         let mut name = self.tmp;
 
-        // 暂时先这样罢
         if unsafe { VirtualQueryEx(self.handle, self.base as *const _, basic.as_mut_ptr(), mem::size_of::<Map>()) }
             != mem::size_of::<MEMORY_BASIC_INFORMATION>()
         {
             return None;
         }
 
-        let name_size =
+        let ok =
             !unsafe { K32GetMappedFileNameW(self.handle, self.base as _, name.as_mut_ptr(), name.len() as _) }.eq(&0);
 
         let info = unsafe { basic.assume_init() };
         self.base = info.BaseAddress as usize + info.RegionSize;
 
-        let pathname = name_size.then_some(PathBuf::from(wstr_to_string(&name)));
-
-        self.tmp.fill(0);
+        let pathname = ok.then_some(PathBuf::from(wstr_to_string(&name)));
 
         Some(Map {
             start: info.BaseAddress as _,
@@ -206,3 +199,5 @@ fn wstr_to_string(full: &[u16]) -> OsString {
     let len = full.iter().position(|&x| x == 0).unwrap_or(full.len());
     OsString::from_wide(&full[..len])
 }
+
+impl VirtualQueryExt for Map {}

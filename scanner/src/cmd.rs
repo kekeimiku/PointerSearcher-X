@@ -91,7 +91,7 @@ impl SubCommandScan {
         let mut spinner = Spinner::start("Start scanning pointer path...");
         let s = select
             .iter()
-            .map(|Map { start, end, path }| format!("{start}-{end}-{}", path.to_string_lossy()))
+            .map(|Map { start, end, path }| format!("{start} {end} {}\n", path.to_string_lossy()))
             .collect::<String>();
 
         let out = match out {
