@@ -9,7 +9,7 @@ pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(map: &Q) -> bool {
         return false;
     }
 
-    if matches!(map.name(), "[stack]" | "[heap]") || check_exe(map) {
+    if matches!(map.name(), "[stack]" | "[heap]") || check_exe(map) || map.path().is_none() {
         return true;
     }
 

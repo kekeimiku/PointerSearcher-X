@@ -74,7 +74,7 @@ pub fn convert_bin_to_txt<P: AsRef<Path>, W: io::Write>(path: P, mut out: W) -> 
         }
         seek += n as u64;
 
-        for bin in buf.chunks(size) {
+        for bin in buf[..n].chunks(size) {
             let (off, path) = wrap_parse_line(bin)?;
             let ptr = path.map(|s| s.to_string()).collect::<Vec<_>>().join("->");
             for Map { start, end, path } in m.iter() {
