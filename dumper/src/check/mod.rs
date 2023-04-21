@@ -7,3 +7,8 @@ pub use linux::check_region;
 mod macos;
 #[cfg(target_os = "macos")]
 pub use macos::check_region;
+
+#[cfg(target_os = "windows")]
+mod windows;
+#[cfg(target_os = "windows")]
+pub use windows::check_region;

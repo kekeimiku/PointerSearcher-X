@@ -1,7 +1,7 @@
 #[cfg(target_os = "windows")]
-mod windows;
+pub mod windows;
 #[cfg(target_os = "windows")]
-pub use windows::proc::Process;
+pub use windows::proc::{Map, Process};
 
 #[cfg(target_os = "macos")]
 pub mod macos;

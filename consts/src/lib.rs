@@ -7,6 +7,9 @@ pub const CHUNK_SIZE: usize = 0x4000;
 #[cfg(all(target_os = "macos", target_arch = "x86_64"))]
 pub const CHUNK_SIZE: usize = 0x1000;
 
+#[cfg(all(target_os = "windows"))]
+pub const CHUNK_SIZE: usize = 0x1000;
+
 pub const POINTER_SIZE: usize = core::mem::size_of::<Address>();
 
 pub const MAX_BUF_SIZE: usize = 0x100000;
