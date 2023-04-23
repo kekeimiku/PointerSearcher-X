@@ -9,9 +9,8 @@ use std::{
     thread, time,
 };
 
+use dumper::map::Map;
 use terminal_size::{terminal_size, Height, Width};
-
-use crate::map::Map;
 
 pub fn select_module(items: Vec<Map>) -> Result<Vec<Map>, Box<dyn std::error::Error>> {
     let items = crate::utils::merge_bases(items);

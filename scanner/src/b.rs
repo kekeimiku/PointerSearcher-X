@@ -7,15 +7,12 @@ use std::{
 };
 
 use consts::{Address, POINTER_SIZE};
-
-use crate::map::{Map, MapIter};
+use dumper::map::{decode_bytes_to_maps, Map};
 
 pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address, Address>, Vec<Map>)> {
     let file = File::open(path)?;
 
     let mut seek = 0;
-    let mut map = BTreeMap::new();
-
     let mut buf = [0; 8];
     file.read_exact_at(&mut buf, seek)?;
     seek += buf.len() as u64;
@@ -25,7 +22,9 @@ pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address
     seek += size as u64;
     assert_eq!((file.metadata()?.size() - seek) % 16, 0);
 
-    let m = MapIter(String::from_utf8_lossy(&buf).lines()).collect();
+    let mut map = BTreeMap::new();
+
+    let m = decode_bytes_to_maps(&buf);
     let mut buf = [0; POINTER_SIZE * 100000];
     let chunk_size = POINTER_SIZE * 2;
 
@@ -64,7 +63,7 @@ pub fn convert_bin_to_txt<P: AsRef<Path>, W: io::Write>(path: P, mut out: W) -> 
 
     assert_eq!((file.metadata()?.size() - seek) % size as u64, 0);
 
-    let m = MapIter(String::from_utf8(mbuf)?.lines()).collect::<Vec<_>>();
+    let m = decode_bytes_to_maps(&mbuf);
     let mut buf = vec![0; size * 1000];
 
     loop {
@@ -98,7 +97,8 @@ pub fn wrap_parse_line(bin: &[u8]) -> Result<(Address, impl Iterator<Item = i16>
 fn parse_line(bin: &[u8]) -> Option<(Address, impl Iterator<Item = i16> + '_)> {
     let line = bin.rsplitn(2, |&n| n == 101).nth(1)?;
     let (off, path) = line.split_at(8);
-    // let off = Address::from_le_bytes(unsafe { *(off.as_ptr() as *const [u8; 8]) });
+    // let off = Address::from_le_bytes(unsafe { *(off.as_ptr() as *const [u8; 8])
+    // });
     let off = Address::from_le_bytes(off.try_into().unwrap());
     let path = path.chunks(2).rev().map(|x| i16::from_le_bytes(x.try_into().unwrap()));
     // .map(|x| i16::from_le_bytes(unsafe { *(x.as_ptr() as *const [u8; 2]) }));

@@ -3,7 +3,7 @@ use std::{num::ParseIntError, str::FromStr};
 use consts::{Address, POINTER_SIZE};
 use vmmap::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
-use crate::cmd::SubCommandTest;
+use super::cmd::SubCommandTest;
 
 impl SubCommandTest {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {

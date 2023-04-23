@@ -7,6 +7,10 @@ edition = "2021"
 path = "../consts"
 default-features = false
 
+[dependencies.dumper]
+path = "../dumper"
+default-features = false
+
 [dependencies.argh]
 version = "0.1.10"
 default-features = false

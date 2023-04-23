@@ -10,11 +10,11 @@ use std::{
 
 use argh::{FromArgValue, FromArgs};
 use consts::{Address, MAX_BUF_SIZE};
+use dumper::map::{encode_map_to_writer, Map};
 
 use crate::{
     b::{convert_bin_to_txt, load_pointer_map},
     e::PointerSeacher,
-    map::Map,
     utils::{select_module, Spinner},
 };
 
@@ -89,19 +89,18 @@ impl SubCommandScan {
         spinner.stop("Pointer map is created.");
 
         let mut spinner = Spinner::start("Start scanning pointer path...");
-        let s = select
-            .iter()
-            .map(|Map { start, end, path }| format!("{start} {end} {}\n", path.to_string_lossy()))
-            .collect::<String>();
 
         let out = match out {
             Some(file) => OpenOptions::new().write(true).append(true).create(true).open(file),
-            None => OpenOptions::new().write(true).append(true).create(true).open(name),
+            None => OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create(true)
+                .open(PathBuf::from(name).with_extension("bin")),
         }?;
         let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
 
-        out.write_all(&s.len().to_le_bytes())?;
-        out.write_all(s.as_bytes())?;
+        encode_map_to_writer(select, &mut out)?;
 
         PathFindEngine {
             target: target.0,

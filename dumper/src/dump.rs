@@ -3,7 +3,10 @@ use std::{cmp::Ordering, io};
 use consts::{Address, CHUNK_SIZE, POINTER_SIZE};
 use vmmap::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
-use super::check::check_region;
+use super::{
+    check::check_region,
+    map::{encode_map_to_writer, Map},
+};
 
 pub fn create_pointer_map_helper<W, P>(proc: P, mut out: W) -> io::Result<()>
 where
@@ -16,13 +19,16 @@ where
 
     let map = region
         .into_iter()
-        .filter_map(|m| Some((m.start(), m.end(), m.path().map(|f| f.to_path_buf())?)))
-        .map(|(start, end, path)| format!("{start} {end} {}\n", path.to_string_lossy()))
-        .collect::<String>();
+        .filter_map(|m| {
+            Some(Map {
+                start: m.start(),
+                end: m.end(),
+                path: m.path().map(|p| p.to_path_buf())?,
+            })
+        })
+        .collect::<Vec<_>>();
 
-    let size = map.len();
-    out.write_all(&size.to_le_bytes())?;
-    out.write_all(map.as_bytes())?;
+    encode_map_to_writer(map, &mut out)?;
 
     create_pointer_map(proc, &scan_region, &mut out)
 }

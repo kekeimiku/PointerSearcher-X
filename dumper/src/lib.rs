@@ -5,3 +5,5 @@ mod net;
 mod test;
 
 pub mod cmd;
+
+pub mod map;
