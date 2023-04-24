@@ -29,7 +29,7 @@ where
         })
         .collect::<Vec<_>>();
 
-    encode_map_to_writer(&map, &mut out)?;
+    encode_map_to_writer(map, &mut out)?;
 
     create_pointer_map(proc, &scan_region, &mut out)
 }

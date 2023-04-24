@@ -40,9 +40,9 @@ impl PointerSeacher {
             let m = iter.min_by_key(|&e| signed_diff(target, e)).unwrap_or(m);
             let off = signed_diff(target, m);
             tmp_v.push(off);
-            tmp_s.extend(m.to_le_bytes());
+            tmp_s.extend_from_slice(&m.to_le_bytes());
             let path = unsafe { core::slice::from_raw_parts(tmp_v.as_ptr() as *const u8, tmp_v.len() * 2) };
-            tmp_s.extend(path);
+            tmp_s.extend_from_slice(path);
             tmp_s.push(101);
             tmp_s.resize(tmp_s.capacity(), 0);
             out.write_all(tmp_s)?;
@@ -94,9 +94,9 @@ fn test_path_find_helpers() {
     ]);
 
     let startpoints = ptrs
-        .keys()
+        .range((Included(0x104B18000), Included(0x104B38000)))
+        .map(|(k, _)| k)
         .copied()
-        .filter(|a| (0x104B18000..0x104B38000).contains(a))
         .collect::<Vec<_>>();
 
     let target = 0x125F04080;
