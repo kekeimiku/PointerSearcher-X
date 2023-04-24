@@ -96,11 +96,11 @@ impl SubCommandScan {
                 .write(true)
                 .append(true)
                 .create(true)
-                .open(PathBuf::from(name).with_extension("bin")),
+                .open(PathBuf::from(name).with_extension(".scandata")),
         }?;
         let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
 
-        encode_map_to_writer(&select, &mut out)?;
+        encode_map_to_writer(select, &mut out)?;
 
         PathFindEngine {
             target: target.0,
