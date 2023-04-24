@@ -64,7 +64,9 @@ where
                     .is_ok()
                 {
                     // TODO big_endian, 32 bit, [u64; 2], [u8; 16] , [u32; 2], [u8; 8] ...
-                    out.write_all(&unsafe { mem::transmute::<[usize; 2], [u8; 16]>([addr, out_addr]) })?;
+                    out.write_all(&unsafe {
+                        mem::transmute::<[Address; 2], [u8; POINTER_SIZE * 2]>([addr, out_addr])
+                    })?;
                 }
             }
         }
