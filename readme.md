@@ -1,6 +1,6 @@
 # PointerSearcher-X
 
-> Memory dynamic pointer (scan/backtrack/search) tool.
+> Memory dynamic pointer chain (scan/backtrack/search) tool.
 
 ## Features:
 
