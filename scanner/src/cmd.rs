@@ -100,7 +100,7 @@ impl SubCommandScan {
         }?;
         let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
 
-        encode_map_to_writer(select, &mut out)?;
+        encode_map_to_writer(&select, &mut out)?;
 
         PathFindEngine {
             target: target.0,

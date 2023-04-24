@@ -29,7 +29,7 @@ where
         })
         .collect::<Vec<_>>();
 
-    encode_map_to_writer(map, &mut out)?;
+    encode_map_to_writer(&map, &mut out)?;
 
     create_pointer_map(proc, &scan_region, &mut out)
 }
@@ -40,7 +40,6 @@ where
     W: io::Write,
 {
     let mut buf = [0; CHUNK_SIZE];
-    let mut arr = [0; POINTER_SIZE];
 
     for &(start, size) in region {
         for off in (0..size).step_by(CHUNK_SIZE) {
@@ -49,10 +48,7 @@ where
             };
             for (k, buf) in buf[..size].windows(POINTER_SIZE).enumerate() {
                 let addr = start + off + k;
-                unsafe {
-                    core::ptr::copy_nonoverlapping(buf.as_ptr(), arr.as_mut_ptr(), arr.len());
-                };
-                let out_addr = Address::from_le_bytes(arr);
+                let out_addr = unsafe { mem::transmute::<[u8; POINTER_SIZE], Address>(*(buf.as_ptr() as *const _)) };
                 if region
                     .binary_search_by(|&(a, s)| {
                         if out_addr >= a && out_addr < a + s {

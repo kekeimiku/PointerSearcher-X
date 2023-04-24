@@ -1,6 +1,6 @@
 use std::{ffi::OsStr, io, os::unix::prelude::OsStrExt, path::PathBuf};
 
-#[derive(Default, Clone)]
+#[derive(Debug, Default, Clone, PartialEq)]
 pub struct Map {
     pub start: usize,
     pub end: usize,
@@ -8,11 +8,11 @@ pub struct Map {
 }
 
 #[inline]
-pub fn encode_map_to_writer<W: io::Write>(map: Vec<Map>, out: &mut W) -> io::Result<()> {
+pub fn encode_map_to_writer<W: io::Write>(map: &[Map], out: &mut W) -> io::Result<()> {
     let mut tmp = vec![];
     let len_b = map.len().to_le_bytes();
     tmp.extend_from_slice(&len_b);
-    for Map { start, end, path } in map.into_iter() {
+    for Map { start, end, path } in map.iter() {
         let path = path.as_os_str().as_bytes();
         let len_path_b = path.len().to_le_bytes();
         tmp.extend_from_slice(&start.to_le_bytes());
@@ -29,23 +29,16 @@ pub fn encode_map_to_writer<W: io::Write>(map: Vec<Map>, out: &mut W) -> io::Res
 pub fn decode_bytes_to_maps(bytes: &[u8]) -> Vec<Map> {
     unsafe {
         let mut i = 0;
-        let mut arr = [0; 8];
-
-        core::ptr::copy_nonoverlapping(bytes.as_ptr(), arr.as_mut_ptr(), arr.len());
-
-        let len = usize::from_le_bytes(arr);
+        let len = usize::from_le_bytes(*(bytes.as_ptr() as *const _));
         let mut maps = Vec::with_capacity(len);
         i += 8;
 
         for _ in 0..len {
-            core::ptr::copy_nonoverlapping(bytes.as_ptr().add(i), arr.as_mut_ptr(), arr.len());
-            let start = usize::from_le_bytes(arr);
+            let start = usize::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
             i += 8;
-            core::ptr::copy_nonoverlapping(bytes.as_ptr().add(i), arr.as_mut_ptr(), arr.len());
-            let end = usize::from_le_bytes(arr);
+            let end = usize::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
             i += 8;
-            core::ptr::copy_nonoverlapping(bytes.as_ptr().add(i), arr.as_mut_ptr(), arr.len());
-            let len = usize::from_le_bytes(arr);
+            let len = usize::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
             i += 8;
             let path = PathBuf::from(OsStr::from_bytes(&bytes[i..i + len]));
             i += len;
@@ -54,4 +47,18 @@ pub fn decode_bytes_to_maps(bytes: &[u8]) -> Vec<Map> {
 
         maps
     }
+}
+
+#[test]
+fn test_decode_and_encode_map() {
+    let map = vec![
+        Map { start: 1, end: 2, path: PathBuf::from("value") },
+        Map { start: 4, end: 7, path: PathBuf::from("va lue") },
+    ];
+    let mut out = vec![];
+    encode_map_to_writer(&map, &mut out).unwrap();
+
+    let d = decode_bytes_to_maps(&out[8..]);
+
+    assert_eq!(d, map)
 }
