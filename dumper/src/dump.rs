@@ -1,3 +1,4 @@
+use core::mem;
 use std::{cmp::Ordering, io};
 
 use consts::{Address, CHUNK_SIZE, POINTER_SIZE};
@@ -48,7 +49,9 @@ where
             };
             for (k, buf) in buf[..size].windows(POINTER_SIZE).enumerate() {
                 let addr = start + off + k;
-                arr[0..POINTER_SIZE].copy_from_slice(buf);
+                unsafe {
+                    core::ptr::copy_nonoverlapping(buf.as_ptr(), arr.as_mut_ptr(), arr.len());
+                };
                 let out_addr = Address::from_le_bytes(arr);
                 if region
                     .binary_search_by(|&(a, s)| {
@@ -60,8 +63,7 @@ where
                     })
                     .is_ok()
                 {
-                    out.write_all(&addr.to_le_bytes())?;
-                    out.write_all(&out_addr.to_le_bytes())?;
+                    out.write_all(&unsafe { mem::transmute::<[usize; 2], [u8; 16]>([addr, out_addr]) })?;
                 }
             }
         }

@@ -27,22 +27,31 @@ pub fn encode_map_to_writer<W: io::Write>(map: Vec<Map>, out: &mut W) -> io::Res
 
 #[inline]
 pub fn decode_bytes_to_maps(bytes: &[u8]) -> Vec<Map> {
-    let mut i = 0;
+    unsafe {
+        let mut i = 0;
+        let mut arr = [0; 8];
 
-    let len = usize::from_le_bytes(bytes[i..i + 8].try_into().unwrap());
-    let mut maps = Vec::with_capacity(len);
-    i += 8;
+        core::ptr::copy_nonoverlapping(bytes.as_ptr(), arr.as_mut_ptr(), arr.len());
 
-    for _ in 0..len {
-        let start = usize::from_le_bytes(bytes[i..i + 8].try_into().unwrap());
+        let len = usize::from_le_bytes(arr);
+        let mut maps = Vec::with_capacity(len);
         i += 8;
-        let end = usize::from_le_bytes(bytes[i..i + 8].try_into().unwrap());
-        i += 8;
-        let len = usize::from_le_bytes(bytes[i..i + 8].try_into().unwrap());
-        i += 8;
-        let path = PathBuf::from(OsStr::from_bytes(&bytes[i..i + len]));
-        i += len;
-        maps.push(Map { start, end, path });
+
+        for _ in 0..len {
+            core::ptr::copy_nonoverlapping(bytes.as_ptr().add(i), arr.as_mut_ptr(), arr.len());
+            let start = usize::from_le_bytes(arr);
+            i += 8;
+            core::ptr::copy_nonoverlapping(bytes.as_ptr().add(i), arr.as_mut_ptr(), arr.len());
+            let end = usize::from_le_bytes(arr);
+            i += 8;
+            core::ptr::copy_nonoverlapping(bytes.as_ptr().add(i), arr.as_mut_ptr(), arr.len());
+            let len = usize::from_le_bytes(arr);
+            i += 8;
+            let path = PathBuf::from(OsStr::from_bytes(&bytes[i..i + len]));
+            i += len;
+            maps.push(Map { start, end, path });
+        }
+
+        maps
     }
-    maps
 }
