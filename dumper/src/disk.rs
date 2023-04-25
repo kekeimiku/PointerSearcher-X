@@ -25,6 +25,6 @@ impl SubCommandDisk {
         }?;
         let out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
 
-        Ok(create_pointer_map_helper(proc, out)?)
+        create_pointer_map_helper(proc, out)
     }
 }

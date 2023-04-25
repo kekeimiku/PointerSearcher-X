@@ -7,7 +7,7 @@ use super::cmd::SubCommandTest;
 
 impl SubCommandTest {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
-        let SubCommandTest { pid, path } = self;
+        let SubCommandTest { pid, path, num } = self;
         let proc = Process::open(pid)?;
         let (name, off, offv, last) = wrap_parse_path(&path)?;
         let mut address = proc
@@ -24,7 +24,14 @@ impl SubCommandTest {
             address = Address::from_le_bytes(buf);
         }
 
-        println!("{:#x}", wrap_add(address, last)?);
+        let address = wrap_add(address, last)?;
+        println!("{address:#x}");
+
+        if let Some(num) = num {
+            let mut buf = vec![0; num];
+            proc.read_at(address, &mut buf)?;
+            println!("{}", buf.iter().map(|x| format!("{x:02x}")).collect::<String>());
+        }
 
         Ok(())
     }
