@@ -1,6 +1,6 @@
 [package]
 name = "vmmap"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2021"
 authors = ["kk <kekelanact@gmail.com>"]
 description = "Easy access to memory maps"
@@ -10,7 +10,7 @@ repository = "https://github.com/kekeimiku/ups"
 readme = "README.md"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.45.0"
+version = "0.48.0"
 default-features = false
 features = [
     "Win32_Foundation",
