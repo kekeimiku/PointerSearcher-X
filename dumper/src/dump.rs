@@ -9,7 +9,7 @@ use super::{
     map::{encode_map_to_writer, Map},
 };
 
-pub fn create_pointer_map_helper<W, P>(proc: P, mut out: W) -> io::Result<()>
+pub fn create_pointer_map_helper<W, P>(proc: P, mut out: W) -> Result<(), Box<dyn std::error::Error>>
 where
     P: ProcessInfo + VirtualMemoryRead,
     W: io::Write,
@@ -29,9 +29,13 @@ where
         })
         .collect::<Vec<_>>();
 
+    if map.is_empty() {
+        return Err("Error: Invalid base module.".into());
+    }
+
     encode_map_to_writer(map, &mut out)?;
 
-    create_pointer_map(proc, &scan_region, &mut out)
+    Ok(create_pointer_map(proc, &scan_region, &mut out)?)
 }
 
 fn create_pointer_map<P, W>(proc: P, region: &[(Address, Address)], mut out: W) -> io::Result<()>
