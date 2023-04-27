@@ -2,3 +2,6 @@
 build/
 Cargo.lock
 .cargo/
+build.sh
+entitlements.plist
+rust-toolchain.toml
