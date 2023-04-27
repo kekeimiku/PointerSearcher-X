@@ -46,4 +46,7 @@ pub struct SubCommandTest {
 
     #[argh(option, description = "ptrs")]
     pub path: String,
+
+    #[argh(option, short = 'n', description = "show bytes")]
+    pub num: Option<usize>,
 }
