@@ -2,3 +2,4 @@
 build/
 Cargo.lock
 .cargo/
+build.sh
