@@ -1,7 +1,7 @@
 use core::mem;
 use std::{cmp::Ordering, io};
 
-use consts::{Address, CHUNK_SIZE, POINTER_SIZE};
+use utils::consts::{Address, CHUNK_SIZE, POINTER_SIZE};
 use vmmap::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 use super::{

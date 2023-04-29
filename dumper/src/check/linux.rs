@@ -1,6 +1,6 @@
 use std::{fs::File, io::Read};
 
-use consts::EXE;
+use utils::consts::EXE;
 use vmmap::{linux::VirtualQueryExt, VirtualQuery};
 
 #[inline]

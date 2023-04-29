@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io, ops::Bound::Included};
 
-use consts::Address;
+use utils::consts::Address;
 
 struct WalkParams<'a, W> {
     target: Address,

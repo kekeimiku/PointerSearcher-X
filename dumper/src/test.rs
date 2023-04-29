@@ -1,6 +1,6 @@
 use std::{num::ParseIntError, str::FromStr};
 
-use consts::{Address, POINTER_SIZE};
+use utils::consts::{Address, POINTER_SIZE};
 use vmmap::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 use super::cmd::SubCommandTest;

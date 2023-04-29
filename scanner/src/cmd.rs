@@ -9,8 +9,8 @@ use std::{
 };
 
 use argh::{FromArgValue, FromArgs};
-use consts::{Address, MAX_BUF_SIZE};
 use dumper::map::{encode_map_to_writer, Map};
+use utils::consts::{Address, MAX_BUF_SIZE};
 
 use crate::{
     b::{convert_bin_to_txt, load_pointer_map},

@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io::BufWriter};
 
-use consts::MAX_BUF_SIZE;
+use utils::consts::MAX_BUF_SIZE;
 use vmmap::{Process, ProcessInfo};
 
 use super::{cmd::SubCommandDisk, dump::create_pointer_map_helper};
