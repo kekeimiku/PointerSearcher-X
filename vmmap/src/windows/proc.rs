@@ -6,7 +6,7 @@ use std::{
 };
 
 use windows_sys::Win32::{
-    Foundation::{GetLastError, FALSE, HANDLE, MAX_PATH},
+    Foundation::{GetLastError, FALSE, HANDLE, MAX_PATH, WIN32_ERROR},
     System::{
         Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory},
         Environment::GetCurrentDirectoryW,
@@ -14,7 +14,7 @@ use windows_sys::Win32::{
             VirtualQueryEx, MEMORY_BASIC_INFORMATION, PAGE_EXECUTE, PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE,
             PAGE_EXECUTE_WRITECOPY, PAGE_READONLY, PAGE_READWRITE, PAGE_WRITECOPY,
         },
-        ProcessStatus::K32GetMappedFileNameW,
+        ProcessStatus::GetMappedFileNameW,
         Threading::{OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE},
     },
 };
@@ -84,10 +84,6 @@ impl Process {
         let pathname = PathBuf::from(wstr_to_string(&buffer));
 
         Ok(Self { pid, handle, pathname })
-    }
-
-    pub fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + Clone + '_> {
-        MapIter::new(self.handle)
     }
 }
 
@@ -167,31 +163,37 @@ impl Iterator for MapIter {
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
-        let mut basic = mem::MaybeUninit::uninit();
+        unsafe {
+            let mut basic = mem::MaybeUninit::uninit();
 
-        let mut name = self.tmp;
+            if VirtualQueryEx(self.handle, self.base as _, basic.as_mut_ptr(), mem::size_of::<Map>())
+                != mem::size_of::<MEMORY_BASIC_INFORMATION>()
+            {
+                return None;
+            }
 
-        if unsafe { VirtualQueryEx(self.handle, self.base as *const _, basic.as_mut_ptr(), mem::size_of::<Map>()) }
-            != mem::size_of::<MEMORY_BASIC_INFORMATION>()
-        {
-            return None;
+            let pathname = get_path_name(self.handle, self.base, &mut self.tmp).ok();
+
+            let info = basic.assume_init();
+            self.base = info.BaseAddress as usize + info.RegionSize;
+
+            Some(Map {
+                start: info.BaseAddress as _,
+                size: info.RegionSize,
+                flags: info.Protect,
+                pathname,
+            })
         }
-
-        let ok =
-            !unsafe { K32GetMappedFileNameW(self.handle, self.base as _, name.as_mut_ptr(), name.len() as _) }.eq(&0);
-
-        let info = unsafe { basic.assume_init() };
-        self.base = info.BaseAddress as usize + info.RegionSize;
-
-        let pathname = ok.then_some(PathBuf::from(wstr_to_string(&name)));
-
-        Some(Map {
-            start: info.BaseAddress as _,
-            size: info.RegionSize,
-            flags: info.Protect,
-            pathname,
-        })
     }
+}
+
+#[inline(always)]
+unsafe fn get_path_name(handle: HANDLE, base: usize, buf: &mut [u16; 260]) -> Result<PathBuf, WIN32_ERROR> {
+    let result = GetMappedFileNameW(handle, base as _, buf.as_mut_ptr(), buf.len() as _);
+    if result <= 0 {
+        return Err(GetLastError());
+    }
+    Ok(PathBuf::from(wstr_to_string(&buf[..result as _])))
 }
 
 #[inline(always)]

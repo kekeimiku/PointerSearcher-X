@@ -21,3 +21,6 @@ pub const EXE: [[u8; 4]; 1] = [[0x7f, b'E', b'L', b'F']];
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub const EXE: [[u8; 4]; 2] = [[0xCA, 0xFE, 0xBA, 0xBE], [0xCF, 0xFA, 0xED, 0xFE]];
+
+#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+pub const EXE: [&str; 2] = ["exe", "dll"];

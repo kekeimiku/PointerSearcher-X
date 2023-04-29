@@ -1,13 +1,10 @@
-use std::{
-    collections::BTreeMap,
-    fs::File,
-    io,
-    os::unix::prelude::{FileExt, MetadataExt},
-    path::Path,
-};
+use std::{collections::BTreeMap, fs::File, io, path::Path};
 
-use consts::{Address, POINTER_SIZE};
 use dumper::map::{decode_bytes_to_maps, Map};
+use utils::{
+    consts::{Address, POINTER_SIZE},
+    file::{FileExt, MetadataExt},
+};
 
 pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address, Address>, Vec<Map>)> {
     let file = File::open(path)?;
@@ -97,11 +94,8 @@ pub fn wrap_parse_line(bin: &[u8]) -> Result<(Address, impl Iterator<Item = i16>
 fn parse_line(bin: &[u8]) -> Option<(Address, impl Iterator<Item = i16> + '_)> {
     let line = bin.rsplitn(2, |&n| n == 101).nth(1)?;
     let (off, path) = line.split_at(8);
-    // let off = Address::from_le_bytes(unsafe { *(off.as_ptr() as *const [u8; 8])
-    // });
     let off = Address::from_le_bytes(off.try_into().unwrap());
     let path = path.chunks(2).rev().map(|x| i16::from_le_bytes(x.try_into().unwrap()));
-    // .map(|x| i16::from_le_bytes(unsafe { *(x.as_ptr() as *const [u8; 2]) }));
 
     Some((off, path))
 }
