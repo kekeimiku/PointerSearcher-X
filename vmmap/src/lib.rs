@@ -1,3 +1,5 @@
+#![feature(return_position_impl_trait_in_trait)]
+
 #[cfg(target_os = "windows")]
 pub mod windows;
 #[cfg(target_os = "windows")]
@@ -49,5 +51,5 @@ pub trait VirtualQuery {
 pub trait ProcessInfo {
     fn pid(&self) -> Pid;
     fn app_path(&self) -> &Path;
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_>;
+    fn get_maps(&self) -> impl Iterator<Item = Map> + '_;
 }
