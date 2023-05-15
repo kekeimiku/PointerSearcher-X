@@ -145,6 +145,16 @@ fn proc_regionfilename(pid: Pid, address: u64) -> Result<Option<PathBuf>, kern_r
     unsafe {
         let mut buf: Vec<u8> = Vec::with_capacity((PROC_PIDPATHINFO_MAXSIZE - 1) as _);
         let result = libproc::proc_regionfilename(pid, address, buf.as_mut_ptr() as _, buf.capacity() as _);
+
+        // match result.cmp(&0) {
+        //     Ordering::Less => Err(result),
+        //     Ordering::Equal => Ok(None),
+        //     Ordering::Greater => {
+        //         buf.set_len(result as _);
+        //         Ok(Some(PathBuf::from(OsString::from_vec(buf))))
+        //     }
+        // }
+
         if result < 0 {
             Err(result)
         } else if result == 0 {

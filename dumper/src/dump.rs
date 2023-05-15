@@ -1,5 +1,5 @@
-use core::mem;
-use std::{cmp::Ordering, io};
+use core::{cmp::Ordering, mem};
+use std::io;
 
 use utils::consts::{Address, CHUNK_SIZE, POINTER_SIZE};
 use vmmap::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
@@ -47,7 +47,7 @@ where
 
     for &(start, size) in region {
         for off in (0..size).step_by(CHUNK_SIZE) {
-            let Ok (size) = proc.read_at(start + off, buf.as_mut_slice()) else {
+            let Ok (size) = proc.read_at((start + off) as _, buf.as_mut_slice()) else {
                 break;
             };
             for (k, buf) in buf[..size].windows(POINTER_SIZE).enumerate() {
