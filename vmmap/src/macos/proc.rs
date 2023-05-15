@@ -64,14 +64,14 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_> {
-        Box::new(MapIter::new(self.task).map(move |m| Map {
+    fn get_maps(&self) -> impl Iterator<Item = Map> + '_ {
+        MapIter::new(self.task).map(|m| Map {
             addr: m.addr,
             size: m.size,
             count: m.count,
             info: m.info,
             pathname: proc_regionfilename(self.pid, m.addr).ok().and_then(|p| p),
-        }))
+        })
     }
 }
 

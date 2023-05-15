@@ -42,8 +42,8 @@ impl<T> ProcessInfo for Process<T> {
         &self.pathname
     }
 
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_> {
-        Box::new(MapIter::new(&self.maps))
+    fn get_maps(&self) -> impl Iterator<Item = Map> + '_ {
+        MapIter::new(&self.maps)
     }
 }
 
