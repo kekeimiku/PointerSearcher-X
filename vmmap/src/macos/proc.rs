@@ -1,13 +1,13 @@
 use core::mem;
 use std::{
-    ffi::OsStr,
-    os::unix::prelude::OsStrExt,
+    ffi::OsString,
+    os::unix::prelude::OsStringExt,
     path::{Path, PathBuf},
 };
 
 use mach2::{
     kern_return::{kern_return_t, KERN_SUCCESS},
-    libproc::{self, PROC_PIDPATHINFO_MAXSIZE},
+    libproc,
     mach_types::vm_task_entry_t,
     message::mach_msg_type_number_t,
     port::{mach_port_name_t, mach_port_t, MACH_PORT_NULL},
@@ -20,7 +20,7 @@ use mach2::{
 
 use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
 
-const MAX_PATH: usize = (PROC_PIDPATHINFO_MAXSIZE - 1) as _;
+const PROC_PIDPATHINFO_MAXSIZE: usize = (libproc::PROC_PIDPATHINFO_MAXSIZE - 1) as _;
 
 #[derive(Clone)]
 pub struct Process {
@@ -32,10 +32,10 @@ pub struct Process {
 impl VirtualMemoryRead for Process {
     type Error = Error;
 
-    fn read_at(&self, address: usize, buf: &mut [u8]) -> Result<usize, Self::Error> {
+    fn read_at(&self, address: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
         let mut out = 0;
         let result =
-            unsafe { mach_vm_read_overwrite(self.task, address as _, buf.len() as _, buf.as_mut_ptr() as _, &mut out) };
+            unsafe { mach_vm_read_overwrite(self.task, address, buf.len() as _, buf.as_mut_ptr() as _, &mut out) };
         if result != KERN_SUCCESS {
             return Err(Error::ReadMemory(result));
         }
@@ -46,8 +46,8 @@ impl VirtualMemoryRead for Process {
 impl VirtualMemoryWrite for Process {
     type Error = Error;
 
-    fn write_at(&self, address: usize, buf: &[u8]) -> Result<(), Self::Error> {
-        let result = unsafe { mach_vm_write(self.task, address as _, buf.as_ptr() as _, buf.len() as _) };
+    fn write_at(&self, address: u64, buf: &[u8]) -> Result<(), Self::Error> {
+        let result = unsafe { mach_vm_write(self.task, address, buf.as_ptr() as _, buf.len() as _) };
         if result != KERN_SUCCESS {
             return Err(Error::WriteMemory(result));
         }
@@ -56,7 +56,7 @@ impl VirtualMemoryWrite for Process {
 }
 
 impl ProcessInfo for Process {
-    fn pid(&self) -> i32 {
+    fn pid(&self) -> Pid {
         self.pid
     }
 
@@ -65,13 +65,12 @@ impl ProcessInfo for Process {
     }
 
     fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_> {
-        let mut buf = [0_u8; MAX_PATH];
         Box::new(MapIter::new(self.task).map(move |m| Map {
             addr: m.addr,
             size: m.size,
             count: m.count,
             info: m.info,
-            pathname: proc_regionfilename(self.pid, m.addr, &mut buf).ok(),
+            pathname: proc_regionfilename(self.pid, m.addr).ok().and_then(|p| p),
         }))
     }
 }
@@ -82,13 +81,12 @@ impl Process {
     }
 
     fn o(pid: Pid) -> Result<Self, kern_return_t> {
-        let mut buf = [0_u8; MAX_PATH];
         let mut task: mach_port_name_t = MACH_PORT_NULL;
         let result = unsafe { task_for_pid(mach_task_self(), pid, &mut task) };
         if result != KERN_SUCCESS {
             return Err(result);
         }
-        let pathname = proc_pidpath(pid, &mut buf)?;
+        let pathname = proc_pidpath(pid)?;
         Ok(Self { pid, task, pathname })
     }
 }
@@ -143,22 +141,32 @@ impl VirtualQueryExt for Map {
 }
 
 #[inline(always)]
-fn proc_regionfilename(pid: Pid, address: u64, buf: &mut [u8]) -> Result<PathBuf, kern_return_t> {
-    let result = unsafe { libproc::proc_regionfilename(pid, address, buf.as_mut_ptr() as _, buf.len() as _) };
-    if result <= 0 {
-        Err(result)
-    } else {
-        Ok(PathBuf::from(OsStr::from_bytes(&buf[..result as _])))
+fn proc_regionfilename(pid: Pid, address: u64) -> Result<Option<PathBuf>, kern_return_t> {
+    unsafe {
+        let mut buf: Vec<u8> = Vec::with_capacity((PROC_PIDPATHINFO_MAXSIZE - 1) as _);
+        let result = libproc::proc_regionfilename(pid, address, buf.as_mut_ptr() as _, buf.capacity() as _);
+        if result < 0 {
+            Err(result)
+        } else if result == 0 {
+            Ok(None)
+        } else {
+            buf.set_len(result as _);
+            Ok(Some(PathBuf::from(OsString::from_vec(buf))))
+        }
     }
 }
 
 #[inline(always)]
-fn proc_pidpath(pid: Pid, buf: &mut [u8]) -> Result<PathBuf, kern_return_t> {
-    let result = unsafe { libproc::proc_pidpath(pid, buf.as_mut_ptr() as _, buf.len() as _) };
-    if result <= 0 {
-        Err(result)
-    } else {
-        Ok(PathBuf::from(OsStr::from_bytes(&buf[..result as _])))
+fn proc_pidpath(pid: Pid) -> Result<PathBuf, kern_return_t> {
+    unsafe {
+        let mut buf: Vec<u8> = Vec::with_capacity((PROC_PIDPATHINFO_MAXSIZE - 1) as _);
+        let result = libproc::proc_pidpath(pid, buf.as_mut_ptr() as _, buf.capacity() as _);
+        if result <= 0 {
+            Err(result)
+        } else {
+            buf.set_len(result as usize);
+            Ok(PathBuf::from(OsString::from_vec(buf)))
+        }
     }
 }
 
