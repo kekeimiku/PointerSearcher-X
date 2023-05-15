@@ -20,19 +20,16 @@ pub struct Process<T> {
 impl VirtualMemoryRead for Process<Arc<File>> {
     type Error = Error;
 
-    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, Self::Error> {
-        self.handle.read_at(buf, offset as _).map_err(Error::ReadMemory)
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        self.handle.read_at(buf, offset).map_err(Error::ReadMemory)
     }
 }
 
 impl VirtualMemoryWrite for Process<Arc<File>> {
     type Error = Error;
 
-    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<(), Self::Error> {
-        self.handle
-            .write_at(buf, offset as _)
-            .map(drop)
-            .map_err(Error::WriteMemory)
+    fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error> {
+        self.handle.write_at(buf, offset).map(drop).map_err(Error::WriteMemory)
     }
 }
 
