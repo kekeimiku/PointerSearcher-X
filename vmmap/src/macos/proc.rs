@@ -143,7 +143,7 @@ impl VirtualQueryExt for Map {
 #[inline(always)]
 fn proc_regionfilename(pid: Pid, address: u64) -> Result<Option<PathBuf>, kern_return_t> {
     unsafe {
-        let mut buf: Vec<u8> = Vec::with_capacity((PROC_PIDPATHINFO_MAXSIZE - 1) as _);
+        let mut buf: Vec<u8> = Vec::with_capacity(PROC_PIDPATHINFO_MAXSIZE);
         let result = libproc::proc_regionfilename(pid, address, buf.as_mut_ptr() as _, buf.capacity() as _);
 
         // match result.cmp(&0) {
@@ -169,7 +169,7 @@ fn proc_regionfilename(pid: Pid, address: u64) -> Result<Option<PathBuf>, kern_r
 #[inline(always)]
 fn proc_pidpath(pid: Pid) -> Result<PathBuf, kern_return_t> {
     unsafe {
-        let mut buf: Vec<u8> = Vec::with_capacity((PROC_PIDPATHINFO_MAXSIZE - 1) as _);
+        let mut buf: Vec<u8> = Vec::with_capacity(PROC_PIDPATHINFO_MAXSIZE);
         let result = libproc::proc_pidpath(pid, buf.as_mut_ptr() as _, buf.capacity() as _);
         if result <= 0 {
             Err(result)
