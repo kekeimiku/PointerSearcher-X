@@ -1,4 +1,4 @@
-use consts::EXE;
+use utils::consts::EXE;
 use vmmap::{windows::VirtualQueryExt, VirtualQuery};
 
 #[inline]

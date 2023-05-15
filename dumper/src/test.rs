@@ -20,7 +20,7 @@ impl SubCommandTest {
         let mut buf = [0; POINTER_SIZE];
 
         for off in offv {
-            proc.read_at(wrap_add(address, off)?, &mut buf)?;
+            proc.read_at(wrap_add(address, off)? as _, &mut buf)?;
             address = Address::from_le_bytes(buf);
         }
 
@@ -29,7 +29,7 @@ impl SubCommandTest {
 
         if let Some(num) = num {
             let mut buf = vec![0; num];
-            proc.read_at(address, &mut buf)?;
+            proc.read_at(address as _, &mut buf)?;
             println!("{}", buf.iter().map(|x| format!("{x:02x}")).collect::<String>());
         }
 
