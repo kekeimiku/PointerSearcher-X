@@ -5,3 +5,4 @@ Cargo.lock
 build.sh
 entitlements.plist
 rust-toolchain.toml
+ffi/main

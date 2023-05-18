@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["vmmap", "dumper", "scanner", "utils"]
+members = ["vmmap", "dumper", "scanner", "utils", "ffi", "ptrsx"]
 
 [profile.release]
 opt-level = 3
@@ -9,3 +9,4 @@ codegen-units = 1
 overflow-checks = false
 panic = "abort"
 strip = true
+debug = false
