@@ -91,11 +91,11 @@ impl SubCommandScan {
         let mut spinner = Spinner::start("Start scanning pointer path...");
 
         let out = match out {
-            Some(file) => OpenOptions::new().write(true).append(true).create(true).open(file),
+            Some(file) => OpenOptions::new().write(true).append(true).create_new(true).open(file),
             None => OpenOptions::new()
                 .write(true)
                 .append(true)
-                .create(true)
+                .create_new(true)
                 .open(PathBuf::from(name).with_extension("scandata")),
         }?;
         let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
@@ -152,7 +152,13 @@ impl SubCommandConvert {
         let SubCommandConvert { file, out } = self;
 
         let out: Box<dyn Write> = match out {
-            Some(file) => Box::new(OpenOptions::new().write(true).append(true).create(true).open(file)?) as _,
+            Some(file) => Box::new(
+                OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create_new(true)
+                    .open(file)?,
+            ) as _,
             None => Box::new(io::stdout()) as _,
         };
         let out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
@@ -183,7 +189,13 @@ impl SubCommandDiff {
         let h2 = h2.lines().collect::<HashSet<_>>();
 
         let out: Box<dyn Write> = match out {
-            Some(file) => Box::new(OpenOptions::new().write(true).append(true).create(true).open(file)?) as _,
+            Some(file) => Box::new(
+                OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create_new(true)
+                    .open(file)?,
+            ) as _,
             None => Box::new(io::stdout()) as _,
         };
         let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);

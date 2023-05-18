@@ -68,7 +68,7 @@ pub unsafe extern "C" fn ptrsx_create_pointer_map(ptr: *mut PtrsX, path: *const 
 
     let proc = &ptrsx.proc;
 
-    let file = OpenOptions::new().write(true).append(true).create(true).open(path);
+    let file = OpenOptions::new().write(true).append(true).create_new(true).open(path);
     let mut out = match file {
         Ok(f) => BufWriter::new(f),
         Err(e) => {

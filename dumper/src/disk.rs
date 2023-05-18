@@ -16,11 +16,11 @@ impl SubCommandDisk {
             .ok_or("get app_name error")?;
 
         let out = match out {
-            Some(file) => OpenOptions::new().write(true).append(true).create(true).open(file),
+            Some(file) => OpenOptions::new().write(true).append(true).create_new(true).open(file),
             None => OpenOptions::new()
                 .write(true)
                 .append(true)
-                .create(true)
+                .create_new(true)
                 .open(format!("{name}-{pid}.dump")),
         }?;
         let out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
