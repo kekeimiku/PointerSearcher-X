@@ -31,10 +31,10 @@ pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address
             break;
         }
         for b in buf.chunks(chunk_size) {
-            let (k, v) = b.split_at(POINTER_SIZE);
-            let k = Address::from_le_bytes(unsafe { *(k.as_ptr() as *const [u8; 8]) });
-            let v = Address::from_le_bytes(unsafe { *(v.as_ptr() as *const [u8; 8]) });
-            map.insert(k, v);
+            let (start_addr, end_addr) = b.split_at(POINTER_SIZE);
+            let start = Address::from_le_bytes(unsafe { *(start_addr.as_ptr() as *const [u8; 8]) });
+            let end = Address::from_le_bytes(unsafe { *(end_addr.as_ptr() as *const [u8; 8]) });
+            map.insert(start, end);
         }
         seek += size as u64;
     }

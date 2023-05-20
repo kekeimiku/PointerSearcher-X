@@ -17,3 +17,11 @@ default-features = false
 [dependencies.ptrsx]
 path = "../ptrsx"
 default-features = false
+
+[dependencies.ptrsx-scanner]
+path = "../scanner"
+default-features = false
+
+[dependencies.dumper]
+path = "../dumper"
+default-features = false
