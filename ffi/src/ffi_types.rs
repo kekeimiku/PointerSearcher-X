@@ -1,25 +1,6 @@
 use core::ffi;
 use std::ffi::CString;
 
-use ptrsx_scanner::cmd::SubCommandScan;
-
-#[repr(C)]
-pub struct ScannerArgs {}
-
-impl TryInto<ptrsx_scanner::cmd::SubCommandScan> for ScannerArgs {
-    type Error = String;
-
-    fn try_into(self) -> Result<ptrsx_scanner::cmd::SubCommandScan, Self::Error> {
-        Ok(SubCommandScan {
-            file: todo!(),
-            target: todo!(),
-            depth: todo!(),
-            offset: todo!(),
-            out: todo!(),
-        })
-    }
-}
-
 #[repr(C)]
 pub struct Addr {
     pub start: *const ffi::c_void,

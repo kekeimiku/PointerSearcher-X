@@ -1,6 +1,7 @@
 use core::ops::Bound::Included;
 use std::{
     collections::{BTreeMap, HashSet},
+    ffi::OsStr,
     fs,
     fs::OpenOptions,
     io,
@@ -70,15 +71,23 @@ pub struct SubCommandScan {
 }
 
 impl SubCommandScan {
-    pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
-        let SubCommandScan { file, target, out, depth, offset } = self;
-        let name = file.file_stem().ok_or("Get file name error")?;
-        let mut spinner = Spinner::start("Start loading cache...");
-        let (pmap, mmap) = load_pointer_map(&file)?;
-        spinner.stop("cache loaded.");
-        let select = select_module(mmap)?;
+    pub fn perform(
+        name: &OsStr,
+        (pmap, mmap): (BTreeMap<usize, usize>, Vec<Map>),
+        selected_regions: Option<Vec<Map>>,
+        target: Target,
+        out: Option<PathBuf>,
+        depth: usize,
+        offset: Offset,
+    ) -> Result<(), Box<dyn std::error::Error>> {
+        let selected_regions = if let Some(regions) = selected_regions {
+            regions
+        } else {
+            select_module(mmap)?
+        };
+
         let mut spinner = Spinner::start("Start creating pointer maps...");
-        let points = select
+        let points = selected_regions
             .iter()
             .flat_map(|Map { start, end, path: _ }| pmap.range((Included(start), Included(end))).map(|(&k, _)| k))
             .collect::<Vec<_>>();
@@ -100,7 +109,7 @@ impl SubCommandScan {
         }?;
         let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
 
-        encode_map_to_writer(select, &mut out)?;
+        encode_map_to_writer(selected_regions, &mut out)?;
 
         PathFindEngine {
             target: target.0,
@@ -114,6 +123,16 @@ impl SubCommandScan {
 
         spinner.stop("Pointer path is scanned.");
         Ok(())
+    }
+
+    pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
+        let SubCommandScan { file, target, out, depth, offset } = self;
+        let name = file.file_stem().ok_or("Get file name error")?;
+        let mut spinner = Spinner::start("Start loading cache...");
+        let map = load_pointer_map(&file)?;
+        spinner.stop("cache loaded.");
+
+        SubCommandScan::perform(name, map, None, target, out, depth, offset)
     }
 }
 
