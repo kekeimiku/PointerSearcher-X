@@ -4,7 +4,7 @@ pub mod error;
 
 use std::{
     ffi,
-    ffi::{CStr, OsStr},
+    ffi::{CStr, CString, OsStr},
     fs::{File, OpenOptions},
     io::BufWriter,
     os::unix::ffi::OsStrExt,
@@ -12,15 +12,23 @@ use std::{
     sync::Arc,
 };
 
+use dumper::map::Map;
 use error::set_last_error;
 use ptrsx::c::create_pointer_map_helper;
 use ptrsx_scanner::b::load_pointer_map;
 use vmmap::{Pid, Process};
 
+#[repr(C)]
+pub struct Addr {
+    pub start: usize,
+    pub end: usize,
+    pub path: *const ffi::c_char,
+}
+
 pub struct PtrsX {
     pub proc: Process<Arc<File>>,
     pub map: Option<Vec<dumper::map::Map>>,
-    addr_vec: Option<Vec<[*const ffi::c_void; 2]>>,
+    addr_vec: Option<Vec<Addr>>,
 }
 
 impl PtrsX {
@@ -85,14 +93,14 @@ pub unsafe extern "C" fn ptrsx_create_pointer_map(ptr: *mut PtrsX, path: *const 
     }
 }
 
-// returns read-only rust-owned array to if read without error
+// returns read-only rust-owned array if read without error
 // returns NULL if any error occured
 #[no_mangle]
 pub unsafe extern "C" fn ptrsx_load_pointer_map(
     ptr: *mut PtrsX,
     path: *const ffi::c_char,
-    length: *mut ffi::c_int,
-) -> *const [*const ffi::c_void; 2] {
+    length: *mut usize,
+) -> *const Addr {
     const C_NULL: usize = 0;
     if ptr.is_null() || path.is_null() {
         return C_NULL as _;
@@ -106,15 +114,37 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
     };
 
     match load_pointer_map(path) {
-        Ok((bmap, map)) => {
+        Ok((_, map)) => {
+            length.write(map.len() as _);
+            ptrsx.addr_vec = Some(
+                map.iter()
+                    .map(|Map { ref start, end, path }| {
+                        let path = CString::from(
+                            path.as_os_str()
+                                .as_bytes()
+                                .iter()
+                                .map(|&c| std::num::NonZeroU8::new_unchecked(c))
+                                .collect::<Vec<_>>(),
+                        )
+                        .into_raw();
+                        Addr { start: *start, end: *end, path }
+                    })
+                    .collect::<Vec<_>>(),
+            );
             ptrsx.map = Some(map);
-            length.write(bmap.len() as _);
-            ptrsx.addr_vec = Some(bmap.into_iter().map(|(a, b)| [a as _, b as _]).collect::<Vec<_>>());
             ptrsx.addr_vec.as_ref().unwrap().as_ptr()
         }
         Err(e) => {
             set_last_error(e);
             return C_NULL as _;
+        }
+    }
+}
+
+impl Drop for Addr {
+    fn drop(&mut self) {
+        unsafe {
+            let _ = CString::from_raw(self.path as _);
         }
     }
 }
