@@ -71,6 +71,13 @@ pub struct SubCommandScan {
 }
 
 impl SubCommandScan {
+    /// name: once output path is not provided, ${name}.scandata will be generated
+    /// (pmap, mmap): ...
+    /// target: target address you are intrested in
+    /// out: output path
+    /// depth: pointer search depth. 7 is generally a good choice
+    /// offset: (ahead, behind) means, for example, you have target address `p`,
+    ///     PtrSX will iterate over P.offset(-ahead) ..= P.offset(behind), for a pointer points to p
     pub fn perform(
         name: &OsStr,
         (pmap, mmap): (BTreeMap<usize, usize>, Vec<Map>),
