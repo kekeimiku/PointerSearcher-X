@@ -1,6 +1,7 @@
 #![allow(clippy::missing_safety_doc)]
 
 pub mod error;
+mod ffi_types;
 
 use std::{
     ffi,
@@ -18,17 +19,12 @@ use ptrsx::c::create_pointer_map_helper;
 use ptrsx_scanner::b::load_pointer_map;
 use vmmap::{Pid, Process};
 
-#[repr(C)]
-pub struct Addr {
-    pub start: usize,
-    pub end: usize,
-    pub path: *const ffi::c_char,
-}
+use crate::ffi_types::Addr;
 
 pub struct PtrsX {
     pub proc: Process<Arc<File>>,
     pub map: Option<Vec<dumper::map::Map>>,
-    addr_vec: Option<Vec<Addr>>,
+    addr_vec: Option<Vec<ffi_types::Addr>>,
 }
 
 impl PtrsX {
@@ -99,7 +95,7 @@ pub unsafe extern "C" fn ptrsx_create_pointer_map(ptr: *mut PtrsX, path: *const 
 pub unsafe extern "C" fn ptrsx_load_pointer_map(
     ptr: *mut PtrsX,
     path: *const ffi::c_char,
-    length: *mut usize,
+    length: *mut ffi::c_uint,
 ) -> *const Addr {
     const C_NULL: usize = 0;
     if ptr.is_null() || path.is_null() {
@@ -123,11 +119,12 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
                             path.as_os_str()
                                 .as_bytes()
                                 .iter()
+                                // on most modern OS NULL is not allowd in path; may should check
                                 .map(|&c| std::num::NonZeroU8::new_unchecked(c))
                                 .collect::<Vec<_>>(),
                         )
                         .into_raw();
-                        Addr { start: *start, end: *end, path }
+                        Addr { start: *start as _, end: *end as _, path }
                     })
                     .collect::<Vec<_>>(),
             );
@@ -137,14 +134,6 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
         Err(e) => {
             set_last_error(e);
             return C_NULL as _;
-        }
-    }
-}
-
-impl Drop for Addr {
-    fn drop(&mut self) {
-        unsafe {
-            let _ = CString::from_raw(self.path as _);
         }
     }
 }
