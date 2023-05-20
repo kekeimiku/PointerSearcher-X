@@ -6,6 +6,8 @@ use utils::{
     file::{FileExt, MetadataExt},
 };
 
+/// BTreeMap(Address, Content)
+/// Maps are VM address regions with path
 pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address, Address>, Vec<Map>)> {
     let file = File::open(path)?;
 
@@ -31,10 +33,10 @@ pub fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address
             break;
         }
         for b in buf.chunks(chunk_size) {
-            let (start_addr, end_addr) = b.split_at(POINTER_SIZE);
-            let start = Address::from_le_bytes(unsafe { *(start_addr.as_ptr() as *const [u8; 8]) });
-            let end = Address::from_le_bytes(unsafe { *(end_addr.as_ptr() as *const [u8; 8]) });
-            map.insert(start, end);
+            let (addr, content) = b.split_at(POINTER_SIZE);
+            let addr = Address::from_le_bytes(unsafe { *(addr.as_ptr() as *const [u8; 8]) });
+            let content = Address::from_le_bytes(unsafe { *(content.as_ptr() as *const [u8; 8]) });
+            map.insert(addr, content);
         }
         seek += size as u64;
     }

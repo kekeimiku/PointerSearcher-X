@@ -10,13 +10,14 @@ use std::{
     io::BufWriter,
     os::unix::ffi::OsStrExt,
     ptr,
-    sync::Arc,
+    sync::Arc, collections::BTreeMap,
 };
 
 use dumper::map::Map;
 use error::set_last_error;
 use ptrsx::c::create_pointer_map_helper;
 use ptrsx_scanner::b::load_pointer_map;
+use utils::consts::Address;
 use vmmap::{Pid, Process};
 
 use crate::ffi_types::Addr;
@@ -24,13 +25,14 @@ use crate::ffi_types::Addr;
 pub struct PtrsX {
     pub proc: Process<Arc<File>>,
     pub map: Option<Vec<dumper::map::Map>>,
+    bmap: Option<BTreeMap<Address, Address>>,
     addr_vec: Option<Vec<ffi_types::Addr>>,
 }
 
 impl PtrsX {
     pub fn init(pid: Pid) -> Result<PtrsX, vmmap::Error> {
         let proc = Process::open(pid)?;
-        Ok(Self { proc, map: None, addr_vec: None })
+        Ok(Self { proc, map: None, addr_vec: None, bmap: None })
     }
 }
 
@@ -110,7 +112,9 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
     };
 
     match load_pointer_map(path) {
-        Ok((_, map)) => {
+        Ok((bmap, map)) => {
+            ptrsx.bmap = Some(bmap);
+
             length.write(map.len() as _);
             ptrsx.addr_vec = Some(
                 map.iter()
