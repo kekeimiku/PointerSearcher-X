@@ -23,6 +23,7 @@ use ptrsx::c::create_pointer_map_helper;
 use ptrsx_scanner::{
     b::load_pointer_map,
     cmd::{Offset, SubCommandScan, Target},
+    utils::merge_bases,
 };
 use utils::consts::Address;
 use vmmap::{Pid, Process};
@@ -123,8 +124,14 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
             ptrsx.bmap = Some(bmap);
 
             length.write(map.len() as _);
+            ptrsx.map = Some(merge_bases(map));
+
             ptrsx.addr_vec = Some(
-                map.iter()
+                ptrsx
+                    .map
+                    .as_ref()
+                    .unwrap()
+                    .iter()
                     .map(|Map { ref start, end, path }| {
                         // TODO: return path with length to tell users path is not NULL-terminated
                         // and avoid unnessacary copy?
@@ -141,7 +148,6 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
                     })
                     .collect::<Vec<_>>(),
             );
-            ptrsx.map = Some(map);
             ptrsx.addr_vec.as_ref().unwrap().as_ptr()
         }
         Err(e) => {

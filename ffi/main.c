@@ -11,7 +11,7 @@ int main() {
     return -1;
   }
 
-  ptrsx_create_pointer_map(ptrsx, "test.map");
+  // ptrsx_create_pointer_map(ptrsx, "test.map");
   unsigned int region_size;
   const Addr *addrs = ptrsx_load_pointer_map(ptrsx, "test.map", &region_size);
 
@@ -26,7 +26,7 @@ int main() {
   scanf("%ju", &target_addr);
 
   int status = ptrsx_scan_pointer_path(ptrsx, "test", addrs, region_size, NULL,
-                                       7, target_addr, 0, 600);
+                                       3, target_addr, 0, 32);
   if (-3 == status) {
     int error_len = last_error_length();
     char error_msg[error_len];
