@@ -151,12 +151,14 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
     }
 }
 
-/// name: file name prefix; ignored when out is not null
-/// selected_regions: C owned array of memory regions to scan
+/// name: file name prefix, NULL-terminated C string; ignored when out is not null
+/// selected_regions: borrowed array of memory regions to scan
 /// regions_len: length for the array above
-/// output_file: C owned valid relative or absolute output path, pass NULL to
-/// use default path ${name}.scandata
-/// depth: max pointer scan depth. 7 is generally a good choice
+/// output_file: borrowed valid relative or absolute output path, pass NULL to
+///     use default path `${name}.scandata`; NULL-terminated C string
+///
+/// for other arguments, check documents of
+/// `ptrsx_scanner::cmd::SubCommandScan::perform`
 ///
 /// Errors:
 ///     -1: ptr or name is NULL
@@ -197,7 +199,6 @@ pub unsafe extern "C" fn ptrsx_scan_pointer_path(
     match SubCommandScan::perform(
         name,
         (pmap, mmap),
-        false,
         Target(target_addr),
         out,
         depth as _,

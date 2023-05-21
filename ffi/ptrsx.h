@@ -19,21 +19,30 @@ const struct Addr *ptrsx_load_pointer_map(struct PtrsX *ptr,
                                           unsigned int *length);
 
 /**
- * name: file name prefix; ignored when out is not null
- * selected_regions: C owned array of memory regions to scan
+ * name: file name prefix, NULL-terminated C string; ignored when out is not null
+ * selected_regions: borrowed array of memory regions to scan
  * regions_len: length for the array above
- * output_file: C owned valid relative or absolute output path, pass NULL to
- * use default path ${name}.scandata
- * depth: max pointer scan depth. 7 is generally a good choice
+ * output_file: borrowed valid relative or absolute output path, pass NULL to
+ *     use default path `${name}.scandata`; NULL-terminated C string
+ *
+ * for other arguments, check documents of
+ * `ptrsx_scanner::cmd::SubCommandScan::perform`
+ *
+ * Errors:
+ *     -1: ptr or name is NULL
+ *     -2: ptrsx did not load a pointer map, or those map is already consumed
+ *     -3: other rust-side errors, check error messages.
  * SAFETY: Addr.path must not modified by C-Side
  */
-void ptrsx_scan_pointer_path(const struct Addr *selected_regions,
-                             uint32_t regions_len,
-                             const char *output_file,
-                             uint32_t depth,
-                             uintptr_t target_addr,
-                             uint32_t offset_ahead,
-                             uint32_t offset_behind);
+int ptrsx_scan_pointer_path(struct PtrsX *ptr,
+                            const char *name,
+                            const struct Addr *selected_regions,
+                            uint32_t regions_len,
+                            const char *output_file,
+                            uint32_t depth,
+                            uintptr_t target_addr,
+                            uintptr_t offset_ahead,
+                            uintptr_t offset_behind);
 
 int last_error_length(void);
 

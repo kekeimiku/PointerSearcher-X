@@ -81,17 +81,12 @@ impl SubCommandScan {
     /// pointer points to p
     pub fn perform(
         name: &OsStr,
-        (pmap, mut mmap): (BTreeMap<usize, usize>, Vec<Map>),
-        select_regions: bool,
+        (pmap, mmap): (BTreeMap<usize, usize>, Vec<Map>),
         target: Target,
         out: Option<PathBuf>,
         depth: usize,
         offset: Offset,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        if select_regions {
-            mmap = select_module(mmap)?;
-        }
-
         let mut spinner = Spinner::start("Start creating pointer maps...");
         let points = mmap
             .iter()
@@ -135,10 +130,11 @@ impl SubCommandScan {
         let SubCommandScan { file, target, out, depth, offset } = self;
         let name = file.file_stem().ok_or("Get file name error")?;
         let mut spinner = Spinner::start("Start loading cache...");
-        let map = load_pointer_map(&file)?;
+        let (pmap, mmap) = load_pointer_map(&file)?;
+
         spinner.stop("cache loaded.");
 
-        SubCommandScan::perform(name, map, true, target, out, depth, offset)
+        SubCommandScan::perform(name, (pmap, select_module(mmap)?), target, out, depth, offset)
     }
 }
 
