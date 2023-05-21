@@ -6,7 +6,7 @@ use std::ffi::CString;
 pub struct Addr {
     pub start: usize,
     pub end: usize,
-    // references to ptrsx.map
+    // references to a pointer created by [`CString::into_raw`](https://stdrs.dev/nightly/x86_64-unknown-linux-gnu/std/ffi/struct.CString.html#method.into_raw)
     // SAFETY: DO NOT use after ptrsx.free()! thus results use-after-free
     pub path: *const ffi::c_char,
 }
