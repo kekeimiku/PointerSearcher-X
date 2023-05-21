@@ -6,10 +6,13 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
+use super::{
+    vmmap32::{ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt},
+    Error, Pid,
+};
 
 pub struct Process {
-    pub pid: Pid,
+    pid: Pid,
     pathname: PathBuf,
     maps: String,
     handle: File,
@@ -18,20 +21,25 @@ pub struct Process {
 impl VirtualMemoryRead for Process {
     type Error = Error;
 
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
-        self.handle.read_at(buf, offset).map_err(Error::ReadMemory)
+    fn read_at(&self, offset: u32, buf: &mut [u8]) -> Result<usize, Self::Error> {
+        self.handle.read_at(buf, offset as _).map_err(Error::ReadMemory)
     }
 }
 
 impl VirtualMemoryWrite for Process {
     type Error = Error;
 
-    fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error> {
-        self.handle.write_at(buf, offset).map(drop).map_err(Error::WriteMemory)
+    fn write_at(&self, offset: u32, buf: &[u8]) -> Result<(), Self::Error> {
+        self.handle
+            .write_at(buf, offset as _)
+            .map(drop)
+            .map_err(Error::WriteMemory)
     }
 }
 
 impl ProcessInfo for Process {
+    type Error = Error;
+
     fn pid(&self) -> Pid {
         self.pid
     }
@@ -40,7 +48,7 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> impl Iterator<Item = Page> + '_ {
+    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_> {
         PageIter::new(&self.maps)
     }
 }
@@ -59,26 +67,27 @@ impl Process {
 }
 
 #[allow(dead_code)]
-pub struct Page<'a> {
-    start: usize,
-    end: usize,
+#[derive(Debug)]
+struct Page<'a> {
+    start: u32,
+    end: u32,
     flags: &'a str,
-    offset: usize,
+    offset: u32,
     dev: &'a str,
-    inode: usize,
+    inode: u32,
     pathname: &'a str,
 }
 
 impl VirtualQuery for Page<'_> {
-    fn start(&self) -> usize {
+    fn start(&self) -> u32 {
         self.start
     }
 
-    fn end(&self) -> usize {
+    fn end(&self) -> u32 {
         self.end
     }
 
-    fn size(&self) -> usize {
+    fn size(&self) -> u32 {
         self.end - self.start
     }
 
@@ -93,11 +102,6 @@ impl VirtualQuery for Page<'_> {
     fn is_exec(&self) -> bool {
         &self.flags[2..3] == "x"
     }
-
-    fn path(&self) -> Option<&Path> {
-        let path = Path::new(&self.pathname);
-        path.exists().then_some(path)
-    }
 }
 
 impl VirtualQueryExt for Page<'_> {
@@ -106,10 +110,10 @@ impl VirtualQueryExt for Page<'_> {
     }
 }
 
-pub struct PageIter<'a>(core::str::Lines<'a>);
+struct PageIter<'a>(core::str::Lines<'a>);
 
 impl<'a> PageIter<'a> {
-    pub fn new(contents: &'a str) -> Self {
+    fn new(contents: &'a str) -> Self {
         Self(contents.lines())
     }
 }
@@ -122,10 +126,10 @@ impl<'a> Iterator for PageIter<'a> {
         let line = self.0.next()?;
         let mut split = line.splitn(6, ' ');
         let mut range_split = split.next()?.split('-');
-        let start = usize::from_str_radix(range_split.next()?, 16).ok()?;
-        let end = usize::from_str_radix(range_split.next()?, 16).ok()?;
+        let start = u32::from_str_radix(range_split.next()?, 16).ok()?;
+        let end = u32::from_str_radix(range_split.next()?, 16).ok()?;
         let flags = split.next()?;
-        let offset = usize::from_str_radix(split.next()?, 16).ok()?;
+        let offset = u32::from_str_radix(split.next()?, 16).ok()?;
         let dev = split.next()?;
         let inode = split.next()?.parse().ok()?;
         let pathname = split.next()?.trim_start();

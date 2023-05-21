@@ -1,19 +1,10 @@
 #![feature(return_position_impl_trait_in_trait)]
 
-#[cfg(target_os = "windows")]
-pub mod windows;
-#[cfg(target_os = "windows")]
-pub use windows::proc::{Map, Process};
-
 #[cfg(target_os = "macos")]
 pub mod macos;
-#[cfg(target_os = "macos")]
-pub use macos::proc::{Map, Process};
 
 #[cfg(target_os = "linux")]
 pub mod linux;
-#[cfg(target_os = "linux")]
-pub use linux::proc::{Map, Process};
 
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub type Pid = i32;
@@ -22,34 +13,96 @@ pub type Pid = i32;
 pub type Pid = u32;
 
 mod error;
-use std::path::Path;
-
 pub use error::Error;
 
-pub trait VirtualMemoryRead {
-    type Error: std::error::Error;
+pub mod vmmap64 {
+    use std::path::Path;
 
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error>;
+    #[cfg(target_os = "linux")]
+    pub use super::linux::proc64::Process;
+    #[cfg(target_os = "macos")]
+    pub use super::macos::proc64::Process;
+    use super::Pid;
+
+    pub trait VirtualMemoryRead {
+        type Error: std::error::Error;
+
+        fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error>;
+    }
+
+    pub trait VirtualMemoryWrite {
+        type Error: std::error::Error;
+
+        fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error>;
+    }
+
+    #[cfg(target_os = "macos")]
+    pub trait VirtualQueryExt {
+        fn tag(&self) -> u32;
+        fn is_reserve(&self) -> bool;
+        fn path(&self) -> Option<&Path>;
+    }
+
+    #[cfg(target_os = "linux")]
+    pub trait VirtualQueryExt {
+        fn name(&self) -> &str;
+    }
+
+    pub trait VirtualQuery: VirtualQueryExt {
+        fn start(&self) -> u64;
+        fn end(&self) -> u64;
+        fn size(&self) -> u64;
+        fn is_read(&self) -> bool;
+        fn is_write(&self) -> bool;
+        fn is_exec(&self) -> bool;
+    }
+
+    pub trait ProcessInfo {
+        fn pid(&self) -> Pid;
+        fn app_path(&self) -> &Path;
+        fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_>;
+    }
 }
 
-pub trait VirtualMemoryWrite {
-    type Error: std::error::Error;
+#[cfg(not(target_os = "macos"))]
+pub mod vmmap32 {
+    use std::path::Path;
 
-    fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error>;
-}
+    #[cfg(target_os = "linux")]
+    pub use super::linux::proc32::Process;
+    use super::Pid;
 
-pub trait VirtualQuery {
-    fn start(&self) -> usize;
-    fn end(&self) -> usize;
-    fn size(&self) -> usize;
-    fn is_read(&self) -> bool;
-    fn is_write(&self) -> bool;
-    fn is_exec(&self) -> bool;
-    fn path(&self) -> Option<&Path>;
-}
+    pub trait VirtualMemoryRead {
+        type Error: std::error::Error;
 
-pub trait ProcessInfo {
-    fn pid(&self) -> Pid;
-    fn app_path(&self) -> &Path;
-    fn get_maps(&self) -> impl Iterator<Item = Map> + '_;
+        fn read_at(&self, offset: u32, buf: &mut [u8]) -> Result<usize, Self::Error>;
+    }
+
+    pub trait VirtualMemoryWrite {
+        type Error: std::error::Error;
+
+        fn write_at(&self, offset: u32, buf: &[u8]) -> Result<(), Self::Error>;
+    }
+
+    #[cfg(target_os = "linux")]
+    pub trait VirtualQueryExt {
+        fn name(&self) -> &str;
+    }
+
+    pub trait VirtualQuery: VirtualQueryExt {
+        fn start(&self) -> u32;
+        fn end(&self) -> u32;
+        fn size(&self) -> u32;
+        fn is_read(&self) -> bool;
+        fn is_write(&self) -> bool;
+        fn is_exec(&self) -> bool;
+    }
+
+    pub trait ProcessInfo {
+        type Error: std::error::Error;
+
+        fn pid(&self) -> Pid;
+        fn app_path(&self) -> &Path;
+        fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_>;
+    }
 }
