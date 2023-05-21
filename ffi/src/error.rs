@@ -13,6 +13,12 @@ where
     });
 }
 
+pub fn set_last_boxed_error(err: Box<dyn Error>) {
+    LAST_ERROR.with(|prev| {
+        *prev.borrow_mut() = Some(err);
+    });
+}
+
 #[inline]
 fn take_last_error() -> Option<Box<dyn Error>> {
     LAST_ERROR.with(|prev| prev.borrow_mut().take())

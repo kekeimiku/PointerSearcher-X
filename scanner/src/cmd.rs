@@ -1,6 +1,7 @@
 use core::ops::Bound::Included;
 use std::{
     collections::{BTreeMap, HashSet},
+    ffi::OsStr,
     fs,
     fs::OpenOptions,
     io,
@@ -18,7 +19,7 @@ use crate::{
     utils::{select_module, Spinner},
 };
 
-pub struct Target(Address);
+pub struct Target(pub Address);
 
 impl FromArgValue for Target {
     fn from_arg_value(value: &str) -> Result<Self, String> {
@@ -28,7 +29,7 @@ impl FromArgValue for Target {
     }
 }
 
-pub struct Offset((usize, usize));
+pub struct Offset(pub (usize, usize));
 
 impl FromArgValue for Offset {
     fn from_arg_value(value: &str) -> Result<Self, String> {
@@ -70,15 +71,24 @@ pub struct SubCommandScan {
 }
 
 impl SubCommandScan {
-    pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
-        let SubCommandScan { file, target, out, depth, offset } = self;
-        let name = file.file_stem().ok_or("Get file name error")?;
-        let mut spinner = Spinner::start("Start loading cache...");
-        let (pmap, mmap) = load_pointer_map(&file)?;
-        spinner.stop("cache loaded.");
-        let select = select_module(mmap)?;
+    /// name: once output path is not provided, ${name}.scandata will be
+    /// generated (pmap, mmap): ...
+    /// target: target address you are intrested in
+    /// out: output path
+    /// depth: pointer search depth. 7 is generally a good choice
+    /// offset: (ahead, behind) means, for example, you have target address `p`,
+    ///     PtrSX will iterate over P.offset(-ahead) ..= P.offset(behind), for a
+    /// pointer points to p
+    pub fn perform(
+        name: &OsStr,
+        (pmap, mmap): (BTreeMap<usize, usize>, Vec<Map>),
+        target: Target,
+        out: Option<PathBuf>,
+        depth: usize,
+        offset: Offset,
+    ) -> Result<(), Box<dyn std::error::Error>> {
         let mut spinner = Spinner::start("Start creating pointer maps...");
-        let points = select
+        let points = mmap
             .iter()
             .flat_map(|Map { start, end, path: _ }| pmap.range((Included(start), Included(end))).map(|(&k, _)| k))
             .collect::<Vec<_>>();
@@ -100,7 +110,7 @@ impl SubCommandScan {
         }?;
         let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
 
-        encode_map_to_writer(select, &mut out)?;
+        encode_map_to_writer(mmap, &mut out)?;
 
         PathFindEngine {
             target: target.0,
@@ -114,6 +124,17 @@ impl SubCommandScan {
 
         spinner.stop("Pointer path is scanned.");
         Ok(())
+    }
+
+    pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
+        let SubCommandScan { file, target, out, depth, offset } = self;
+        let name = file.file_stem().ok_or("Get file name error")?;
+        let mut spinner = Spinner::start("Start loading cache...");
+        let (pmap, mmap) = load_pointer_map(&file)?;
+
+        spinner.stop("cache loaded.");
+
+        SubCommandScan::perform(name, (pmap, select_module(mmap)?), target, out, depth, offset)
     }
 }
 
