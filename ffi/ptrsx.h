@@ -1,42 +1,30 @@
 #include <stdint.h>
 
-typedef struct PtrsX PtrsX;
-
-typedef struct Addr {
+typedef struct FFIMap {
   uintptr_t start;
   uintptr_t end;
   const char *path;
-} Addr;
+} FFIMap;
 
-struct PtrsX *ptrsx_init(int pid);
+typedef struct PtrsXDumper PtrsXDumper;
 
-void ptrsx_free(struct PtrsX *ptr);
+struct PtrsXDumper *ptrsx_dumper_init(int pid);
 
-int ptrsx_create_pointer_map(struct PtrsX *ptr, const char *path);
+void ptrsx_dumper_free(PtrsXDumper *ptr);
 
-const struct Addr *ptrsx_load_pointer_map(struct PtrsX *ptr,
-                                          const char *path,
-                                          unsigned int *length);
+int ptrsx_create_pointer_map(PtrsXDumper *ptr, const char *path);
 
-/**
- * name: file name prefix, NULL-terminated C string; ignored when out is not
- * null selected_regions: borrowed array of memory regions to scan
- * regions_len: length for the array above
- * output_file: borrowed valid relative or absolute output path, pass NULL to
- *     use default path `${name}.scandata`; NULL-terminated C string
- *
- * for other arguments, check documents of
- * `ptrsx_scanner::cmd::SubCommandScan::perform`
- *
- * Errors:
- *     -1: ptr or name is NULL
- *     -2: ptrsx did not load a pointer map, or those map is already consumed
- *     -3: other rust-side errors, check error messages.
- * SAFETY: Addr.path must not modified by C-Side
- */
-int ptrsx_scan_pointer_path(struct PtrsX *ptr,
+typedef struct PtrsXScanner PtrsXScanner;
+
+struct PtrsXScanner *ptrsx_scanner_init(const char *path);
+
+void ptrsx_scanner_free(PtrsXScanner *ptr);
+
+const struct FFIMap *ptrsx_get_select_page(PtrsXScanner *ptr, unsigned int *len);
+
+int ptrsx_scan_pointer_path(PtrsXScanner *ptr,
                             const char *name,
-                            const struct Addr *selected_regions,
+                            const struct FFIMap *selected_regions,
                             uint32_t regions_len,
                             const char *output_file,
                             uint32_t depth,

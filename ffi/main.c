@@ -3,36 +3,36 @@
 #include <stdio.h>
 
 int main() {
-  int pid;
-  scanf("%d", &pid);
+  // int pid;
+  // scanf("%d", &pid);
 
-  PtrsX *const ptrsx = ptrsx_init(pid);
-  if (!ptrsx) {
+  // PtrsXDumper *const ptrsx_dumper = ptrsx_dumper_init(pid);
+  // if (!ptrsx_dumper) {
+  //   return -1;
+  // }
+
+  // ptrsx_create_pointer_map(ptrsx_dumper, "test.map");
+  // ptrsx_dumper_free(ptrsx_dumper);
+
+  PtrsXScanner *ptrsx_scanner = ptrsx_scanner_init("test.map");
+  if (!ptrsx_scanner) {
     return -1;
   }
 
-  ptrsx_create_pointer_map(ptrsx, "test.map");
   unsigned int region_size;
-  const Addr *addrs = ptrsx_load_pointer_map(ptrsx, "test.map", &region_size);
+  const FFIMap *maps = ptrsx_get_select_page(ptrsx_scanner, &region_size);
 
-  if (!addrs) {
-    printf("pointer map load failed!\n");
-    return -1;
-  } else {
-    printf("pointer map loaded!\n");
-  }
+  printf("%d\n", region_size);
+  printf("%s",maps->path);
+  printf("start %ld \n", maps->start);
 
-  uintptr_t target_addr;
-  scanf("%jx", &target_addr);
-  printf("got target addr: %jx\n", target_addr);
-
-  int status = ptrsx_scan_pointer_path(ptrsx, "test", addrs, region_size, NULL,
-                                       3, target_addr, 0, 32);
-  if (-3 == status) {
+  int status = ptrsx_scan_pointer_path(ptrsx_scanner, "test", maps, region_size,
+                                       NULL, 3, 0x7f6fff2b5058, 0, 32);
+  if (status != 0) {
     int error_len = last_error_length();
     char error_msg[error_len];
     last_error_message(error_msg, error_len);
     printf("error occured in scanning: %s\n", error_msg);
   }
-  ptrsx_free(ptrsx);
+  ptrsx_scanner_free(ptrsx_scanner);
 }

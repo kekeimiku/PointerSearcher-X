@@ -9,7 +9,7 @@ use std::{
     thread, time,
 };
 
-use dumper::map::Map;
+use ptrsx::map::Map;
 use terminal_size::{terminal_size, Height, Width};
 
 pub fn select_module(items: Vec<Map>) -> Result<Vec<Map>, Box<dyn std::error::Error>> {

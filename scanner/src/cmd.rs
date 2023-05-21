@@ -10,7 +10,7 @@ use std::{
 };
 
 use argh::{FromArgValue, FromArgs};
-use dumper::map::{encode_map_to_writer, Map};
+use ptrsx::map::{encode_map_to_writer, Map};
 use utils::consts::{Address, MAX_BUF_SIZE};
 
 use crate::{
@@ -90,7 +90,7 @@ impl SubCommandScan {
         let mut spinner = Spinner::start("Start creating pointer maps...");
         let points = mmap
             .iter()
-            .flat_map(|Map { start, end, path: _ }| pmap.range((Included(start), Included(end))).map(|(&k, _)| k))
+            .flat_map(|Map { start, end, .. }| pmap.range((Included(start), Included(end))).map(|(&k, _)| k))
             .collect::<Vec<_>>();
         let mut map: BTreeMap<Address, Vec<Address>> = BTreeMap::new();
         for (k, v) in pmap {

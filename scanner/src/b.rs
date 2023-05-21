@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, fs::File, io, path::Path};
 
-use dumper::map::{decode_bytes_to_maps, Map};
+use ptrsx::map::{decode_bytes_to_maps, Map};
 use utils::{
     consts::{Address, POINTER_SIZE},
     file::{FileExt, MetadataExt},
