@@ -19,8 +19,8 @@ const struct Addr *ptrsx_load_pointer_map(struct PtrsX *ptr,
                                           unsigned int *length);
 
 /**
- * name: file name prefix, NULL-terminated C string; ignored when out is not null
- * selected_regions: borrowed array of memory regions to scan
+ * name: file name prefix, NULL-terminated C string; ignored when out is not
+ * null selected_regions: borrowed array of memory regions to scan
  * regions_len: length for the array above
  * output_file: borrowed valid relative or absolute output path, pass NULL to
  *     use default path `${name}.scandata`; NULL-terminated C string
