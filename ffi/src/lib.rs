@@ -7,14 +7,13 @@ use std::{
     collections::BTreeMap,
     ffi,
     ffi::{CStr, CString, OsStr},
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     io::BufWriter,
     mem::take,
     os::unix::ffi::OsStrExt,
     path::PathBuf,
     ptr::{self, NonNull},
     slice,
-    sync::Arc,
 };
 
 use dumper::map::Map;
@@ -31,7 +30,7 @@ use vmmap::{Pid, Process};
 use crate::ffi_types::Addr;
 
 pub struct PtrsX {
-    pub proc: Process<Arc<File>>,
+    pub proc: Process,
     pub map: Option<Vec<dumper::map::Map>>,
     bmap: Option<BTreeMap<Address, Address>>,
     addr_vec: Option<Vec<ffi_types::Addr>>,
@@ -152,7 +151,7 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
         }
         Err(e) => {
             set_last_error(e);
-            return C_NULL as _;
+            C_NULL as _
         }
     }
 }
