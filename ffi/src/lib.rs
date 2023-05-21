@@ -4,19 +4,26 @@ pub mod error;
 mod ffi_types;
 
 use std::{
+    collections::BTreeMap,
     ffi,
     ffi::{CStr, CString, OsStr},
     fs::{File, OpenOptions},
     io::BufWriter,
+    mem::take,
     os::unix::ffi::OsStrExt,
-    ptr,
-    sync::Arc, collections::BTreeMap,
+    path::PathBuf,
+    ptr::{self, NonNull},
+    slice,
+    sync::Arc,
 };
 
 use dumper::map::Map;
-use error::set_last_error;
+use error::{set_last_boxed_error, set_last_error};
 use ptrsx::c::create_pointer_map_helper;
-use ptrsx_scanner::b::load_pointer_map;
+use ptrsx_scanner::{
+    b::load_pointer_map,
+    cmd::{Offset, SubCommandScan, Target},
+};
 use utils::consts::Address;
 use vmmap::{Pid, Process};
 
@@ -128,7 +135,7 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
                                 .collect::<Vec<_>>(),
                         )
                         .into_raw();
-                        Addr { start: *start as _, end: *end as _, path }
+                        Addr { start: *start, end: *end, path }
                     })
                     .collect::<Vec<_>>(),
             );
@@ -138,6 +145,66 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
         Err(e) => {
             set_last_error(e);
             return C_NULL as _;
+        }
+    }
+}
+
+/// name: file name prefix; ignored when out is not null
+/// selected_regions: C owned array of memory regions to scan
+/// regions_len: length for the array above
+/// output_file: C owned valid relative or absolute output path, pass NULL to
+/// use default path ${name}.scandata
+/// depth: max pointer scan depth. 7 is generally a good choice
+///
+/// Errors:
+///     -1: ptr or name is NULL
+///     -2: ptrsx did not load a pointer map, or those map is already consumed
+///     -3: other rust-side errors, check error messages.
+/// SAFETY: Addr.path must not modified by C-Side
+#[no_mangle]
+pub unsafe extern "C" fn ptrsx_scan_pointer_path(
+    ptr: *mut PtrsX,
+    name: *const ffi::c_char,
+    selected_regions: *const Addr,
+    regions_len: u32,
+    output_file: *const ffi::c_char,
+    depth: u32,
+    target_addr: usize,
+    offset_ahead: usize,
+    offset_behind: usize,
+) -> ffi::c_int {
+    if ptr.is_null() || name.is_null() {
+        return -1;
+    }
+
+    let ptrsx = { &mut *ptr };
+
+    let Some((pmap, mmap)) = take(&mut ptrsx.bmap).zip(take(&mut ptrsx.map)) else {
+        return -2;
+    };
+
+    let name = OsStr::from_bytes(CStr::from_ptr(name).to_bytes());
+
+    let selected_regions = slice::from_raw_parts(selected_regions, regions_len as _)
+        .iter()
+        .map(|addr| addr.into())
+        .collect::<Vec<Map>>();
+    let out = NonNull::new(output_file as *mut ffi::c_char)
+        .map(|p| PathBuf::from(OsStr::from_bytes(CStr::from_ptr(p.as_ptr() as _).to_bytes())));
+
+    match SubCommandScan::perform(
+        name,
+        (pmap, mmap),
+        Some(selected_regions),
+        Target(target_addr),
+        out,
+        depth as _,
+        Offset((offset_ahead, offset_behind)),
+    ) {
+        Ok(()) => 0,
+        Err(e) => {
+            set_last_boxed_error(e);
+            -2
         }
     }
 }
