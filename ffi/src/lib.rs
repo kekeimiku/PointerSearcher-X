@@ -151,8 +151,8 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
     }
 }
 
-/// name: file name prefix, NULL-terminated C string; ignored when out is not null
-/// selected_regions: borrowed array of memory regions to scan
+/// name: file name prefix, NULL-terminated C string; ignored when out is not
+/// null selected_regions: borrowed array of memory regions to scan
 /// regions_len: length for the array above
 /// output_file: borrowed valid relative or absolute output path, pass NULL to
 ///     use default path `${name}.scandata`; NULL-terminated C string
@@ -190,8 +190,15 @@ pub unsafe extern "C" fn ptrsx_scan_pointer_path(
     let name = OsStr::from_bytes(CStr::from_ptr(name).to_bytes());
 
     let selected_regions = slice::from_raw_parts(selected_regions, regions_len as _);
-
-    mmap.retain(|m| selected_regions.iter().any(|Addr { start, .. }| start == &m.start));
+    #[cfg(not(feature = "fxhashmap"))]
+    {
+        mmap.retain(|m| selected_regions.iter().any(|Addr { start, .. }| start == &m.start));
+    }
+    #[cfg(feature = "fxhashmap")]
+    {
+        let start_addr_set = rustc_hash::FxHashSet::from_iter(selected_regions.iter().map(|addr| addr.start));
+        mmap.retain(|m| start_addr_set.contains(&m.start));
+    }
 
     let out = NonNull::new(output_file as *mut ffi::c_char)
         .map(|p| PathBuf::from(OsStr::from_bytes(CStr::from_ptr(p.as_ptr() as _).to_bytes())));
