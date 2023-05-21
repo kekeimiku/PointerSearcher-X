@@ -126,6 +126,8 @@ pub unsafe extern "C" fn ptrsx_load_pointer_map(
             ptrsx.addr_vec = Some(
                 map.iter()
                     .map(|Map { ref start, end, path }| {
+                        // TODO: return path with length to tell users path is not NULL-terminated
+                        // and avoid unnessacary copy?
                         let path = CString::from(
                             path.as_os_str()
                                 .as_bytes()
@@ -179,23 +181,23 @@ pub unsafe extern "C" fn ptrsx_scan_pointer_path(
 
     let ptrsx = { &mut *ptr };
 
-    let Some((pmap, mmap)) = take(&mut ptrsx.bmap).zip(take(&mut ptrsx.map)) else {
+    let Some((pmap, mut mmap)) = take(&mut ptrsx.bmap).zip(take(&mut ptrsx.map)) else {
         return -2;
     };
 
     let name = OsStr::from_bytes(CStr::from_ptr(name).to_bytes());
 
-    let selected_regions = slice::from_raw_parts(selected_regions, regions_len as _)
-        .iter()
-        .map(|addr| addr.into())
-        .collect::<Vec<Map>>();
+    let selected_regions = slice::from_raw_parts(selected_regions, regions_len as _);
+
+    mmap.retain(|m| selected_regions.iter().any(|Addr { start, .. }| start == &m.start));
+
     let out = NonNull::new(output_file as *mut ffi::c_char)
         .map(|p| PathBuf::from(OsStr::from_bytes(CStr::from_ptr(p.as_ptr() as _).to_bytes())));
 
     match SubCommandScan::perform(
         name,
         (pmap, mmap),
-        Some(selected_regions),
+        false,
         Target(target_addr),
         out,
         depth as _,

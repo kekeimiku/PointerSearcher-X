@@ -1,11 +1,5 @@
 use core::ffi;
-use std::{
-    ffi::{CStr, CString, OsStr},
-    os::unix::prelude::OsStrExt,
-    path::PathBuf,
-};
-
-use dumper::map::Map;
+use std::ffi::CString;
 
 #[repr(C)]
 #[derive(Clone)]
@@ -21,16 +15,6 @@ impl Drop for Addr {
     fn drop(&mut self) {
         unsafe {
             let _ = CString::from_raw(self.path as _);
-        }
-    }
-}
-
-impl Into<Map> for &Addr {
-    fn into(self) -> Map {
-        Map {
-            start: self.start,
-            end: self.end,
-            path: PathBuf::from(OsStr::from_bytes(unsafe { CStr::from_ptr(self.path) }.to_bytes())),
         }
     }
 }
