@@ -99,7 +99,6 @@ pub unsafe extern "C" fn ptrsx_scan_pointer_path(
 
     let selected_regions = slice::from_raw_parts(selected_regions, regions_len as _);
     mmap.retain(|m| selected_regions.iter().any(|FFIMap { start, .. }| start == &m.start));
-    println!("{:?}", selected_regions);
 
     let out = NonNull::new(output_file as *mut ffi::c_char)
         .map(|p| PathBuf::from(OsStr::from_bytes(CStr::from_ptr(p.as_ptr() as _).to_bytes())));

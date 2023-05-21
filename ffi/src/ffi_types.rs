@@ -31,8 +31,6 @@ pub unsafe fn rsmap_to_ffimap(map: &Map) -> FFIMap {
             .collect::<Vec<_>>(),
     );
 
-    println!("{:?}", path);
-
     let path = path.into_raw();
 
     FFIMap { start: map.start, end: map.end, path }
