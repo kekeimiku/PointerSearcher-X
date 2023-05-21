@@ -81,21 +81,19 @@ impl SubCommandScan {
     /// pointer points to p
     pub fn perform(
         name: &OsStr,
-        (pmap, mmap): (BTreeMap<usize, usize>, Vec<Map>),
-        selected_regions: Option<Vec<Map>>,
+        (pmap, mut mmap): (BTreeMap<usize, usize>, Vec<Map>),
+        select_regions: bool,
         target: Target,
         out: Option<PathBuf>,
         depth: usize,
         offset: Offset,
     ) -> Result<(), Box<dyn std::error::Error>> {
-        let selected_regions = if let Some(regions) = selected_regions {
-            regions
-        } else {
-            select_module(mmap)?
-        };
+        if select_regions {
+            mmap = select_module(mmap)?;
+        }
 
         let mut spinner = Spinner::start("Start creating pointer maps...");
-        let points = selected_regions
+        let points = mmap
             .iter()
             .flat_map(|Map { start, end, path: _ }| pmap.range((Included(start), Included(end))).map(|(&k, _)| k))
             .collect::<Vec<_>>();
@@ -117,7 +115,7 @@ impl SubCommandScan {
         }?;
         let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
 
-        encode_map_to_writer(selected_regions, &mut out)?;
+        encode_map_to_writer(mmap, &mut out)?;
 
         PathFindEngine {
             target: target.0,
@@ -140,7 +138,7 @@ impl SubCommandScan {
         let map = load_pointer_map(&file)?;
         spinner.stop("cache loaded.");
 
-        SubCommandScan::perform(name, map, None, target, out, depth, offset)
+        SubCommandScan::perform(name, map, true, target, out, depth, offset)
     }
 }
 
