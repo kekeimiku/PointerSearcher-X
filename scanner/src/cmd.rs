@@ -19,7 +19,7 @@ use crate::{
     utils::{select_module, Spinner},
 };
 
-pub struct Target(Address);
+pub struct Target(pub Address);
 
 impl FromArgValue for Target {
     fn from_arg_value(value: &str) -> Result<Self, String> {
@@ -29,7 +29,7 @@ impl FromArgValue for Target {
     }
 }
 
-pub struct Offset((usize, usize));
+pub struct Offset(pub (usize, usize));
 
 impl FromArgValue for Offset {
     fn from_arg_value(value: &str) -> Result<Self, String> {
@@ -71,13 +71,14 @@ pub struct SubCommandScan {
 }
 
 impl SubCommandScan {
-    /// name: once output path is not provided, ${name}.scandata will be generated
-    /// (pmap, mmap): ...
+    /// name: once output path is not provided, ${name}.scandata will be
+    /// generated (pmap, mmap): ...
     /// target: target address you are intrested in
     /// out: output path
     /// depth: pointer search depth. 7 is generally a good choice
     /// offset: (ahead, behind) means, for example, you have target address `p`,
-    ///     PtrSX will iterate over P.offset(-ahead) ..= P.offset(behind), for a pointer points to p
+    ///     PtrSX will iterate over P.offset(-ahead) ..= P.offset(behind), for a
+    /// pointer points to p
     pub fn perform(
         name: &OsStr,
         (pmap, mmap): (BTreeMap<usize, usize>, Vec<Map>),
