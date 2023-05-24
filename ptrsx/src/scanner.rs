@@ -2,27 +2,69 @@ use std::{
     collections::BTreeMap,
     fs::File,
     io,
+    ops::Bound::Included,
     os::unix::prelude::{FileExt, MetadataExt},
     path::Path,
 };
 
 use utils::consts::{Address, POINTER_SIZE};
 
-use crate::map::{decode_bytes_to_maps, Map};
+use crate::{
+    e::PointerSeacher,
+    map::{decode_bytes_to_maps, Map},
+};
 
 pub struct PtrsXScanner {
-    pub map: Vec<Map>,
+    pub pages: Vec<Map>,
     pub bmap: BTreeMap<Address, Address>,
 }
 
 impl PtrsXScanner {
     pub fn init<P: AsRef<Path>>(path: P) -> Result<Self, std::io::Error> {
         let (bmap, map) = load_pointer_map(path)?;
-        Ok(Self { map, bmap })
+        Ok(Self { pages: map, bmap })
     }
 
-    pub fn map(&self) -> &[Map] {
-        &self.map
+    pub fn pages(&self) -> &[Map] {
+        &self.pages
+    }
+
+    pub fn range_address<'a>(&'a self, pages: &'a [Map]) -> impl Iterator<Item = Address> + 'a {
+        pages
+            .iter()
+            .flat_map(|Map { start, end, .. }| self.bmap.range((Included(start), Included(end))).map(|(&k, _)| k))
+    }
+
+    pub fn default_address(&self) -> impl Iterator<Item = Address> + '_ {
+        self.bmap.iter().map(|(&k, _)| k)
+    }
+
+    pub fn rev_pointer_map(self) -> BTreeMap<Address, Vec<Address>> {
+        self.bmap.into_iter().fold(BTreeMap::new(), |mut acc, (k, v)| {
+            acc.entry(v).or_default().push(k);
+            acc
+        })
+    }
+}
+
+pub struct PathFindEngine<'a, W> {
+    target: Address,
+    depth: usize,
+    offset: (usize, usize),
+    out: &'a mut W,
+    startpoints: Vec<Address>,
+    engine: PointerSeacher,
+}
+
+impl<W> PathFindEngine<'_, W>
+where
+    W: io::Write,
+{
+    pub fn find_pointer_path(self) -> io::Result<()> {
+        let PathFindEngine { target, depth, offset, out, engine, startpoints } = self;
+        let size = depth * 2 + 9;
+        out.write_all(&size.to_le_bytes())?;
+        engine.path_find_helpers(target, out, offset, depth, size, &startpoints)
     }
 }
 

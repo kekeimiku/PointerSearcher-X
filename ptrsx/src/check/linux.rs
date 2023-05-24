@@ -27,10 +27,7 @@ fn check_exe<Q: VirtualQuery>(map: &Q) -> bool {
     }
 
     let mut header = [0; 4];
-    if let Ok(mut file) = File::open(path) {
-        if file.read_exact(&mut header).is_ok() {
-            return EXE.contains(&header);
-        }
-    }
-    false
+    File::open(path)
+        .and_then(|mut f| f.read_exact(&mut header))
+        .map_or(false, |_| EXE.contains(&header))
 }

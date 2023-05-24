@@ -22,7 +22,6 @@ use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, Virt
 
 const PROC_PIDPATHINFO_MAXSIZE: usize = (libproc::PROC_PIDPATHINFO_MAXSIZE - 1) as _;
 
-#[derive(Clone)]
 pub struct Process {
     pid: Pid,
     task: mach_port_t,

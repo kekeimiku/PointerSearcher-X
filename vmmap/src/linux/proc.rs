@@ -4,20 +4,18 @@ use std::{
     io,
     os::unix::prelude::FileExt,
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
 
-#[derive(Clone)]
-pub struct Process<T> {
+pub struct Process {
     pub pid: Pid,
     pathname: PathBuf,
     maps: String,
-    handle: T,
+    handle: File,
 }
 
-impl VirtualMemoryRead for Process<Arc<File>> {
+impl VirtualMemoryRead for Process {
     type Error = Error;
 
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
@@ -25,7 +23,7 @@ impl VirtualMemoryRead for Process<Arc<File>> {
     }
 }
 
-impl VirtualMemoryWrite for Process<Arc<File>> {
+impl VirtualMemoryWrite for Process {
     type Error = Error;
 
     fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error> {
@@ -33,7 +31,7 @@ impl VirtualMemoryWrite for Process<Arc<File>> {
     }
 }
 
-impl<T> ProcessInfo for Process<T> {
+impl ProcessInfo for Process {
     fn pid(&self) -> Pid {
         self.pid
     }
@@ -47,7 +45,7 @@ impl<T> ProcessInfo for Process<T> {
     }
 }
 
-impl Process<Arc<File>> {
+impl Process {
     pub fn open(pid: Pid) -> Result<Self, Error> {
         Self::o(pid).map_err(Error::OpenProcess)
     }
@@ -55,7 +53,7 @@ impl Process<Arc<File>> {
     fn o(pid: Pid) -> Result<Self, io::Error> {
         let maps = fs::read_to_string(format!("/proc/{pid}/maps"))?;
         let pathname = fs::read_link(format!("/proc/{pid}/exe"))?;
-        let handle = Arc::new(File::open(format!("/proc/{pid}/mem"))?);
+        let handle = File::open(format!("/proc/{pid}/mem"))?;
         Ok(Self { pid, pathname, maps, handle })
     }
 }

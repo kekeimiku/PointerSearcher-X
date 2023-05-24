@@ -53,7 +53,7 @@ pub unsafe extern "C" fn ptrsx_get_select_page(ptr: *mut PtrsXScanner, len: *mut
     }
 
     let ptrsx = { &mut *ptr };
-    let mut ffimap = ptrsx.map().iter().map(|m| rsmap_to_ffimap(m)).collect::<Vec<_>>();
+    let mut ffimap = ptrsx.pages().iter().map(|m| rsmap_to_ffimap(m)).collect::<Vec<_>>();
     len.write(ffimap.len() as _);
     let ptr = ffimap.as_mut_ptr();
     std::mem::forget(ffimap);
@@ -93,7 +93,7 @@ pub unsafe extern "C" fn ptrsx_scan_pointer_path(
     let ptrsx = { &mut *ptr };
 
     let pmap = take(&mut ptrsx.bmap);
-    let mut mmap = take(&mut ptrsx.map);
+    let mut mmap = take(&mut ptrsx.pages);
 
     let name = OsStr::from_bytes(CStr::from_ptr(name).to_bytes());
 
