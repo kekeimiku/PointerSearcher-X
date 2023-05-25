@@ -10,7 +10,8 @@ use std::{
 use argh::{FromArgValue, FromArgs};
 use ptrsx::{
     consts::{Address, MAX_BUF_SIZE},
-    scanner::ScannerParm, dumper::merge_bases,
+    dumper::merge_bases,
+    scanner::ScannerParm,
 };
 
 use crate::{
