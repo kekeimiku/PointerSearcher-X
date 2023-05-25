@@ -7,6 +7,8 @@ use std::{
     path::Path,
 };
 
+use rayon::prelude::{IntoParallelRefIterator, ParallelIterator};
+
 use super::{
     consts::{Address, POINTER_SIZE},
     map::{decode_bytes_to_maps, Page},
@@ -98,26 +100,26 @@ impl PtrsXScanner {
         let ScannerParm { ref target, depth, offset, pages } = parms;
         let pointer_map = self.rev_pointer_map();
 
-        for (Page { start, path, .. }, startpoints) in pages
-            .iter()
+        pages
+            .par_iter()
             .map(|page| (page, self.range_address(page).collect::<Vec<_>>()))
-        {
-            let name = path.file_name().and_then(|f| f.to_str()).unwrap();
-            let path = path.as_os_str().as_bytes();
-            let file = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create_new(true)
-                .open(format!("{target:x}-{name}.scandata"))?;
-            let mut writer = BufWriter::new(file);
-            let size = depth * 2 + 9;
-            writer.write_all(&MODEL1)?;
-            writer.write_all(&size.to_le_bytes())?;
-            writer.write_all(&path.len().to_le_bytes())?;
-            writer.write_all(path)?;
-            let pointer_search = PointerSeacher(&pointer_map);
-            pointer_search.path_find_helpers(*target, *start, &mut writer, offset, depth, size, &startpoints)?;
-        }
+            .try_for_each(|(Page { start, path, .. }, startpoints)| {
+                let name = path.file_name().and_then(|f| f.to_str()).unwrap();
+                let path = path.as_os_str().as_bytes();
+                let file = OpenOptions::new()
+                    .write(true)
+                    .append(true)
+                    .create_new(true)
+                    .open(format!("{target:x}-{name}.scandata"))?;
+                let mut writer = BufWriter::new(file);
+                let size = depth * 2 + 9;
+                writer.write_all(&MODEL1)?;
+                writer.write_all(&size.to_le_bytes())?;
+                writer.write_all(&path.len().to_le_bytes())?;
+                writer.write_all(path)?;
+                let pointer_search = PointerSeacher(&pointer_map);
+                pointer_search.path_find_helpers(*target, *start, &mut writer, offset, depth, size, &startpoints)
+            })?;
 
         Ok(())
     }

@@ -10,7 +10,7 @@ use std::{
 use argh::{FromArgValue, FromArgs};
 use ptrsx::{
     consts::{Address, MAX_BUF_SIZE},
-    scanner::ScannerParm,
+    scanner::ScannerParm, dumper::merge_bases,
 };
 
 use crate::{
@@ -76,13 +76,14 @@ impl SubCommandScan {
         let scanner = ptrsx::scanner::PtrsXScanner::init(file)?;
         spinner.stop("cache loaded.");
 
-        let pages = select_module(scanner.pages().to_vec())?;
+        let pages = select_module(merge_bases(scanner.pages().to_vec()))?;
 
         let parm = ScannerParm { target: target.0, depth, offset: offset.0, pages };
 
+        let mut spinner = Spinner::start("Start scanning pointer path...");
+
         scanner.scanner(parm)?;
 
-        let mut spinner = Spinner::start("Start scanning pointer path...");
         spinner.stop("Pointer path is scanned.");
 
         Ok(())
