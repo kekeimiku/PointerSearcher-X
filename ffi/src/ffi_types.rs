@@ -1,7 +1,7 @@
 use core::ffi;
 use std::{ffi::CString, os::unix::prelude::OsStrExt};
 
-use ptrsx::map::Map;
+use ptrsx::map::Page;
 
 #[repr(C)]
 #[derive(Clone, Debug)]
@@ -21,7 +21,7 @@ impl Drop for FFIMap {
     }
 }
 
-pub unsafe fn rsmap_to_ffimap(map: &Map) -> FFIMap {
+pub unsafe fn rsmap_to_ffimap(map: &Page) -> FFIMap {
     let path = CString::from(
         map.path
             .as_os_str()

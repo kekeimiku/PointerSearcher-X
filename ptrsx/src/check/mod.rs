@@ -12,3 +12,5 @@ pub use macos::check_region;
 mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::check_region;
+
+use super::consts;

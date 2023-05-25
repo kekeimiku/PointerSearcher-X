@@ -1,7 +1,8 @@
 use std::{fs::File, io::Read};
 
-use utils::consts::EXE;
 use vmmap::{linux::VirtualQueryExt, VirtualQuery};
+
+use super::consts::EXE;
 
 #[inline]
 pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(map: &Q) -> bool {

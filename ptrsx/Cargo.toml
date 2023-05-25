@@ -3,10 +3,6 @@ name = "ptrsx"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies.utils]
-path = "../utils"
-default-features = false
-
 [dependencies.vmmap]
 path = "../vmmap"
 default-features = false

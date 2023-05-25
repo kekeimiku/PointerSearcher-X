@@ -9,13 +9,9 @@ use std::{
 };
 
 use ptrsx::scanner::PtrsXScanner;
-use ptrsx_scanner::cmd::{Offset, SubCommandScan, Target};
 
 use super::error::set_last_error;
-use crate::{
-    error::set_last_boxed_error,
-    ffi_types::{rsmap_to_ffimap, FFIMap},
-};
+use crate::ffi_types::{rsmap_to_ffimap, FFIMap};
 
 #[no_mangle]
 pub unsafe extern "C" fn ptrsx_scanner_init(path: *const ffi::c_char) -> *mut PtrsXScanner {
@@ -81,10 +77,10 @@ pub unsafe extern "C" fn ptrsx_scan_pointer_path(
     selected_regions: *const FFIMap,
     regions_len: u32,
     output_file: *const ffi::c_char,
-    depth: u32,
-    target_addr: usize,
-    offset_ahead: usize,
-    offset_behind: usize,
+    _depth: u32,
+    _target_addr: usize,
+    _offset_ahead: usize,
+    _offset_behind: usize,
 ) -> ffi::c_int {
     if ptr.is_null() || name.is_null() {
         return -1;
@@ -92,29 +88,31 @@ pub unsafe extern "C" fn ptrsx_scan_pointer_path(
 
     let ptrsx = { &mut *ptr };
 
-    let pmap = take(&mut ptrsx.bmap);
+    let _pmap = take(&mut ptrsx.bmap);
     let mut mmap = take(&mut ptrsx.pages);
 
-    let name = OsStr::from_bytes(CStr::from_ptr(name).to_bytes());
+    let _name = OsStr::from_bytes(CStr::from_ptr(name).to_bytes());
 
     let selected_regions = slice::from_raw_parts(selected_regions, regions_len as _);
     mmap.retain(|m| selected_regions.iter().any(|FFIMap { start, .. }| start == &m.start));
 
-    let out = NonNull::new(output_file as *mut ffi::c_char)
+    let _out = NonNull::new(output_file as *mut ffi::c_char)
         .map(|p| PathBuf::from(OsStr::from_bytes(CStr::from_ptr(p.as_ptr() as _).to_bytes())));
 
-    match SubCommandScan::perform(
-        name,
-        (pmap, mmap),
-        Target(target_addr),
-        out,
-        depth as _,
-        Offset((offset_ahead, offset_behind)),
-    ) {
-        Ok(()) => 0,
-        Err(e) => {
-            set_last_boxed_error(e);
-            -2
-        }
-    }
+    // match SubCommandScan::perform(
+    //     name,
+    //     (pmap, mmap),
+    //     Target(target_addr),
+    //     out,
+    //     depth as _,
+    //     Offset((offset_ahead, offset_behind)),
+    // ) {
+    //     Ok(()) => 0,
+    //     Err(e) => {
+    //         set_last_boxed_error(e);
+    //         -2
+    //     }
+    // }
+
+    todo!()
 }

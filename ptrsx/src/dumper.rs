@@ -1,12 +1,12 @@
 use std::{cmp::Ordering, io, mem};
 
-use utils::consts::{Address, CHUNK_SIZE, POINTER_SIZE};
 use vmmap::{Pid, Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
-use crate::{
+use super::{
     check::check_region,
+    consts::{Address, CHUNK_SIZE, POINTER_SIZE},
     error::Error,
-    map::{encode_map_to_writer, Map},
+    map::{encode_map_to_writer, Page},
 };
 
 pub struct PtrsXDumper {
@@ -30,7 +30,7 @@ impl PtrsXDumper {
         let map = region
             .into_iter()
             .filter_map(|m| {
-                Some(Map {
+                Some(Page {
                     start: m.start(),
                     end: m.end(),
                     path: m.path().map(|p| p.to_path_buf())?,
@@ -87,7 +87,7 @@ where
 }
 
 #[inline]
-pub fn merge_bases(mut bases: Vec<Map>) -> Vec<Map> {
+pub fn merge_bases(mut bases: Vec<Page>) -> Vec<Page> {
     let mut aom = Vec::new();
     let mut current = core::mem::take(&mut bases[0]);
     for map in bases.into_iter().skip(1) {

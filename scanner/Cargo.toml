@@ -3,10 +3,6 @@ name = "ptrsx-scanner"
 version = "0.2.0"
 edition = "2021"
 
-[dependencies.utils]
-path = "../utils"
-default-features = false
-
 [dependencies.dumper]
 path = "../dumper"
 default-features = false

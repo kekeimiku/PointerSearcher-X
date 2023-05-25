@@ -9,12 +9,10 @@ use std::{
     thread, time,
 };
 
-use ptrsx::map::Map;
+use ptrsx::map::Page;
 use terminal_size::{terminal_size, Height, Width};
 
-pub fn select_module(items: Vec<Map>) -> Result<Vec<Map>, Box<dyn std::error::Error>> {
-    let items = crate::utils::merge_bases(items);
-
+pub fn select_module(items: Vec<Page>) -> Result<Vec<Page>, Box<dyn std::error::Error>> {
     let words = items
         .iter()
         .filter_map(|m| m.path.file_name())
@@ -62,22 +60,6 @@ pub fn select_module(items: Vec<Map>) -> Result<Vec<Map>, Box<dyn std::error::Er
     }
 
     Ok(selected_items)
-}
-
-#[inline]
-pub fn merge_bases(mut bases: Vec<Map>) -> Vec<Map> {
-    let mut aom = Vec::new();
-    let mut current = core::mem::take(&mut bases[0]);
-    for map in bases.into_iter().skip(1) {
-        if map.path == current.path {
-            current.end = map.end;
-        } else {
-            aom.push(current);
-            current = map;
-        }
-    }
-    aom.push(current);
-    aom
 }
 
 pub struct Spinner {

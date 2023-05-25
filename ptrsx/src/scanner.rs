@@ -1,21 +1,20 @@
 use std::{
     collections::BTreeMap,
-    fs::File,
-    io,
+    fs::{File, OpenOptions},
+    io::{self, BufWriter, Write},
     ops::Bound::Included,
-    os::unix::prelude::{FileExt, MetadataExt},
+    os::unix::prelude::{FileExt, MetadataExt, OsStrExt},
     path::Path,
 };
 
-use utils::consts::{Address, POINTER_SIZE};
-
-use crate::{
-    e::PointerSeacher,
-    map::{decode_bytes_to_maps, Map},
+use super::{
+    consts::{Address, POINTER_SIZE},
+    map::{decode_bytes_to_maps, Page},
 };
+use crate::{consts::MODEL1, e::PointerSeacher};
 
 pub struct PtrsXScanner {
-    pub pages: Vec<Map>,
+    pub pages: Vec<Page>,
     pub bmap: BTreeMap<Address, Address>,
 }
 
@@ -25,50 +24,33 @@ impl PtrsXScanner {
         Ok(Self { pages: map, bmap })
     }
 
-    pub fn pages(&self) -> &[Map] {
+    pub fn pages(&self) -> &[Page] {
         &self.pages
     }
 
-    pub fn range_address<'a>(&'a self, pages: &'a [Map]) -> impl Iterator<Item = Address> + 'a {
-        pages
-            .iter()
-            .flat_map(|Map { start, end, .. }| self.bmap.range((Included(start), Included(end))).map(|(&k, _)| k))
+    pub fn range_address<'a>(&'a self, page: &'a Page) -> impl Iterator<Item = Address> + 'a {
+        self.bmap
+            .range((Included(page.start), (Included(page.end))))
+            .map(|(&k, _)| k)
+    }
+
+    pub fn flat_range_address<'a>(&'a self, pages: &'a [Page]) -> impl Iterator<Item = Address> + 'a {
+        pages.iter().flat_map(|page| self.range_address(page))
     }
 
     pub fn default_address(&self) -> impl Iterator<Item = Address> + '_ {
         self.bmap.iter().map(|(&k, _)| k)
     }
 
-    pub fn rev_pointer_map(self) -> BTreeMap<Address, Vec<Address>> {
-        self.bmap.into_iter().fold(BTreeMap::new(), |mut acc, (k, v)| {
+    pub fn rev_pointer_map(&self) -> BTreeMap<Address, Vec<Address>> {
+        self.bmap.iter().fold(BTreeMap::new(), |mut acc, (&k, &v)| {
             acc.entry(v).or_default().push(k);
             acc
         })
     }
 }
 
-pub struct PathFindEngine<'a, W> {
-    target: Address,
-    depth: usize,
-    offset: (usize, usize),
-    out: &'a mut W,
-    startpoints: Vec<Address>,
-    engine: PointerSeacher,
-}
-
-impl<W> PathFindEngine<'_, W>
-where
-    W: io::Write,
-{
-    pub fn find_pointer_path(self) -> io::Result<()> {
-        let PathFindEngine { target, depth, offset, out, engine, startpoints } = self;
-        let size = depth * 2 + 9;
-        out.write_all(&size.to_le_bytes())?;
-        engine.path_find_helpers(target, out, offset, depth, size, &startpoints)
-    }
-}
-
-fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address, Address>, Vec<Map>)> {
+fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address, Address>, Vec<Page>)> {
     let file = File::open(path)?;
 
     let mut seek = 0;
@@ -102,4 +84,41 @@ fn load_pointer_map<P: AsRef<Path>>(path: P) -> io::Result<(BTreeMap<Address, Ad
     }
 
     Ok((map, m))
+}
+
+pub struct ScannerParm {
+    pub target: Address,
+    pub depth: usize,
+    pub offset: (usize, usize),
+    pub pages: Vec<Page>,
+}
+
+impl PtrsXScanner {
+    pub fn scanner(&self, parms: ScannerParm) -> Result<(), std::io::Error> {
+        let ScannerParm { ref target, depth, offset, pages } = parms;
+        let pointer_map = self.rev_pointer_map();
+
+        for (Page { start, path, .. }, startpoints) in pages
+            .iter()
+            .map(|page| (page, self.range_address(page).collect::<Vec<_>>()))
+        {
+            let name = path.file_name().and_then(|f| f.to_str()).unwrap();
+            let path = path.as_os_str().as_bytes();
+            let file = OpenOptions::new()
+                .write(true)
+                .append(true)
+                .create_new(true)
+                .open(format!("{target:x}-{name}.scandata"))?;
+            let mut writer = BufWriter::new(file);
+            let size = depth * 2 + 9;
+            writer.write_all(&MODEL1)?;
+            writer.write_all(&size.to_le_bytes())?;
+            writer.write_all(&path.len().to_le_bytes())?;
+            writer.write_all(path)?;
+            let pointer_search = PointerSeacher(&pointer_map);
+            pointer_search.path_find_helpers(*target, *start, &mut writer, offset, depth, size, &startpoints)?;
+        }
+
+        Ok(())
+    }
 }

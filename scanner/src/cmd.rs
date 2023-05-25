@@ -1,7 +1,5 @@
-use core::ops::Bound::Included;
 use std::{
-    collections::{BTreeMap, HashSet},
-    ffi::OsStr,
+    collections::HashSet,
     fs,
     fs::OpenOptions,
     io,
@@ -10,12 +8,13 @@ use std::{
 };
 
 use argh::{FromArgValue, FromArgs};
-use ptrsx::map::{encode_map_to_writer, Map};
-use utils::consts::{Address, MAX_BUF_SIZE};
+use ptrsx::{
+    consts::{Address, MAX_BUF_SIZE},
+    scanner::ScannerParm,
+};
 
 use crate::{
-    b::{convert_bin_to_txt, load_pointer_map},
-    e::PointerSeacher,
+    b::convert_bin_to_txt,
     utils::{select_module, Spinner},
 };
 
@@ -71,91 +70,22 @@ pub struct SubCommandScan {
 }
 
 impl SubCommandScan {
-    /// name: once output path is not provided, ${name}.scandata will be
-    /// generated (pmap, mmap): ...
-    /// target: target address you are intrested in
-    /// out: output path
-    /// depth: pointer search depth. 7 is generally a good choice
-    /// offset: (ahead, behind) means, for example, you have target address `p`,
-    ///     PtrSX will iterate over P.offset(-ahead) ..= P.offset(behind), for a
-    /// pointer points to p
-    pub fn perform(
-        name: &OsStr,
-        (pmap, mmap): (BTreeMap<usize, usize>, Vec<Map>),
-        target: Target,
-        out: Option<PathBuf>,
-        depth: usize,
-        offset: Offset,
-    ) -> Result<(), Box<dyn std::error::Error>> {
-        let mut spinner = Spinner::start("Start creating pointer maps...");
-        let points = mmap
-            .iter()
-            .flat_map(|Map { start, end, .. }| pmap.range((Included(start), Included(end))).map(|(&k, _)| k))
-            .collect::<Vec<_>>();
-        let mut map: BTreeMap<Address, Vec<Address>> = BTreeMap::new();
-        for (k, v) in pmap {
-            map.entry(v).or_default().push(k);
-        }
-        spinner.stop("Pointer map is created.");
-
-        let mut spinner = Spinner::start("Start scanning pointer path...");
-
-        let out = match out {
-            Some(file) => OpenOptions::new().write(true).append(true).create_new(true).open(file),
-            None => OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create_new(true)
-                .open(PathBuf::from(name).with_extension("scandata")),
-        }?;
-        let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
-
-        encode_map_to_writer(mmap, &mut out)?;
-
-        PathFindEngine {
-            target: target.0,
-            depth,
-            offset: offset.0,
-            out: &mut out,
-            startpoints: points,
-            engine: PointerSeacher(map),
-        }
-        .find_pointer_path()?;
-
-        spinner.stop("Pointer path is scanned.");
-        Ok(())
-    }
-
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
-        let SubCommandScan { file, target, out, depth, offset } = self;
-        let name = file.file_stem().ok_or("Get file name error")?;
+        let SubCommandScan { file, target, depth, offset, .. } = self;
         let mut spinner = Spinner::start("Start loading cache...");
-        let (pmap, mmap) = load_pointer_map(&file)?;
-
+        let scanner = ptrsx::scanner::PtrsXScanner::init(file)?;
         spinner.stop("cache loaded.");
 
-        SubCommandScan::perform(name, (pmap, select_module(mmap)?), target, out, depth, offset)
-    }
-}
+        let pages = select_module(scanner.pages().to_vec())?;
 
-pub struct PathFindEngine<'a, W> {
-    target: Address,
-    depth: usize,
-    offset: (usize, usize),
-    out: &'a mut W,
-    startpoints: Vec<Address>,
-    engine: PointerSeacher,
-}
+        let parm = ScannerParm { target: target.0, depth, offset: offset.0, pages };
 
-impl<W> PathFindEngine<'_, W>
-where
-    W: io::Write,
-{
-    pub fn find_pointer_path(self) -> io::Result<()> {
-        let PathFindEngine { target, depth, offset, out, engine, startpoints } = self;
-        let size = depth * 2 + 9;
-        out.write_all(&size.to_le_bytes())?;
-        engine.path_find_helpers(target, out, offset, depth, size, &startpoints)
+        scanner.scanner(parm)?;
+
+        let mut spinner = Spinner::start("Start scanning pointer path...");
+        spinner.stop("Pointer path is scanned.");
+
+        Ok(())
     }
 }
 

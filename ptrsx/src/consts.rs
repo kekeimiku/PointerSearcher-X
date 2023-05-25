@@ -24,3 +24,6 @@ pub const EXE: [[u8; 4]; 2] = [[0xCA, 0xFE, 0xBA, 0xBE], [0xCF, 0xFA, 0xED, 0xFE
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
 pub const EXE: [&str; 2] = ["exe", "dll"];
+
+pub const MODEL1: [u8; 8] = 1_u64.to_le_bytes();
+pub const MODEL2: [u8; 8] = 2_u64.to_le_bytes();

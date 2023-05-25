@@ -1,19 +1,13 @@
 use std::{fs::OpenOptions, io::BufWriter};
 
-use utils::consts::MAX_BUF_SIZE;
-use vmmap::{Process, ProcessInfo};
+use ptrsx::{consts::MAX_BUF_SIZE, dumper::PtrsXDumper};
 
-use super::{cmd::SubCommandDisk, dump::create_pointer_map_helper};
+use super::cmd::SubCommandDisk;
 
 impl SubCommandDisk {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
         let SubCommandDisk { pid, out } = self;
-        let proc = Process::open(pid)?;
-        let name = proc
-            .app_path()
-            .file_name()
-            .and_then(|f| f.to_str())
-            .ok_or("get app_name error")?;
+        let dumper = PtrsXDumper::init(pid)?;
 
         let out = match out {
             Some(file) => OpenOptions::new().write(true).append(true).create_new(true).open(file),
@@ -21,10 +15,12 @@ impl SubCommandDisk {
                 .write(true)
                 .append(true)
                 .create_new(true)
-                .open(format!("{name}-{pid}.dump")),
+                .open(format!("{pid}.dump")),
         }?;
-        let out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
+        let mut out = BufWriter::with_capacity(MAX_BUF_SIZE, out);
 
-        create_pointer_map_helper(proc, out)
+        dumper.create_pointer_map_helper(&mut out)?;
+
+        Ok(())
     }
 }

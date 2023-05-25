@@ -11,8 +11,8 @@ path = "src/main.rs"
 path = "../vmmap"
 default-features = false
 
-[dependencies.utils]
-path = "../utils"
+[dependencies.ptrsx]
+path = "../ptrsx"
 default-features = false
 
 [dependencies.argh]
