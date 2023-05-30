@@ -1,6 +1,6 @@
 [workspace]
 
-members = ["vmmap", "dumper", "scanner", "ffi", "ptrsx", "linux-pc"]
+members = ["vmmap", "dumper", "scanner", "ffi", "ptrsx"]
 
 [profile.release]
 opt-level = 3

@@ -40,8 +40,8 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> impl Iterator<Item = Map> + '_ {
-        MapIter::new(&self.maps)
+    fn get_maps(&self) -> impl Iterator<Item = Page> + '_ {
+        PageIter::new(&self.maps)
     }
 }
 
@@ -59,7 +59,7 @@ impl Process {
 }
 
 #[allow(dead_code)]
-pub struct Map<'a> {
+pub struct Page<'a> {
     start: usize,
     end: usize,
     flags: &'a str,
@@ -69,7 +69,7 @@ pub struct Map<'a> {
     pathname: &'a str,
 }
 
-impl VirtualQuery for Map<'_> {
+impl VirtualQuery for Page<'_> {
     fn start(&self) -> usize {
         self.start
     }
@@ -100,22 +100,22 @@ impl VirtualQuery for Map<'_> {
     }
 }
 
-impl VirtualQueryExt for Map<'_> {
+impl VirtualQueryExt for Page<'_> {
     fn name(&self) -> &str {
         self.pathname
     }
 }
 
-pub struct MapIter<'a>(core::str::Lines<'a>);
+pub struct PageIter<'a>(core::str::Lines<'a>);
 
-impl<'a> MapIter<'a> {
+impl<'a> PageIter<'a> {
     pub fn new(contents: &'a str) -> Self {
         Self(contents.lines())
     }
 }
 
-impl<'a> Iterator for MapIter<'a> {
-    type Item = Map<'a>;
+impl<'a> Iterator for PageIter<'a> {
+    type Item = Page<'a>;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
@@ -127,9 +127,9 @@ impl<'a> Iterator for MapIter<'a> {
         let flags = split.next()?;
         let offset = usize::from_str_radix(split.next()?, 16).ok()?;
         let dev = split.next()?;
-        let inode = split.next()?.parse::<usize>().ok()?;
+        let inode = split.next()?.parse().ok()?;
         let pathname = split.next()?.trim_start();
 
-        Some(Map { start, end, flags, offset, dev, inode, pathname })
+        Some(Page { start, end, flags, offset, dev, inode, pathname })
     }
 }

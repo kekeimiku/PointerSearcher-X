@@ -63,8 +63,8 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> impl Iterator<Item = Map> + '_ {
-        MapIter::new(self.task).map(|m| Map {
+    fn get_maps(&self) -> impl Iterator<Item = Page> + '_ {
+        PageIter::new(self.task).map(|m| Page {
             addr: m.addr,
             size: m.size,
             count: m.count,
@@ -91,7 +91,7 @@ impl Process {
 }
 
 #[allow(dead_code)]
-pub struct Map {
+pub struct Page {
     addr: mach_vm_address_t,
     size: mach_vm_size_t,
     count: mach_msg_type_number_t,
@@ -99,7 +99,7 @@ pub struct Map {
     pathname: Option<PathBuf>,
 }
 
-impl VirtualQuery for Map {
+impl VirtualQuery for Page {
     fn start(&self) -> usize {
         self.addr as _
     }
@@ -129,7 +129,7 @@ impl VirtualQuery for Map {
     }
 }
 
-impl VirtualQueryExt for Map {
+impl VirtualQueryExt for Page {
     fn tag(&self) -> u32 {
         self.info.user_tag
     }
@@ -144,16 +144,6 @@ fn proc_regionfilename(pid: Pid, address: u64) -> Result<Option<PathBuf>, kern_r
     unsafe {
         let mut buf: Vec<u8> = Vec::with_capacity(PROC_PIDPATHINFO_MAXSIZE);
         let result = libproc::proc_regionfilename(pid, address, buf.as_mut_ptr() as _, buf.capacity() as _);
-
-        // match result.cmp(&0) {
-        //     Ordering::Less => Err(result),
-        //     Ordering::Equal => Ok(None),
-        //     Ordering::Greater => {
-        //         buf.set_len(result as _);
-        //         Ok(Some(PathBuf::from(OsString::from_vec(buf))))
-        //     }
-        // }
-
         if result < 0 {
             Err(result)
         } else if result == 0 {
@@ -187,24 +177,24 @@ pub struct MapRange {
     pub info: vm_region_extended_info,
 }
 
-struct MapIter {
+struct PageIter {
     task: vm_task_entry_t,
     addr: mach_vm_address_t,
 }
 
-impl MapIter {
+impl PageIter {
     const fn new(task: mach_port_name_t) -> Self {
         Self { task, addr: 1 }
     }
 }
 
-impl Default for MapIter {
+impl Default for PageIter {
     fn default() -> Self {
         Self { task: unsafe { mach_task_self() }, addr: 1 }
     }
 }
 
-impl Iterator for MapIter {
+impl Iterator for PageIter {
     type Item = MapRange;
 
     fn next(&mut self) -> Option<Self::Item> {
