@@ -23,9 +23,9 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s = match self {
-            Error::OpenProcess(e) => format!("OpenProcess {}", e),
-            Error::ReadMemory(e) => format!("OpenProcess {}", e),
-            Error::WriteMemory(e) => format!("WriteMemory {}", e),
+            Error::OpenProcess(e) => format!("OpenProcess {e}"),
+            Error::ReadMemory(e) => format!("OpenProcess {e}"),
+            Error::WriteMemory(e) => format!("WriteMemory {e}"),
         };
 
         write!(f, "{}", s)

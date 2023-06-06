@@ -1,8 +1,3 @@
-pub mod proc;
+pub mod proc64;
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
-
-pub trait VirtualQueryExt {
-    fn tag(&self) -> u32;
-    fn is_reserve(&self) -> bool;
-}
+use super::{vmmap64, Error, Pid};
