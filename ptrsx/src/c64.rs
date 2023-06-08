@@ -34,6 +34,16 @@ where
     }
 }
 
+#[cfg(target_os = "linux")]
+impl<'a, V> From<&'a V> for Page<'a>
+where
+    V: VirtualQuery + VirtualQueryExt,
+{
+    fn from(value: &'a V) -> Self {
+        Self { start: value.start(), end: value.end(), path: value.name() }
+    }
+}
+
 #[inline]
 pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     if !page.is_read() {
@@ -91,9 +101,7 @@ where
 {
     let pages = proc.get_maps().filter(check_region).collect::<Vec<_>>();
     let pages_w = pages.iter().map(Page::from).collect::<Vec<_>>();
-    
-    
-    
+
     // let region = pages.iter().map(|m| (m.start(), m.size())).collect::<Vec<_>>();
 
     // create_pointer_map_writer(proc, &region, writer)
