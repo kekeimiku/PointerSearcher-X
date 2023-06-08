@@ -75,15 +75,16 @@ pub mod vmmap32 {
     pub trait VirtualMemoryRead {
         type Error: std::error::Error;
 
-        fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error>;
+        fn read_at(&self, offset: u32, buf: &mut [u8]) -> Result<usize, Self::Error>;
     }
 
     pub trait VirtualMemoryWrite {
         type Error: std::error::Error;
 
-        fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error>;
+        fn write_at(&self, offset: u32, buf: &[u8]) -> Result<(), Self::Error>;
     }
 
+    #[cfg(target_os = "linux")]
     pub trait VirtualQueryExt {
         fn name(&self) -> &str;
     }
