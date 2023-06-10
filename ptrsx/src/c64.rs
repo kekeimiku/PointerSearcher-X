@@ -1,6 +1,7 @@
 use std::{
     fs::File,
-    io::{self, Read, Write},
+    io,
+    io::{Read, Write},
 };
 
 #[cfg(target_os = "linux")]
