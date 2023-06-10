@@ -30,7 +30,10 @@ impl VirtualMemoryWrite for Process {
     type Error = Error;
 
     fn write_at(&self, offset: u32, buf: &[u8]) -> Result<(), Self::Error> {
-        self.handle.write_at(buf, offset as _).map(drop).map_err(Error::WriteMemory)
+        self.handle
+            .write_at(buf, offset as _)
+            .map(drop)
+            .map_err(Error::WriteMemory)
     }
 }
 
