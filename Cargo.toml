@@ -6,7 +6,6 @@ members = ["vmmap", "ptrsx"]
 opt-level = 3
 lto = true
 codegen-units = 1
-overflow-checks = false
 panic = "abort"
 strip = true
 debug = false

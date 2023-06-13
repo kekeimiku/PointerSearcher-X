@@ -6,3 +6,7 @@ edition = "2021"
 [dependencies.vmmap]
 path = "../vmmap"
 default-features = false
+
+[dependencies.rayon]
+version = "1.7.0"
+default-features = false
