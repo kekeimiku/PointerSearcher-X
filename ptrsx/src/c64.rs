@@ -16,7 +16,7 @@ use vmmap::vmmap64::VirtualQueryExt;
 use vmmap::vmmap64::VirtualQueryExt;
 use vmmap::vmmap64::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
-use super::d64::create_pointer_map_writer;
+use super::{d64::create_pointer_map_writer, PTRHEADER64};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Page<T> {
@@ -25,27 +25,35 @@ pub struct Page<T> {
     pub path: T,
 }
 
-#[cfg(target_os = "macos")]
-impl<'a, V> From<&'a V> for Page<&'a str>
+// fuck sb rust TryFrom https://github.com/rust-lang/rust/issues/50133
+pub struct PageTryWrapper<T>(T);
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<&'a str>
 where
     V: VirtualQuery + VirtualQueryExt,
 {
-    fn from(value: &'a V) -> Self {
-        Self {
-            start: value.start(),
-            end: value.end(),
-            path: value.path().and_then(|s| s.to_str()).unwrap_or("~err"),
-        }
+    type Error = ();
+
+    fn try_from(value: PageTryWrapper<&'a V>) -> Result<Self, Self::Error> {
+        let path = value.0.path().and_then(|s| s.to_str()).ok_or(())?;
+        Ok(Self { start: value.0.start(), end: value.0.end(), path })
     }
 }
 
 #[cfg(target_os = "linux")]
-impl<'a, V> From<&'a V> for Page<&'a str>
+impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<&'a str>
 where
     V: VirtualQuery + VirtualQueryExt,
 {
-    fn from(value: &'a V) -> Self {
-        Self { start: value.start(), end: value.end(), path: value.name() }
+    type Error = ();
+
+    fn try_from(value: PageTryWrapper<&'a V>) -> Result<Self, Self::Error> {
+        let path = value.0.name();
+        if !std::path::Path::new(path).has_root() {
+            return Err(());
+        }
+        Ok(Self { start: value.0.start(), end: value.0.end(), path })
     }
 }
 
@@ -64,6 +72,9 @@ pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     if matches!(page.name(), "[stack]" | "[heap]") || check_exe(page) || page.name().is_empty() {
         return true;
     }
+
+    #[cfg(target_os = "android")]
+    todo!();
 
     false
 }
@@ -99,14 +110,15 @@ pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
         .map_or(false, |_| EXE.eq(&header))
 }
 
-pub fn default_dump_pages<P, W>(proc: &P, writer: &mut W) -> Result<(), io::Error>
+pub fn default_dump_ptr<P, W>(proc: &P, writer: &mut W) -> Result<(), io::Error>
 where
     P: ProcessInfo + VirtualMemoryRead,
     W: io::Write,
 {
     let pages = proc.get_maps().filter(check_region).collect::<Vec<_>>();
     let region = pages.iter().map(|m| (m.start(), m.size())).collect::<Vec<_>>();
-    let pages_info = merge_bases(pages.iter().map(Page::from)).expect("error: pages is_empty");
+    let pages_info =
+        merge_bases(pages.iter().flat_map(|x| PageTryWrapper(x).try_into())).expect("error: pages is_empty");
     encode_page_info(&pages_info, writer)?;
     create_pointer_map_writer(proc, &region, writer)
 }
@@ -135,13 +147,16 @@ fn encode_page_info<W: io::Write>(pages: &[Page<&str>], writer: &mut W) -> io::R
     let mut tmp = Vec::new();
     let len = (pages.len() as u32).to_le_bytes();
     tmp.write_all(&len)?;
-
     for Page { start, end, path } in pages {
         tmp.write_all(&start.to_le_bytes())?;
         tmp.write_all(&end.to_le_bytes())?;
         tmp.write_all(&(path.len() as u32).to_le_bytes())?;
         tmp.write_all(path.as_bytes())?;
     }
+    // header 表示这是一个64位ptr文件
+    writer.write_all(&PTRHEADER64)?;
+    // pages 长度
+    writer.write_all(&(tmp.len() as u32).to_le_bytes())?;
     writer.write_all(&tmp)
 }
 
@@ -173,13 +188,9 @@ fn test_decode_and_encode_map() {
         Page { start: 1, end: 2, path: "value" },
         Page { start: 4, end: 7, path: "va lue" },
     ];
-    let m1 = pages.clone();
     let mut out = vec![];
     encode_page_info(&pages, &mut out).unwrap();
-
-    let d = decode_page_info(&out);
-
-    assert_eq!(d, m1)
+    assert_eq!(decode_page_info(&out[8..]), pages)
 }
 
 #[test]
