@@ -4,7 +4,13 @@
 
 ## Features:
 
-No need to rely on hooks, nor on debugger (such as ptrace-related things)
+It contains three tools: 
+
+- `ptrsx-scan` for scanning pointer files.
+
+- `ptrsx-dumper` is used to dump process memory. 
+
+- `ptrsx-inject` for dynamic library injection.
 
 ## Support:
 
@@ -23,6 +29,10 @@ Currently, it is only tested on 64-bit systems and 64-bit targets. Although it c
 ## Tutorial
 
 https://www.bilibili.com/video/BV1Hh411E7oW/
+
+# Other
+
+In fact, this project currently contains two tools, pointer search and dynamic library injection.
 
 ## Disclaimer
 
