@@ -24,6 +24,10 @@ Currently, it is only tested on 64-bit systems and 64-bit targets. Although it c
 
 https://www.bilibili.com/video/BV1Hh411E7oW/
 
+# Other
+
+In fact, this project currently contains two tools, pointer search and dynamic library injection.
+
 ## Disclaimer
 
 This is just for learning rust, no malicious purpose.
