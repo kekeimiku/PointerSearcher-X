@@ -8,14 +8,11 @@ use super::{
     },
     error::Error,
     ffi::{
-        self, mach_vm_allocate, mach_vm_protect, mach_vm_write, thread_create_running, thread_get_state, thread_info,
-        thread_terminate, VM_PROT_EXECUTE, VM_PROT_READ, VM_PROT_WRITE,
+        mach_vm_allocate, mach_vm_protect, mach_vm_write, thread_create_running, thread_get_state, thread_info,
+        thread_terminate, ARM_THREAD_STATE64_COUNT, THREAD_BASIC_INFO_COUNT, VM_PROT_EXECUTE, VM_PROT_READ,
+        VM_PROT_WRITE,
     },
     utils,
-};
-use crate::{
-    ffi::{ARM_THREAD_STATE64_COUNT, THREAD_BASIC_INFO_COUNT},
-    utils::gen_asm,
 };
 
 pub fn find_library_address(task: mach_port_t, library: &str) -> Result<u64, Error> {
@@ -31,7 +28,7 @@ pub fn find_symbol_address(
 }
 
 pub fn task_for_pid(pid: i32) -> Result<mach_port_t, Error> {
-    Ok(unsafe { ffi::task_for_pid(pid) }?)
+    Ok(unsafe { super::ffi::task_for_pid(pid) }?)
 }
 
 pub fn inject<P: AsRef<Path>>(pid: i32, path: P) -> Result<(), Error> {
@@ -74,7 +71,7 @@ unsafe fn inj(path: &[u8], pid: i32) -> Result<(), Error> {
 
     mach_vm_protect(remote_task, remote_path, (path.len() + 1) as _, 0, VM_PROT_READ | VM_PROT_WRITE)?;
 
-    let asm = gen_asm(dlopen);
+    let asm = utils::gen_asm(dlopen);
     let mut remote_code: mach_vm_address_t = 0;
     mach_vm_allocate(remote_task, &mut remote_code, asm.len() as _, VM_FLAGS_ANYWHERE)?;
 
