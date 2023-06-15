@@ -2,54 +2,34 @@ use std::{ffi::CStr, mem, slice};
 
 use super::{
     bindgen::{
-        dyld_all_image_infos, dyld_image_info, kern_return_t, load_command, mach_header_64,
-        mach_msg_type_number_t, mach_port_t, mach_vm_address_t, mach_vm_size_t, nlist_64,
-        segment_command_64, symtab_command, task_dyld_info_data_t, LC_SEGMENT, LC_SEGMENT_64,
-        LC_SYMTAB, MH_MAGIC_64, SEG_LINKEDIT, SEG_TEXT, TASK_DYLD_INFO,
+        dyld_all_image_infos, dyld_image_info, kern_return_t, load_command, mach_header_64, mach_msg_type_number_t,
+        mach_port_t, mach_vm_address_t, mach_vm_size_t, nlist_64, segment_command_64, symtab_command,
+        task_dyld_info_data_t, LC_SEGMENT, LC_SEGMENT_64, LC_SYMTAB, MH_MAGIC_64, SEG_LINKEDIT, SEG_TEXT,
+        TASK_DYLD_INFO,
     },
     ffi::{mach_vm_read_overwrite, task_info, PIDPATHINFO_MAXSIZE, TASK_DYLD_INFO_COUNT},
 };
 
-pub const GLOBALASM: &[u8; 136] = include_bytes!("aarch64");
-
 pub fn gen_asm(dlopen: u64) -> [u8; 136] {
-    let mut asm: [u8; 136] = *GLOBALASM;
+    let mut asm: [u8; 136] = *include_bytes!("aarch64");
     let asm_size = asm.len();
 
     let copy_bits = |reg: &mut u32, value: u16| {
-        for (bit, value_bit) in (5..=20).rev().zip((0..=15).rev()) {
-            let bit_to_set = ((value >> value_bit) & 1) != 0;
-            *reg ^= ((bit_to_set as u32).wrapping_neg() ^ *reg) & (1u32 << bit);
+        for i in 0..=15 {
+            let bit_to_set = ((value >> i) & 1) != 0;
+            *reg &= !(1 << (i + 5));
+            *reg |= (bit_to_set as u32) << (i + 5);
         }
-    };
-
-    let decode_instruction = |instructions: &[u8]| -> u32 {
-        (instructions[3] as u32) << 24
-            | (instructions[2] as u32) << 16
-            | (instructions[1] as u32) << 8
-            | (instructions[0] as u32)
-    };
-
-    let encode_instruction = |instruction: u32, instructions: &mut [u8; 4]| {
-        instructions[3] = ((instruction & 0xFF000000) >> 24) as u8;
-        instructions[2] = ((instruction & 0x00FF0000) >> 16) as u8;
-        instructions[1] = ((instruction & 0x0000FF00) >> 8) as u8;
-        instructions[0] = (instruction & 0x000000FF) as u8;
     };
 
     let write_instruction_address = |address_intermediate: u32, asm: &mut [u8], offset: isize| {
         let mut instructions = [0u8; 4];
-        instructions.copy_from_slice(
-            &asm[(asm_size as isize + offset) as usize..(asm_size as isize + offset + 4) as usize],
-        );
-
-        let mut instruction = decode_instruction(&instructions);
+        instructions
+            .copy_from_slice(&asm[(asm_size as isize + offset) as usize..(asm_size as isize + offset + 4) as usize]);
+        let mut instruction = u32::from_le_bytes(instructions);
         copy_bits(&mut instruction, (address_intermediate & 0xFFFF) as u16);
-
-        encode_instruction(instruction, &mut instructions);
-
         asm[(asm_size as isize + offset) as usize..(asm_size as isize + offset + 4) as usize]
-            .copy_from_slice(&instructions);
+            .copy_from_slice(&instruction.to_le_bytes());
     };
 
     let beef = (dlopen & 0x000000000000FFFF) as u32;
@@ -69,12 +49,7 @@ pub unsafe fn find_library(task: mach_port_t, library: &str) -> Result<Option<u6
     let mut info: task_dyld_info_data_t = mem::zeroed();
     let mut count: mach_msg_type_number_t = TASK_DYLD_INFO_COUNT as _;
 
-    task_info(
-        task,
-        TASK_DYLD_INFO,
-        &mut info as *mut task_dyld_info_data_t as _,
-        &mut count,
-    )?;
+    task_info(task, TASK_DYLD_INFO, &mut info as *mut task_dyld_info_data_t as _, &mut count)?;
 
     let mut infos = mem::zeroed::<dyld_all_image_infos>();
     let mut size = info.all_image_info_size;
@@ -107,13 +82,7 @@ pub unsafe fn find_library(task: mach_port_t, library: &str) -> Result<Option<u6
     let mut buf = [0; PIDPATHINFO_MAXSIZE];
 
     for info in image_infos.iter_mut().take(infos.infoArrayCount as usize) {
-        mach_vm_read_overwrite(
-            task,
-            info.imageFilePath as _,
-            buf.len() as _,
-            buf.as_mut_ptr() as _,
-            &mut size,
-        )?;
+        mach_vm_read_overwrite(task, info.imageFilePath as _, buf.len() as _, buf.as_mut_ptr() as _, &mut size)?;
 
         let path = CStr::from_ptr(buf.as_ptr()).to_bytes_with_nul();
         let library = library.as_bytes();
@@ -133,13 +102,7 @@ pub unsafe fn find_symbol(
     let mut header = mem::zeroed::<mach_header_64>();
     let mut size: mach_vm_size_t = mem::size_of_val(&header) as u64;
 
-    mach_vm_read_overwrite(
-        task,
-        library_header_address,
-        size,
-        &mut header as *mut _ as mach_vm_address_t,
-        &mut size,
-    )?;
+    mach_vm_read_overwrite(task, library_header_address, size, &mut header as *mut _ as mach_vm_address_t, &mut size)?;
 
     if header.magic != MH_MAGIC_64 {
         return Ok(None);
@@ -150,12 +113,7 @@ pub unsafe fn find_symbol(
         let mut info = mem::zeroed::<task_dyld_info_data_t>();
         let mut count: mach_msg_type_number_t = TASK_DYLD_INFO_COUNT as _;
 
-        task_info(
-            task,
-            TASK_DYLD_INFO,
-            &mut info as *mut task_dyld_info_data_t as _,
-            &mut count,
-        )?;
+        task_info(task, TASK_DYLD_INFO, &mut info as *mut task_dyld_info_data_t as _, &mut count)?;
 
         let mut infos = mem::zeroed::<dyld_all_image_infos>();
         let mut size = info.all_image_info_size;
@@ -227,33 +185,15 @@ pub unsafe fn find_symbol(
 
     let mut size = mem::size_of_val(&seg_linkedit) as u64;
 
-    mach_vm_read_overwrite(
-        task,
-        seg_linkedit_addr,
-        size,
-        &mut seg_linkedit as *mut _ as mach_vm_address_t,
-        &mut size,
-    )?;
+    mach_vm_read_overwrite(task, seg_linkedit_addr, size, &mut seg_linkedit as *mut _ as mach_vm_address_t, &mut size)?;
 
     size = mem::size_of_val(&seg_text) as u64;
 
-    mach_vm_read_overwrite(
-        task,
-        seg_text_addr,
-        size,
-        &mut seg_text as *mut _ as mach_vm_address_t,
-        &mut size,
-    )?;
+    mach_vm_read_overwrite(task, seg_text_addr, size, &mut seg_text as *mut _ as mach_vm_address_t, &mut size)?;
 
     size = mem::size_of_val(&symtab) as u64;
 
-    mach_vm_read_overwrite(
-        task,
-        symtab_addr,
-        size,
-        &mut symtab as *mut _ as mach_vm_address_t,
-        &mut size,
-    )?;
+    mach_vm_read_overwrite(task, symtab_addr, size, &mut symtab as *mut _ as mach_vm_address_t, &mut size)?;
 
     let file_slide = seg_linkedit.vmaddr - seg_text.vmaddr - seg_linkedit.fileoff;
     let strings = library_header_address + symtab.stroff as u64 + file_slide;
@@ -265,26 +205,14 @@ pub unsafe fn find_symbol(
         let mut sym = mem::zeroed::<nlist_64>();
         size = mem::size_of_val(&sym) as u64;
 
-        mach_vm_read_overwrite(
-            task,
-            sym_addr,
-            size,
-            &mut sym as *mut _ as mach_vm_address_t,
-            &mut size,
-        )?;
+        mach_vm_read_overwrite(task, sym_addr, size, &mut sym as *mut _ as mach_vm_address_t, &mut size)?;
 
         if sym.n_value != 0 {
             let mut size = mem::size_of_val(&name) as u64;
 
             let symname_offset = strings + sym.n_un.n_strx as u64;
 
-            mach_vm_read_overwrite(
-                task,
-                symname_offset,
-                size,
-                name.as_mut_ptr() as mach_vm_address_t,
-                &mut size,
-            )?;
+            mach_vm_read_overwrite(task, symname_offset, size, name.as_mut_ptr() as mach_vm_address_t, &mut size)?;
 
             let sym_name = CStr::from_ptr(name.as_ptr());
 
