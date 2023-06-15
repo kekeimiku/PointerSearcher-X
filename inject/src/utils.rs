@@ -1,4 +1,4 @@
-use std::{ffi::CStr, mem, slice};
+use std::{ffi::CStr, mem};
 
 use super::{
     bindgen::{
@@ -46,44 +46,38 @@ pub fn gen_asm(dlopen: u64) -> [u8; 136] {
 }
 
 pub unsafe fn find_library(task: mach_port_t, library: &str) -> Result<Option<u64>, kern_return_t> {
-    let mut info: task_dyld_info_data_t = mem::zeroed();
+    let mut dyld_info: task_dyld_info_data_t = mem::zeroed();
     let mut count: mach_msg_type_number_t = TASK_DYLD_INFO_COUNT as _;
 
-    task_info(task, TASK_DYLD_INFO, &mut info as *mut task_dyld_info_data_t as _, &mut count)?;
+    task_info(task, TASK_DYLD_INFO, &mut dyld_info as *mut task_dyld_info_data_t as _, &mut count)?;
 
-    let mut infos = mem::zeroed::<dyld_all_image_infos>();
-    let mut size = info.all_image_info_size;
-
-    mach_vm_read_overwrite(
-        task,
-        info.all_image_info_addr,
-        info.all_image_info_size,
-        &mut infos as *mut _ as mach_vm_address_t,
-        &mut size,
-    )?;
-
-    size = mem::size_of::<dyld_all_image_infos>() as u64 * infos.infoArrayCount as u64;
-
-    let image_infos = {
-        let mut vec = Vec::<dyld_image_info>::with_capacity(size as _);
-        let ptr = vec.as_mut_ptr();
-        mem::forget(vec);
-        slice::from_raw_parts_mut(ptr, size as _)
-    };
+    let mut image_infos = mem::zeroed::<dyld_all_image_infos>();
+    let mut size = mem::size_of_val(&image_infos) as u64;
 
     mach_vm_read_overwrite(
         task,
-        infos.infoArray as *const _ as mach_vm_address_t,
+        dyld_info.all_image_info_addr,
         size,
-        image_infos.as_mut_ptr() as mach_vm_address_t,
+        &mut image_infos as *mut _ as mach_vm_address_t,
         &mut size,
     )?;
 
-    let mut buf = [0; PIDPATHINFO_MAXSIZE];
+    size = (mem::size_of::<dyld_image_info>() * image_infos.infoArrayCount as usize) as mach_vm_size_t;
 
-    for info in image_infos.iter_mut().take(infos.infoArrayCount as usize) {
+    let mut modules = vec![mem::zeroed::<dyld_image_info>(); size as usize];
+
+    mach_vm_read_overwrite(
+        task,
+        image_infos.infoArray as mach_vm_address_t,
+        size,
+        modules.as_mut_ptr() as mach_vm_address_t,
+        &mut size,
+    )?;
+
+    let mut buf = [0; 512];
+
+    for info in modules {
         mach_vm_read_overwrite(task, info.imageFilePath as _, buf.len() as _, buf.as_mut_ptr() as _, &mut size)?;
-
         let path = CStr::from_ptr(buf.as_ptr()).to_bytes_with_nul();
         let library = library.as_bytes();
         if path.windows(library.len()).any(|w| w == library) {
