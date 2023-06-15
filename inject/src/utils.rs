@@ -188,7 +188,7 @@ pub unsafe fn find_symbol(
         )?;
 
         if command.cmd == LC_SEGMENT | LC_SEGMENT_64 {
-            let mut name: [std::os::raw::c_char; 512] = [0; 512];
+            let mut name: [core::ffi::c_char; 512] = [0; 512];
             let mut size = mem::size_of_val(&name) as u64;
 
             let segname_offset = mem::offset_of!(segment_command_64, segname);
