@@ -23,14 +23,18 @@ impl PtrsxScanner {
         decode_page_info(&self.pages)
     }
 
-    pub fn get_range_address<'b, T>(&'b self, pages: &'b [Page<T>]) -> impl Iterator<Item = u64> + 'b {
-        pages
-            .iter()
-            .flat_map(|Page { start, end, .. }| self.map.range((Included(start), Included(end))).map(|(&k, _)| k))
+    pub fn range_address<'a, T>(&'a self, page: &'a Page<T>) -> impl Iterator<Item = u64> + 'a {
+        self.map
+            .range((Included(page.start), (Included(page.end))))
+            .map(|(&k, _)| k)
     }
 
-    pub fn into_rev_pointer_map(self) -> BTreeMap<u64, Vec<u64>> {
-        self.map.into_iter().fold(BTreeMap::new(), |mut acc, (k, v)| {
+    pub fn flat_range_address<'a, T>(&'a self, pages: &'a [Page<T>]) -> impl Iterator<Item = u64> + 'a {
+        pages.iter().flat_map(|page| self.range_address(page))
+    }
+
+    pub fn get_rev_pointer_map(&self) -> BTreeMap<u64, Vec<u64>> {
+        self.map.iter().fold(BTreeMap::new(), |mut acc, (&k, &v)| {
             acc.entry(v).or_default().push(k);
             acc
         })
@@ -67,7 +71,7 @@ impl PtrsxScanner {
                 if size == 0 {
                     break;
                 }
-                for b in tmp.chunks(16) {
+                for b in tmp[..size].chunks(16) {
                     let (addr, content) = b.split_at(8);
                     let addr = u64::from_le_bytes(*(addr.as_ptr() as *const _));
                     let content = u64::from_le_bytes(*(content.as_ptr() as *const _));
