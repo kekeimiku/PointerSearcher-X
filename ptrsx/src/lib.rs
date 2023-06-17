@@ -15,3 +15,9 @@ pub mod error;
 pub const DEFAULT_BUF_SIZE: usize = 0x100000;
 
 pub const PTRHEADER64: [u8; 8] = [b'P', b'T', b'R', 64, 0, 0, 0, 0];
+
+pub const PTRHEADER32: [u8; 8] = [b'P', b'T', b'R', 32, 0, 0, 0, 0];
+
+pub const DATHEADER64: [u8; 8] = [b'D', b'A', b'T', 64, 0, 0, 0, 0];
+
+pub const DATHEADER32: [u8; 8] = [b'D', b'A', b'T', 32, 0, 0, 0, 0];

@@ -7,5 +7,5 @@ entitlements.plist
 rust-toolchain.toml
 **/.DS_Store
 **/*.ptrs
-vmmap/main.rs
-ptrsx/main.rs
+vmmap/src/main.rs
+ptrsx/src/main.rs

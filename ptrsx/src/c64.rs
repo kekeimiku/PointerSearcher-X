@@ -190,7 +190,7 @@ fn test_decode_and_encode_map() {
     ];
     let mut out = vec![];
     encode_page_info(&pages, &mut out).unwrap();
-    assert_eq!(decode_page_info(&out[8..]), pages)
+    assert_eq!(decode_page_info(&out[12..]), pages)
 }
 
 #[test]
