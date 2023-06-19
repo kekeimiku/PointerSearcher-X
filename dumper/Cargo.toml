@@ -1,5 +1,5 @@
 [package]
-name = "ptrsx"
+name = "dumper"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,10 +7,10 @@ edition = "2021"
 path = "../vmmap"
 default-features = false
 
-[dependencies.itoa]
-version = "1.0.6"
+[dependencies.ptrsx]
+path = "../ptrsx"
 default-features = false
 
-[dependencies.arrayvec]
-version = "0.7.4"
+[dependencies.argh]
+version = "0.1.10"
 default-features = false

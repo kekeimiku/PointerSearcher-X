@@ -1,6 +1,7 @@
 use std::{
     collections::BTreeMap,
     fs::File,
+    io,
     ops::Bound::Included,
     os::unix::prelude::{FileExt, MetadataExt},
     path::Path,
@@ -9,13 +10,14 @@ use std::{
 use super::{
     c64::{decode_page_info, Page},
     error::Error,
+    s64::{pointer_search, Params},
     PTRHEADER64,
 };
 
 #[derive(Default)]
 pub struct PtrsxScanner {
     pages: Vec<u8>,
-    pub map: BTreeMap<u64, u64>,
+    map: BTreeMap<usize, usize>,
 }
 
 impl PtrsxScanner {
@@ -23,24 +25,24 @@ impl PtrsxScanner {
         decode_page_info(&self.pages)
     }
 
-    pub fn range_address<'a, T>(&'a self, page: &'a Page<T>) -> impl Iterator<Item = u64> + 'a {
+    pub fn range_address<'a, T>(&'a self, page: &'a Page<T>) -> impl Iterator<Item = usize> + 'a {
         self.map
-            .range((Included(page.start), (Included(page.end))))
+            .range((Included(page.start as usize), (Included(page.end as _))))
             .map(|(&k, _)| k)
     }
 
-    pub fn flat_range_address<'a, T>(&'a self, pages: &'a [Page<T>]) -> impl Iterator<Item = u64> + 'a {
+    pub fn flat_range_address<'a, T>(&'a self, pages: &'a [Page<T>]) -> impl Iterator<Item = usize> + 'a {
         pages.iter().flat_map(|page| self.range_address(page))
     }
 
-    pub fn get_rev_pointer_map(&self) -> BTreeMap<u64, Vec<u64>> {
+    pub fn get_rev_pointer_map(&self) -> BTreeMap<usize, Vec<usize>> {
         self.map.iter().fold(BTreeMap::new(), |mut acc, (&k, &v)| {
             acc.entry(v).or_default().push(k);
             acc
         })
     }
 
-    pub fn load_pointer_map<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
+    pub fn load_pointer_map_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
         unsafe {
             let file = File::open(&path)?;
             let mut buf = [0; 12];
@@ -73,8 +75,8 @@ impl PtrsxScanner {
                 }
                 for b in tmp[..size].chunks(16) {
                     let (addr, content) = b.split_at(8);
-                    let addr = u64::from_le_bytes(*(addr.as_ptr() as *const _));
-                    let content = u64::from_le_bytes(*(content.as_ptr() as *const _));
+                    let addr = usize::from_le_bytes(*(addr.as_ptr() as *const _));
+                    let content = usize::from_le_bytes(*(content.as_ptr() as *const _));
                     self.map.insert(addr, content);
                 }
                 seek += size as u64;
@@ -82,5 +84,9 @@ impl PtrsxScanner {
 
             Ok(())
         }
+    }
+
+    pub fn scan<W: io::Write>(&self, map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()> {
+        pointer_search(map, params)
     }
 }
