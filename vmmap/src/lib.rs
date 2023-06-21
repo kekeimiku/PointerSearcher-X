@@ -6,6 +6,9 @@ pub mod macos;
 #[cfg(target_os = "linux")]
 pub mod linux;
 
+#[cfg(target_os = "windows")]
+pub mod windows;
+
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 pub type Pid = i32;
 
@@ -22,6 +25,8 @@ pub mod vmmap64 {
     pub use super::linux::proc64::Process;
     #[cfg(target_os = "macos")]
     pub use super::macos::proc64::Process;
+    #[cfg(target_os = "windows")]
+    pub use super::windows::proc64::Process;
     use super::Pid;
 
     pub trait VirtualMemoryRead {
@@ -46,6 +51,11 @@ pub mod vmmap64 {
     #[cfg(target_os = "linux")]
     pub trait VirtualQueryExt {
         fn name(&self) -> &str;
+    }
+
+    #[cfg(target_os = "windows")]
+    pub trait VirtualQueryExt {
+        fn path(&self) -> Option<&Path>;
     }
 
     pub trait VirtualQuery: VirtualQueryExt {
@@ -87,6 +97,11 @@ pub mod vmmap32 {
     #[cfg(target_os = "linux")]
     pub trait VirtualQueryExt {
         fn name(&self) -> &str;
+    }
+
+    #[cfg(target_os = "windows")]
+    pub trait VirtualQueryExt {
+        fn path(&self) -> Option<&Path>;
     }
 
     pub trait VirtualQuery: VirtualQueryExt {

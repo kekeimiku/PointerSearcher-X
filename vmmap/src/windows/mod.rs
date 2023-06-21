@@ -1,5 +1,3 @@
-pub mod proc;
+pub mod proc64;
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
-
-pub trait VirtualQueryExt {}
+use super::{vmmap64, Error, Pid};

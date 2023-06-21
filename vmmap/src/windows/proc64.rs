@@ -19,7 +19,10 @@ use windows_sys::Win32::{
     },
 };
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
+use super::{
+    vmmap64::{ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt},
+    Error, Pid,
+};
 
 #[derive(Debug, Clone)]
 pub struct Process {
@@ -31,7 +34,7 @@ pub struct Process {
 impl VirtualMemoryRead for Process {
     type Error = Error;
 
-    fn read_at(&self, offset: usize, buf: &mut [u8]) -> Result<usize, Self::Error> {
+    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
         let code =
             unsafe { ReadProcessMemory(self.handle, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut()) };
         if code == 0 {
@@ -46,7 +49,7 @@ impl VirtualMemoryRead for Process {
 impl VirtualMemoryWrite for Process {
     type Error = Error;
 
-    fn write_at(&self, offset: usize, buf: &[u8]) -> Result<(), Self::Error> {
+    fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error> {
         let code =
             unsafe { WriteProcessMemory(self.handle, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut()) };
 
@@ -96,29 +99,35 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Map> + '_> {
-        Box::new(MapIter::new(self.handle))
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
+        Box::new(PageIter::new(self.handle))
     }
 }
 
 #[derive(Debug, Clone)]
-pub struct Map {
-    start: usize,
-    size: usize,
+pub struct Page {
+    start: u64,
+    size: u64,
     flags: u32,
     pathname: Option<PathBuf>,
 }
 
-impl VirtualQuery for Map {
-    fn start(&self) -> usize {
+impl VirtualQueryExt for Page {
+    fn path(&self) -> Option<&Path> {
+        self.pathname.as_deref()
+    }
+}
+
+impl VirtualQuery for Page {
+    fn start(&self) -> u64 {
         self.start
     }
 
-    fn end(&self) -> usize {
+    fn end(&self) -> u64 {
         self.start + self.size
     }
 
-    fn size(&self) -> usize {
+    fn size(&self) -> u64 {
         self.size
     }
 
@@ -140,33 +149,29 @@ impl VirtualQuery for Map {
     fn is_exec(&self) -> bool {
         self.flags & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY) != 0
     }
-
-    fn path(&self) -> Option<&Path> {
-        self.pathname.as_deref()
-    }
 }
 
-pub struct MapIter {
+pub struct PageIter {
     handle: HANDLE,
     base: usize,
     tmp: [u16; MAX_PATH as usize],
 }
 
-impl MapIter {
+impl PageIter {
     pub const fn new(handle: HANDLE) -> Self {
         Self { handle, base: 0, tmp: [0u16; MAX_PATH as usize] }
     }
 }
 
-impl Iterator for MapIter {
-    type Item = Map;
+impl Iterator for PageIter {
+    type Item = Page;
 
     #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         unsafe {
             let mut basic = mem::MaybeUninit::uninit();
 
-            if VirtualQueryEx(self.handle, self.base as _, basic.as_mut_ptr(), mem::size_of::<Map>())
+            if VirtualQueryEx(self.handle, self.base as _, basic.as_mut_ptr(), mem::size_of::<Page>())
                 != mem::size_of::<MEMORY_BASIC_INFORMATION>()
             {
                 return None;
@@ -177,9 +182,9 @@ impl Iterator for MapIter {
             let info = basic.assume_init();
             self.base = info.BaseAddress as usize + info.RegionSize;
 
-            Some(Map {
+            Some(Page {
                 start: info.BaseAddress as _,
-                size: info.RegionSize,
+                size: info.RegionSize as _,
                 flags: info.Protect,
                 pathname,
             })
@@ -190,7 +195,7 @@ impl Iterator for MapIter {
 #[inline(always)]
 unsafe fn get_path_name(handle: HANDLE, base: usize, buf: &mut [u16; 260]) -> Result<PathBuf, WIN32_ERROR> {
     let result = GetMappedFileNameW(handle, base as _, buf.as_mut_ptr(), buf.len() as _);
-    if result <= 0 {
+    if result == 0 {
         return Err(GetLastError());
     }
     Ok(PathBuf::from(wstr_to_string(&buf[..result as _])))
@@ -201,5 +206,3 @@ fn wstr_to_string(full: &[u16]) -> OsString {
     let len = full.iter().position(|&x| x == 0).unwrap_or(full.len());
     OsString::from_wide(&full[..len])
 }
-
-impl VirtualQueryExt for Map {}

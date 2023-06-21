@@ -1,8 +1,6 @@
-use std::{
-    fs::File,
-    io,
-    io::{Read, Write},
-};
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::{fs::File, io::Read};
+use std::{io, io::Write};
 
 #[cfg(target_os = "linux")]
 pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];
@@ -11,6 +9,8 @@ pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 pub const EXE: [[u8; 4]; 2] = [[0xCA, 0xFE, 0xBA, 0xBE], [0xCF, 0xFA, 0xED, 0xFE]];
 
 #[cfg(target_os = "linux")]
+use vmmap::vmmap64::VirtualQueryExt;
+#[cfg(target_os = "windows")]
 use vmmap::vmmap64::VirtualQueryExt;
 #[cfg(target_os = "macos")]
 use vmmap::vmmap64::VirtualQueryExt;
@@ -57,6 +57,22 @@ where
     }
 }
 
+#[cfg(target_os = "windows")]
+impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<&'a str>
+where
+    V: VirtualQuery + VirtualQueryExt,
+{
+    type Error = ();
+
+    fn try_from(value: PageTryWrapper<&'a V>) -> Result<Self, Self::Error> {
+        let path = value.0.path().and_then(|s| s.to_str()).ok_or(())?;
+        if !std::path::Path::new(path).has_root() {
+            return Err(());
+        }
+        Ok(Self { start: value.0.start(), end: value.0.end(), path })
+    }
+}
+
 #[inline]
 pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     if !page.is_read() {
@@ -73,10 +89,8 @@ pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
         return true;
     }
 
-    #[cfg(target_os = "android")]
-    todo!();
-
-    false
+    #[cfg(target_os = "windows")]
+    check_exe(page)
 }
 
 #[cfg(target_os = "macos")]
@@ -108,6 +122,13 @@ pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     File::open(path)
         .and_then(|mut f| f.read_exact(&mut header))
         .map_or(false, |_| EXE.eq(&header))
+}
+
+#[cfg(target_os = "windows")]
+#[inline]
+pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
+    page.path()
+        .map_or(false, |f| f.extension().is_some_and(|s| s == "dll" || s == "exe"))
 }
 
 pub fn default_dump_ptr<P, W>(proc: &P, writer: &mut W) -> Result<(), io::Error>

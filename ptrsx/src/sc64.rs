@@ -1,11 +1,37 @@
-use std::{
-    collections::BTreeMap,
-    fs::File,
-    io,
-    ops::Bound::Included,
-    os::unix::prelude::{FileExt, MetadataExt},
-    path::Path,
-};
+#[cfg(any(target_os = "linux", target_os = "macos"))]
+use std::os::unix::prelude::{FileExt, MetadataExt};
+#[cfg(target_os = "windows")]
+use std::os::windows::prelude::{FileExt, MetadataExt};
+use std::{collections::BTreeMap, fs::File, io, ops::Bound::Included, path::Path};
+#[cfg(target_os = "windows")]
+trait WindowsFileExt {
+    fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()>;
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize>;
+}
+#[cfg(target_os = "windows")]
+impl WindowsFileExt for File {
+    fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()> {
+        let size = FileExt::seek_read(self, buf, offset)?;
+        if size < buf.len() {
+            return Err(std::io::Error::new(std::io::ErrorKind::WriteZero, "failed to write whole buffer"));
+        }
+        Ok(())
+    }
+
+    fn read_at(&self, buf: &mut [u8], offset: u64) -> io::Result<usize> {
+        FileExt::seek_read(self, buf, offset)
+    }
+}
+#[cfg(target_os = "windows")]
+trait WindowsMetadataExt {
+    fn size(&self) -> u64;
+}
+#[cfg(target_os = "windows")]
+impl WindowsMetadataExt for std::fs::Metadata {
+    fn size(&self) -> u64 {
+        MetadataExt::file_size(self)
+    }
+}
 
 use super::{
     c64::{decode_page_info, Page},
