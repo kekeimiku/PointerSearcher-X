@@ -29,6 +29,10 @@ For example, generate a dump file on macOS and then perform scanning on a Linux 
 
 Currently, it is only tested on 64-bit systems and 64-bit targets. Although it can be compiled to other architectures, it cannot run normally. Support for 32-bit targets and other operating systems is in progress.
 
+## PointerSearch concept
+
+ASLR causes the program memory address to always be different when you start the program. The so-called "static" addresses are addresses relative to the beginning of the program code (BinaryFile). With a static address, once you find it, you're done, because the address of the loader (BinaryFile) is easy to find. Unfortunately, not all memory of interest are "static", for these either code hack(often referred to as ASM hack) is needed or a pointer chain is needed(to find this chain is often referred to as pointer search).
+
 ## Tutorial
 
 https://www.bilibili.com/video/BV1Hh411E7oW/
