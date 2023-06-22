@@ -28,7 +28,10 @@ pub struct Page<T> {
 // fuck sb rust TryFrom https://github.com/rust-lang/rust/issues/50133
 pub struct PageTryWrapper<T>(T);
 
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[cfg(any(
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "windows", target_arch = "x86_64")
+))]
 impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<&'a str>
 where
     V: VirtualQuery + VirtualQueryExt,
@@ -50,22 +53,6 @@ where
 
     fn try_from(value: PageTryWrapper<&'a V>) -> Result<Self, Self::Error> {
         let path = value.0.name();
-        if !std::path::Path::new(path).has_root() {
-            return Err(());
-        }
-        Ok(Self { start: value.0.start(), end: value.0.end(), path })
-    }
-}
-
-#[cfg(target_os = "windows")]
-impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<&'a str>
-where
-    V: VirtualQuery + VirtualQueryExt,
-{
-    type Error = ();
-
-    fn try_from(value: PageTryWrapper<&'a V>) -> Result<Self, Self::Error> {
-        let path = value.0.path().and_then(|s| s.to_str()).ok_or(())?;
         if !std::path::Path::new(path).has_root() {
             return Err(());
         }
