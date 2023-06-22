@@ -4,17 +4,30 @@ use vmmap::vmmap64::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery, Virt
 
 use super::cmd::SubCommandTest;
 
+#[cfg(target_os = "linux")]
+pub fn find_base_address(proc: &Process, name: &str) -> Result<u64, &'static str> {
+    proc.get_maps()
+        .filter(|m| m.is_read() && !m.name().is_empty())
+        .find(|m| m.name().eq(name))
+        .map(|m| m.start())
+        .ok_or("find modules error")
+}
+
+#[cfg(any(target_os = "macos", target_os = "windows"))]
+pub fn find_base_address(proc: &Process, name: &str) -> Result<u64, &'static str> {
+    proc.get_maps()
+        .filter(|m| m.is_read() && m.path().is_none())
+        .find(|m| m.path().is_some_and(|f| f.file_name().is_some_and(|n| n.eq(name))))
+        .map(|m| m.start())
+        .ok_or("find modules error")
+}
+
 impl SubCommandTest {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
         let SubCommandTest { pid, path, num } = self;
         let proc = Process::open(pid)?;
         let (name, off, offv, last) = parse_path(&path).ok_or("parse path error")?;
-        let mut address = proc
-            .get_maps()
-            .filter(|m| m.is_read() && m.path().is_some())
-            .find(|m| m.path().and_then(|f| f.file_name()).map_or(false, |n| n.eq(name)))
-            .map(|m| m.start() + off as u64)
-            .ok_or("find modules error")? as usize;
+        let mut address = find_base_address(&proc, name)? as usize + off;
 
         let mut buf = [0; 8];
 
