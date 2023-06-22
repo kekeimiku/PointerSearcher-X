@@ -80,13 +80,13 @@ pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     }
 
     #[cfg(target_os = "macos")]
-    if check_exe(page) || page.path().is_none() && matches!(page.tag(), |1..=9| 11 | 30 | 33 | 60 | 61) {
-        return true;
+    {
+        check_exe(page) || page.path().is_none() && matches!(page.tag(), |1..=9| 11 | 30 | 33 | 60 | 61)
     }
 
     #[cfg(target_os = "linux")]
-    if matches!(page.name(), "[stack]" | "[heap]") || check_exe(page) || page.name().is_empty() {
-        return true;
+    {
+        matches!(page.name(), "[stack]" | "[heap]") || check_exe(page) || page.name().is_empty()
     }
 
     #[cfg(target_os = "windows")]
