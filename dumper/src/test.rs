@@ -5,7 +5,7 @@ use vmmap::vmmap64::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery, Virt
 use super::cmd::SubCommandTest;
 
 #[cfg(target_os = "linux")]
-pub fn find_base_address(proc: &Process, name: &str) -> Result<u64, &'static str> {
+pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<u64, &'static str> {
     proc.get_maps()
         .filter(|m| m.is_read() && !m.name().is_empty())
         .find(|m| m.name().eq(name))
@@ -14,10 +14,10 @@ pub fn find_base_address(proc: &Process, name: &str) -> Result<u64, &'static str
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn find_base_address(proc: &Process, name: &str) -> Result<u64, &'static str> {
+pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<u64, &'static str> {
     proc.get_maps()
         .filter(|m| m.is_read() && m.path().is_none())
-        .find(|m| m.path().is_some_and(|f| f.file_name().is_some_and(|n| n.eq(name))))
+        .find(|m| m.path().and_then(|f| f.file_name()).is_some_and(|n| n.eq(name)))
         .map(|m| m.start())
         .ok_or("find modules error")
 }
