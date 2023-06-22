@@ -15,7 +15,7 @@ pub mod error;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub const DEFAULT_BUF_SIZE: usize = 0x4000;
 
-#[cfg(all(target_os = "linux", target_arch = "x86_64"))]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 pub const DEFAULT_BUF_SIZE: usize = 0x100000;
 
 #[cfg(all(target_os = "windows", target_arch = "x86_64"))]
