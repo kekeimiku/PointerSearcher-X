@@ -62,10 +62,6 @@ impl<'a> PtrsxScanner<'a> {
             .map(|(&k, _)| k)
     }
 
-    pub fn flat_range_address<T>(&'a self, pages: &'a [Page<'a>]) -> impl Iterator<Item = usize> + 'a {
-        pages.iter().flat_map(|page| self.range_address(page))
-    }
-
     pub fn get_rev_pointer_map(&self) -> BTreeMap<usize, Vec<usize>> {
         self.map.iter().fold(BTreeMap::new(), |mut acc, (&k, &v)| {
             acc.entry(v).or_default().push(k);
@@ -73,7 +69,7 @@ impl<'a> PtrsxScanner<'a> {
         })
     }
 
-    pub fn load_pointer_map_file<P: AsRef<Path>>(path: P) -> Result<Pin<Box<Self>>, Error> {
+    pub fn new<P: AsRef<Path>>(path: P) -> Result<Pin<Box<Self>>, Error> {
         unsafe {
             let file = File::open(&path)?;
             let mut buf = [0; 12];

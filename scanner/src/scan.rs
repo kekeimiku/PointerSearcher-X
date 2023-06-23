@@ -14,7 +14,7 @@ impl SubCommandScan {
 
         let file_name = file.file_stem().and_then(|f| f.to_str()).ok_or("get filename error")?;
         let mut spinner = Spinner::start("Start loading cache...");
-        let ptrsx = PtrsxScanner::load_pointer_map_file(file)?;
+        let ptrsx = PtrsxScanner::new(file)?;
         spinner.stop("cache loaded.");
 
         let pages = select_module(ptrsx.pages())?;
