@@ -45,7 +45,7 @@ where
 }
 
 #[cfg(target_os = "linux")]
-impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<&'a str>
+impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<'a>
 where
     V: VirtualQuery + VirtualQueryExt,
 {
