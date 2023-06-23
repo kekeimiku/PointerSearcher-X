@@ -16,7 +16,7 @@ pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<u64, &'
 #[cfg(any(target_os = "macos", target_os = "windows"))]
 pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<u64, &'static str> {
     proc.get_maps()
-        .filter(|m| m.is_read() && m.path().is_none())
+        .filter(|m| m.is_read() && m.path().is_some())
         .find(|m| m.path().and_then(|f| f.file_name()).is_some_and(|n| n.eq(name)))
         .map(|m| m.start())
         .ok_or("find modules error")
