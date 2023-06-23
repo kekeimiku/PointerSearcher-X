@@ -11,10 +11,10 @@ use super::{
 impl SubCommandScan {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
         let SubCommandScan { ref file, target, depth, ignore, offset, dir } = self;
-        let mut ptrsx = PtrsxScanner::default();
+
         let file_name = file.file_stem().and_then(|f| f.to_str()).ok_or("get filename error")?;
         let mut spinner = Spinner::start("Start loading cache...");
-        ptrsx.load_pointer_map_file(file)?;
+        let ptrsx = PtrsxScanner::load_pointer_map_file(file)?;
         spinner.stop("cache loaded.");
 
         let pages = select_module(ptrsx.pages())?;

@@ -19,10 +19,10 @@ use vmmap::vmmap64::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 use super::{d64::create_pointer_map_writer, PTRHEADER64};
 
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct Page<T> {
+pub struct Page<'a> {
     pub start: u64,
     pub end: u64,
-    pub path: T,
+    pub path: &'a str,
 }
 
 // fuck sb rust TryFrom https://github.com/rust-lang/rust/issues/50133
@@ -32,7 +32,7 @@ pub struct PageTryWrapper<T>(T);
     all(target_os = "macos", target_arch = "aarch64"),
     all(target_os = "windows", target_arch = "x86_64")
 ))]
-impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<&'a str>
+impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<'a>
 where
     V: VirtualQuery + VirtualQueryExt,
 {
@@ -132,10 +132,9 @@ where
 }
 
 #[inline]
-pub fn merge_bases<T, I>(mut iter: I) -> Option<Vec<Page<T>>>
+pub fn merge_bases<'a, I>(mut iter: I) -> Option<Vec<Page<'a>>>
 where
-    T: PartialEq,
-    I: Iterator<Item = Page<T>>,
+    I: Iterator<Item = Page<'a>>,
 {
     let mut current = iter.next()?;
     let mut result = Vec::new();
@@ -151,7 +150,7 @@ where
     Some(result)
 }
 
-fn encode_page_info<W: io::Write>(pages: &[Page<&str>], writer: &mut W) -> io::Result<()> {
+fn encode_page_info<W: io::Write>(pages: &[Page<'_>], writer: &mut W) -> io::Result<()> {
     let mut tmp = Vec::new();
     let len = (pages.len() as u32).to_le_bytes();
     tmp.write_all(&len)?;
@@ -168,7 +167,7 @@ fn encode_page_info<W: io::Write>(pages: &[Page<&str>], writer: &mut W) -> io::R
     writer.write_all(&tmp)
 }
 
-pub fn decode_page_info(bytes: &[u8]) -> Vec<Page<&str>> {
+pub fn decode_page_info(bytes: &[u8]) -> Vec<Page<'_>> {
     unsafe {
         let mut i = 0;
         let len = u32::from_le_bytes(*(bytes.as_ptr() as *const _)) as usize;

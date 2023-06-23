@@ -12,7 +12,7 @@ use std::{
 use ptrsx::c64::Page;
 use terminal_size::{terminal_size, Height, Width};
 
-pub fn select_module(items: Vec<Page<&str>>) -> Result<Vec<Page<&str>>, Box<dyn std::error::Error>> {
+pub fn select_module<'a>(items: &[Page<'a>]) -> Result<Vec<Page<'a>>, Box<dyn std::error::Error>> {
     let words = items
         .iter()
         .filter_map(|m| Path::new(m.path).file_name())

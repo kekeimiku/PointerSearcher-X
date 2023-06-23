@@ -2,7 +2,10 @@
 use std::os::unix::prelude::{FileExt, MetadataExt};
 #[cfg(target_os = "windows")]
 use std::os::windows::prelude::{FileExt, MetadataExt};
-use std::{collections::BTreeMap, fs::File, io, ops::Bound::Included, path::Path};
+use std::{
+    collections::BTreeMap, fs::File, io, marker::PhantomPinned, ops::Bound::Included, path::Path, pin::Pin,
+    ptr::NonNull,
+};
 #[cfg(target_os = "windows")]
 trait WindowsFileExt {
     fn read_exact_at(&self, buf: &mut [u8], offset: u64) -> io::Result<()>;
@@ -41,23 +44,25 @@ use super::{
 };
 
 #[derive(Default)]
-pub struct PtrsxScanner {
-    pages: Vec<u8>,
+pub struct PtrsxScanner<'a> {
+    tmp: Vec<u8>,
+    pages: Vec<Page<'a>>,
     map: BTreeMap<usize, usize>,
+    _pin: PhantomPinned,
 }
 
-impl PtrsxScanner {
-    pub fn pages(&self) -> Vec<Page<&str>> {
-        decode_page_info(&self.pages)
+impl<'a> PtrsxScanner<'a> {
+    pub fn pages(&self) -> &[Page] {
+        &self.pages
     }
 
-    pub fn range_address<'a, T>(&'a self, page: &'a Page<T>) -> impl Iterator<Item = usize> + 'a {
+    pub fn range_address(&'a self, page: &Page<'a>) -> impl Iterator<Item = usize> + 'a {
         self.map
             .range((Included(page.start as usize), (Included(page.end as _))))
             .map(|(&k, _)| k)
     }
 
-    pub fn flat_range_address<'a, T>(&'a self, pages: &'a [Page<T>]) -> impl Iterator<Item = usize> + 'a {
+    pub fn flat_range_address<T>(&'a self, pages: &'a [Page<'a>]) -> impl Iterator<Item = usize> + 'a {
         pages.iter().flat_map(|page| self.range_address(page))
     }
 
@@ -68,7 +73,7 @@ impl PtrsxScanner {
         })
     }
 
-    pub fn load_pointer_map_file<P: AsRef<Path>>(&mut self, path: P) -> Result<(), Error> {
+    pub fn load_pointer_map_file<P: AsRef<Path>>(path: P) -> Result<Pin<Box<Self>>, Error> {
         unsafe {
             let file = File::open(&path)?;
             let mut buf = [0; 12];
@@ -83,10 +88,17 @@ impl PtrsxScanner {
                 return Err("this file is not ptr64".into());
             }
 
-            let mut buf = vec![0; len as usize];
-            file.read_exact_at(&mut buf, seek)?;
+            let mut tmp = vec![0; len as usize];
+            file.read_exact_at(&mut tmp, seek)?;
             seek += len as u64;
-            self.pages = buf;
+
+            let ptrsx = Self { tmp, ..Default::default() };
+
+            let mut boxed = Box::pin(ptrsx);
+            let raw_tmp = NonNull::from(&boxed.tmp);
+            let mut_ref: Pin<&mut Self> = Pin::as_mut(&mut boxed);
+            let pin = Pin::get_unchecked_mut(mut_ref);
+            pin.pages = decode_page_info(raw_tmp.as_ref());
 
             let size = std::fs::metadata(path)?.size();
             if (size - seek) % 16 != 0 {
@@ -103,12 +115,12 @@ impl PtrsxScanner {
                     let (addr, content) = b.split_at(8);
                     let addr = usize::from_le_bytes(*(addr.as_ptr() as *const _));
                     let content = usize::from_le_bytes(*(content.as_ptr() as *const _));
-                    self.map.insert(addr, content);
+                    pin.map.insert(addr, content);
                 }
                 seek += size as u64;
             }
 
-            Ok(())
+            Ok(boxed)
         }
     }
 
