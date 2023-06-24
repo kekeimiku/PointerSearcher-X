@@ -1,0 +1,20 @@
+[package]
+name = "ffi"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "ptrsx"
+crate-type = ["cdylib"]
+
+[dependencies.ptrsx]
+path = "../ptrsx"
+default-features = false
+
+[dependencies.rayon]
+version = "1.7.0"
+default-features = false
+
+[dependencies.vmmap]
+path = "../vmmap"
+default-features = false
