@@ -4,8 +4,6 @@ use std::{
     io::{self, BufWriter, Write},
 };
 
-use ptrsx::DEFAULT_BUF_SIZE;
-
 use super::cmd::SubCommandDiff;
 
 impl SubCommandDiff {
@@ -22,7 +20,7 @@ impl SubCommandDiff {
             Some(file) => Box::new(OpenOptions::new().write(true).append(true).create(true).open(file)?) as _,
             None => Box::new(io::stdout()) as _,
         };
-        let mut out = BufWriter::with_capacity(DEFAULT_BUF_SIZE, out);
+        let mut out = BufWriter::new(out);
 
         Ok(h1.intersection(&h2).try_for_each(|s| writeln!(out, "{s}"))?)
     }
