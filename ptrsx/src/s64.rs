@@ -5,7 +5,6 @@ use arrayvec::{ArrayString, ArrayVec};
 pub struct Params<'a, W> {
     pub base: usize,
     pub depth: usize,
-    pub ignore: usize,
     pub range: (usize, usize),
     pub points: &'a [usize],
     pub target: usize,
@@ -33,7 +32,7 @@ fn walk_down_binary<W>(
 where
     W: io::Write,
 {
-    let Params { base, depth, ignore, range: (lr, ur), points, target, writer } = params;
+    let Params { base, depth, range: (lr, ur), points, target, writer } = params;
 
     let min = target.saturating_sub(ur);
     let max = target.saturating_add(lr);
@@ -43,20 +42,18 @@ where
     let mut iter = points.iter().skip(idx).take_while(|&v| v <= &max).copied();
 
     if let Some(m) = iter.next() {
-        if tmp_v.len() > ignore {
-            let m = iter.min_by_key(|&e| signed_diff(target, e)).unwrap_or(m);
-            let off = signed_diff(target, m);
-            tmp_v.push(off);
-            tmp_s.push_str(itoa.format(m - base));
-            for &s in tmp_v.iter().rev() {
-                tmp_s.push('@');
-                tmp_s.push_str(itoa.format(s))
-            }
-            tmp_s.push('\n');
-            writer.write_all(tmp_s.as_bytes())?;
-            tmp_s.clear();
-            tmp_v.pop();
+        let m = iter.min_by_key(|&e| signed_diff(target, e)).unwrap_or(m);
+        let off = signed_diff(target, m);
+        tmp_v.push(off);
+        tmp_s.push_str(itoa.format(m - base));
+        for &s in tmp_v.iter().rev() {
+            tmp_s.push('@');
+            tmp_s.push_str(itoa.format(s))
         }
+        tmp_s.push('\n');
+        writer.write_all(tmp_s.as_bytes())?;
+        tmp_s.clear();
+        tmp_v.pop();
     }
 
     if lv < depth {
@@ -66,7 +63,7 @@ where
             for &target in vec {
                 walk_down_binary(
                     map,
-                    Params { base, depth, ignore, range: (lr, ur), points, target, writer },
+                    Params { base, depth, range: (lr, ur), points, target, writer },
                     lv + 1,
                     (tmp_v, tmp_s, itoa),
                 )?;
@@ -112,7 +109,6 @@ fn test_path_find_helpers() {
         Params {
             base: 0x104B18000,
             depth: 5,
-            ignore: 0,
             range: (0, 16),
             points: &points,
             target: 0x125F04080,

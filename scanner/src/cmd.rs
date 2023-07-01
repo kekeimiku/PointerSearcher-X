@@ -46,8 +46,6 @@ pub struct SubCommandScan {
     pub target: Target,
     #[argh(option, default = "7", short = 'd', description = "depth")]
     pub depth: usize,
-    #[argh(option, default = "0", short = 'i', description = "depth")]
-    pub ignore: usize,
     #[argh(option, default = "Offset((0, 600))", short = 'o', description = "offset")]
     pub offset: Offset,
     #[argh(option, description = "out dir")]

@@ -10,10 +10,7 @@ use super::{
 
 impl SubCommandScan {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
-        let SubCommandScan { ref file, target, depth, ignore, offset, dir } = self;
-        if ignore > depth {
-            return Err("ignore cannot be greater than depth.".into());
-        }
+        let SubCommandScan { ref file, target, depth, offset, dir } = self;
 
         let file_name = file.file_stem().and_then(|f| f.to_str()).ok_or("get filename error")?;
         let mut spinner = Spinner::start("Start loading cache...");
@@ -45,7 +42,6 @@ impl SubCommandScan {
                 let params = Params {
                     base: base as usize,
                     depth,
-                    ignore,
                     range: offset.0,
                     points: &points,
                     target: target.0,

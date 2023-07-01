@@ -29,13 +29,13 @@ pub unsafe extern "C" fn scanner_free(ptr: *mut Scanner) {
 
 #[no_mangle]
 pub unsafe extern "C" fn scanner_get_pages_len(ptr: *mut Scanner) -> ffi::c_int {
-    (&mut *ptr).0.pages().len() as ffi::c_int
+    (*ptr).0.pages().len() as ffi::c_int
 }
 
 #[no_mangle]
 pub unsafe extern "C" fn scanner_get_pages(ptr: *mut Scanner) -> *mut FFIPAGE {
     let mut pages = ffi_try_result![
-        (&mut *ptr)
+        (*ptr)
             .0
             .pages()
             .iter()
