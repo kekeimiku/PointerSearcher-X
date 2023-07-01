@@ -6,9 +6,11 @@ use super::cmd::SubCommandTest;
 
 #[cfg(target_os = "linux")]
 pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<u64, &'static str> {
+    use std::path::Path;
+
     proc.get_maps()
         .filter(|m| m.is_read() && !m.name().is_empty())
-        .find(|m| m.name().eq(name))
+        .find(|m| Path::new(m.name()).file_name().map_or(false, |n| n.eq(name)))
         .map(|m| m.start())
         .ok_or("find modules error")
 }
