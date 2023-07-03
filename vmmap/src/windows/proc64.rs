@@ -1,8 +1,9 @@
-use core::{mem, ptr};
 use std::{
     ffi::OsString,
+    mem,
     os::windows::prelude::OsStringExt,
     path::{Path, PathBuf},
+    ptr,
 };
 
 use windows_sys::Win32::{
@@ -64,29 +65,29 @@ impl VirtualMemoryWrite for Process {
 
 impl Process {
     pub fn open(pid: Pid) -> Result<Self, Error> {
-        let handle = unsafe {
-            OpenProcess(
+        unsafe {
+            let handle = OpenProcess(
                 PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION,
                 FALSE,
                 pid,
-            )
-        };
+            );
 
-        if handle == 0 {
-            let error = unsafe { GetLastError() };
-            return Err(Error::OpenProcess(error));
+            if handle == 0 {
+                let error = GetLastError();
+                return Err(Error::OpenProcess(error));
+            }
+
+            let mut buffer: [u16; MAX_PATH as _] = [0; MAX_PATH as _];
+
+            let result = GetCurrentDirectoryW(MAX_PATH, buffer.as_mut_ptr());
+            if result == 0 {
+                let error = GetLastError();
+                return Err(Error::OpenProcess(error));
+            }
+
+            let pathname = PathBuf::from(OsString::from_wide(&buffer[..result as _]));
+            Ok(Self { pid, handle, pathname })
         }
-
-        let mut buffer: [u16; MAX_PATH as _] = [0; MAX_PATH as _];
-
-        if unsafe { GetCurrentDirectoryW(MAX_PATH, buffer.as_mut_ptr()) } == 0 {
-            let error = unsafe { GetLastError() };
-            return Err(Error::OpenProcess(error));
-        }
-
-        let pathname = PathBuf::from(wstr_to_string(&buffer));
-
-        Ok(Self { pid, handle, pathname })
     }
 }
 
@@ -99,8 +100,12 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
-        Box::new(PageIter::new(self.handle))
+    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_> {
+        fn skip_last<T>(mut iter: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
+            let last = iter.next();
+            iter.scan(last, |state, item| mem::replace(state, Some(item)))
+        }
+        skip_last(PageIter::new(self.handle).skip(1))
     }
 }
 
@@ -171,8 +176,12 @@ impl Iterator for PageIter {
         unsafe {
             let mut basic = mem::MaybeUninit::uninit();
 
-            if VirtualQueryEx(self.handle, self.base as _, basic.as_mut_ptr(), mem::size_of::<Page>())
-                != mem::size_of::<MEMORY_BASIC_INFORMATION>()
+            if VirtualQueryEx(
+                self.handle,
+                self.base as _,
+                basic.as_mut_ptr(),
+                mem::size_of::<MEMORY_BASIC_INFORMATION>(),
+            ) == 0
             {
                 return None;
             }
@@ -198,11 +207,5 @@ unsafe fn get_path_name(handle: HANDLE, base: usize, buf: &mut [u16; 260]) -> Re
     if result == 0 {
         return Err(GetLastError());
     }
-    Ok(PathBuf::from(wstr_to_string(&buf[..result as _])))
-}
-
-#[inline(always)]
-fn wstr_to_string(full: &[u16]) -> OsString {
-    let len = full.iter().position(|&x| x == 0).unwrap_or(full.len());
-    OsString::from_wide(&full[..len])
+    Ok(PathBuf::from(OsString::from_wide(&buf[..result as _])))
 }
