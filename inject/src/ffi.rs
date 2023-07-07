@@ -15,12 +15,10 @@ use crate::bindgen::{
     thread_inspect_t, thread_read_t, thread_state_flavor_t, thread_state_t, vm_map_t, vm_offset_t, vm_prot_t,
 };
 
-pub const PIDPATHINFO_MAXSIZE: usize = 4095;
-
 pub const TASK_DYLD_INFO_COUNT: usize = mem::size_of::<task_dyld_info_data_t>() / mem::size_of::<natural_t>();
 
 pub const ARM_THREAD_STATE64_COUNT: mach_msg_type_number_t =
-    (mem::size_of::<arm_thread_state64_t>() / mem::size_of::<u32>()) as mach_msg_type_number_t;
+    (mem::size_of::<arm_thread_state64_t>() / mem::size_of::<natural_t>()) as mach_msg_type_number_t;
 
 pub const THREAD_BASIC_INFO_COUNT: mach_msg_type_number_t =
     (mem::size_of::<thread_basic_info_data_t>() / mem::size_of::<natural_t>()) as mach_msg_type_number_t;
@@ -124,40 +122,6 @@ pub unsafe fn thread_create_running(
     child_act: *mut thread_act_t,
 ) -> Result<(), kern_return_t> {
     let ret = bindgen::thread_create_running(parent_task, flavor, new_state, new_stateCnt, child_act);
-    if ret != KERN_SUCCESS {
-        return Err(ret);
-    }
-    Ok(())
-}
-
-pub unsafe fn thread_info(
-    target_act: thread_inspect_t,
-    flavor: thread_flavor_t,
-    thread_info_out: thread_info_t,
-    thread_info_outCnt: *mut mach_msg_type_number_t,
-) -> Result<(), kern_return_t> {
-    let ret = bindgen::thread_info(target_act, flavor, thread_info_out, thread_info_outCnt);
-    if ret != KERN_SUCCESS {
-        return Err(ret);
-    }
-    Ok(())
-}
-
-pub unsafe fn thread_get_state(
-    target_act: thread_read_t,
-    flavor: thread_state_flavor_t,
-    old_state: thread_state_t,
-    old_stateCnt: *mut mach_msg_type_number_t,
-) -> Result<(), kern_return_t> {
-    let ret = bindgen::thread_get_state(target_act, flavor, old_state, old_stateCnt);
-    if ret != KERN_SUCCESS {
-        return Err(ret);
-    }
-    Ok(())
-}
-
-pub unsafe fn thread_terminate(target_act: thread_act_t) -> Result<(), kern_return_t> {
-    let ret = bindgen::thread_terminate(target_act);
     if ret != KERN_SUCCESS {
         return Err(ret);
     }

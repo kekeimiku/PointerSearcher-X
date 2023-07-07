@@ -1,16 +1,14 @@
-use std::{fs::File, io::Read, mem, os::unix::prelude::OsStrExt, path::Path, time::Duration};
+use std::{fs::File, io::Read, mem, os::unix::prelude::OsStrExt, path::Path};
 
 use super::{
     bindgen::{
-        arm_thread_state64_t, arm_unified_thread_state_t, mach_port_t, mach_vm_address_t, thread_act_t,
-        thread_basic_info_data_t, thread_info_t, thread_state_t, ARM_THREAD_STATE64, THREAD_BASIC_INFO,
+        arm_unified_thread_state_t, mach_port_t, mach_vm_address_t, thread_act_t, thread_state_t, ARM_THREAD_STATE64,
         VM_FLAGS_ANYWHERE,
     },
     error::Error,
     ffi::{
-        mach_vm_allocate, mach_vm_protect, mach_vm_write, thread_create_running, thread_get_state, thread_info,
-        thread_terminate, ARM_THREAD_STATE64_COUNT, THREAD_BASIC_INFO_COUNT, VM_PROT_EXECUTE, VM_PROT_READ,
-        VM_PROT_WRITE,
+        mach_vm_allocate, mach_vm_protect, mach_vm_write, thread_create_running, ARM_THREAD_STATE64_COUNT,
+        VM_PROT_EXECUTE, VM_PROT_READ, VM_PROT_WRITE,
     },
     utils,
 };
@@ -24,7 +22,7 @@ pub fn find_symbol_address(
     library_header_address: mach_vm_address_t,
     symbol: &str,
 ) -> Result<u64, Error> {
-    unsafe { utils::find_symbol(task, library_header_address, symbol) }?.ok_or("symbol not found".into())
+    unsafe { utils::find_symbol_addr(task, library_header_address, symbol) }?.ok_or("symbol not found".into())
 }
 
 pub fn task_for_pid(pid: i32) -> Result<mach_port_t, Error> {
@@ -47,11 +45,11 @@ unsafe fn inj(path: &[u8], pid: i32) -> Result<(), Error> {
     let stack_size: u64 = 0x4000;
     let remote_task = task_for_pid(pid)?;
 
-    let libdyld = find_library_address(remote_task, "libdyld")?;
+    let libdyld = find_library_address(remote_task, "libdyld.dylib")?;
 
-    let libsystem_pthread = find_library_address(remote_task, "libsystem_pthread")?;
+    let libsystem_pthread = find_library_address(remote_task, "libsystem_pthread.dylib")?;
 
-    let libsystem_kernel = find_library_address(remote_task, "libsystem_kernel")?;
+    let libsystem_kernel = find_library_address(remote_task, "libsystem_kernel.dylib")?;
 
     let dlopen = find_symbol_address(remote_task, libdyld, "_dlopen")?;
 
@@ -119,28 +117,5 @@ unsafe fn inj(path: &[u8], pid: i32) -> Result<(), Error> {
         &mut thread,
     )?;
 
-    std::thread::sleep(Duration::from_millis(30));
-
-    let mut basic_info = mem::zeroed::<thread_basic_info_data_t>();
-
-    let mut info_count = THREAD_BASIC_INFO_COUNT;
-
-    thread_info(thread, THREAD_BASIC_INFO, &mut basic_info as *mut _ as thread_info_t, &mut info_count)?;
-
-    if basic_info.suspend_count > 0 {
-        let mut state = mem::zeroed::<arm_thread_state64_t>();
-        let mut count = ARM_THREAD_STATE64_COUNT;
-        thread_get_state(thread, ARM_THREAD_STATE64 as _, &mut state as *mut _ as thread_state_t, &mut count)?;
-
-        let result = state.__x[10];
-        let thread_id = state.__x[11];
-
-        if result == 0 && thread_id != 0 {
-            std::thread::sleep(Duration::from_millis(30));
-            thread_terminate(thread)?;
-            return Ok(());
-        }
-    }
-
-    Err(Error::Other("inject error".into()))
+    Ok(())
 }

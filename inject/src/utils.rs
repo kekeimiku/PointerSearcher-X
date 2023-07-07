@@ -1,13 +1,12 @@
-use std::{ffi::CStr, mem};
+use std::{ffi::CStr, mem, path::Path};
 
 use super::{
     bindgen::{
         dyld_all_image_infos, dyld_image_info, kern_return_t, load_command, mach_header_64, mach_msg_type_number_t,
         mach_port_t, mach_vm_address_t, mach_vm_size_t, nlist_64, segment_command_64, symtab_command,
-        task_dyld_info_data_t, LC_SEGMENT, LC_SEGMENT_64, LC_SYMTAB, MH_MAGIC_64, SEG_LINKEDIT, SEG_TEXT,
-        TASK_DYLD_INFO,
+        task_dyld_info_data_t, LC_SEGMENT, LC_SEGMENT_64, LC_SYMTAB, SEG_LINKEDIT, SEG_TEXT, TASK_DYLD_INFO,
     },
-    ffi::{mach_vm_read_overwrite, task_info, PIDPATHINFO_MAXSIZE, TASK_DYLD_INFO_COUNT},
+    ffi::{mach_vm_read_overwrite, task_info, TASK_DYLD_INFO_COUNT},
 };
 
 pub fn gen_asm(dlopen: u64) -> [u8; 136] {
@@ -78,17 +77,18 @@ pub unsafe fn find_library(task: mach_port_t, library: &str) -> Result<Option<u6
 
     for info in modules {
         mach_vm_read_overwrite(task, info.imageFilePath as _, buf.len() as _, buf.as_mut_ptr() as _, &mut size)?;
-        let path = CStr::from_ptr(buf.as_ptr()).to_bytes_with_nul();
-        let library = library.as_bytes();
-        if path.windows(library.len()).any(|w| w == library) {
-            return Ok(Some(info.imageLoadAddress as u64));
+        let path = Path::new(std::str::from_utf8_unchecked(CStr::from_ptr(buf.as_ptr()).to_bytes()));
+        if let Some(filename) = path.file_name() {
+            if filename.eq(library) {
+                return Ok(Some(info.imageLoadAddress as u64));
+            }
         }
     }
 
     Ok(None)
 }
 
-pub unsafe fn find_symbol(
+pub unsafe fn find_symbol_addr(
     task: mach_port_t,
     library_header_address: mach_vm_address_t,
     symbol: &str,
@@ -98,32 +98,26 @@ pub unsafe fn find_symbol(
 
     mach_vm_read_overwrite(task, library_header_address, size, &mut header as *mut _ as mach_vm_address_t, &mut size)?;
 
-    if header.magic != MH_MAGIC_64 {
-        return Ok(None);
-    }
+    let mut info = mem::zeroed::<task_dyld_info_data_t>();
+    let mut count: mach_msg_type_number_t = TASK_DYLD_INFO_COUNT as _;
 
-    let mut shared_image_cache_slide = 0;
-    if (header.flags & 0x80000000) == 0x80000000 {
-        let mut info = mem::zeroed::<task_dyld_info_data_t>();
-        let mut count: mach_msg_type_number_t = TASK_DYLD_INFO_COUNT as _;
+    task_info(task, TASK_DYLD_INFO, &mut info as *mut task_dyld_info_data_t as _, &mut count)?;
 
-        task_info(task, TASK_DYLD_INFO, &mut info as *mut task_dyld_info_data_t as _, &mut count)?;
+    let mut infos = mem::zeroed::<dyld_all_image_infos>();
+    let mut size = info.all_image_info_size;
 
-        let mut infos = mem::zeroed::<dyld_all_image_infos>();
-        let mut size = info.all_image_info_size;
+    mach_vm_read_overwrite(
+        task,
+        info.all_image_info_addr,
+        info.all_image_info_size,
+        &mut infos as *mut _ as mach_vm_address_t,
+        &mut size,
+    )?;
 
-        mach_vm_read_overwrite(
-            task,
-            info.all_image_info_addr,
-            info.all_image_info_size,
-            &mut infos as *mut _ as mach_vm_address_t,
-            &mut size,
-        )?;
-        shared_image_cache_slide = infos.sharedCacheSlide as u64
-    }
+    let shared_image_cache_slide = infos.sharedCacheSlide as u64;
 
     let mut command = mem::zeroed::<load_command>();
-    size = mem::size_of_val(&command) as u64;
+    let mut size = mem::size_of_val(&command) as u64;
 
     let mut seg_linkedit_addr: mach_vm_address_t = 0;
     let mut seg_text_addr: mach_vm_address_t = 0;
@@ -140,7 +134,7 @@ pub unsafe fn find_symbol(
         )?;
 
         if command.cmd == LC_SEGMENT | LC_SEGMENT_64 {
-            let mut name: [core::ffi::c_char; 512] = [0; 512];
+            let mut name = [0; 512];
             let mut size = mem::size_of_val(&name) as u64;
 
             let segname_offset = mem::offset_of!(segment_command_64, segname);
@@ -169,10 +163,6 @@ pub unsafe fn find_symbol(
         load_command_address += command.cmdsize as u64;
     }
 
-    if seg_text_addr == 0 || seg_linkedit_addr == 0 || symtab_addr == 0 {
-        return Ok(None);
-    }
-
     let mut seg_linkedit = mem::zeroed::<segment_command_64>();
     let mut seg_text = mem::zeroed::<segment_command_64>();
     let mut symtab = mem::zeroed::<symtab_command>();
@@ -181,11 +171,11 @@ pub unsafe fn find_symbol(
 
     mach_vm_read_overwrite(task, seg_linkedit_addr, size, &mut seg_linkedit as *mut _ as mach_vm_address_t, &mut size)?;
 
-    size = mem::size_of_val(&seg_text) as u64;
+    let mut size = mem::size_of_val(&seg_text) as u64;
 
     mach_vm_read_overwrite(task, seg_text_addr, size, &mut seg_text as *mut _ as mach_vm_address_t, &mut size)?;
 
-    size = mem::size_of_val(&symtab) as u64;
+    let mut size = mem::size_of_val(&symtab) as u64;
 
     mach_vm_read_overwrite(task, symtab_addr, size, &mut symtab as *mut _ as mach_vm_address_t, &mut size)?;
 
@@ -193,37 +183,26 @@ pub unsafe fn find_symbol(
     let strings = library_header_address + symtab.stroff as u64 + file_slide;
     let mut sym_addr = library_header_address + symtab.symoff as u64 + file_slide;
 
-    let mut name = [0; PIDPATHINFO_MAXSIZE];
+    let mut name = [0; 512];
+
+    let mut sym = mem::zeroed::<nlist_64>();
+    let mut sym_size = mem::size_of_val(&sym) as u64;
 
     for _ in 0..symtab.nsyms {
-        let mut sym = mem::zeroed::<nlist_64>();
-        size = mem::size_of_val(&sym) as u64;
+        mach_vm_read_overwrite(task, sym_addr, sym_size, &mut sym as *mut _ as mach_vm_address_t, &mut sym_size)?;
 
-        mach_vm_read_overwrite(task, sym_addr, size, &mut sym as *mut _ as mach_vm_address_t, &mut size)?;
+        let mut size = mem::size_of_val(&name) as u64;
+        let symname_offset = strings + sym.n_un.n_strx as u64;
 
-        if sym.n_value != 0 {
-            let mut size = mem::size_of_val(&name) as u64;
+        mach_vm_read_overwrite(task, symname_offset, size, name.as_mut_ptr() as mach_vm_address_t, &mut size)?;
 
-            let symname_offset = strings + sym.n_un.n_strx as u64;
+        let sym_name = CStr::from_ptr(name.as_ptr());
 
-            mach_vm_read_overwrite(task, symname_offset, size, name.as_mut_ptr() as mach_vm_address_t, &mut size)?;
-
-            let sym_name = CStr::from_ptr(name.as_ptr());
-
-            if sym_name.to_bytes() == symbol.as_bytes() {
-                if sym.n_value < 0x1000 {
-                    return Ok(Some(sym.n_value + library_header_address));
-                }
-
-                if shared_image_cache_slide != 0 {
-                    return Ok(Some(sym.n_value + shared_image_cache_slide));
-                }
-
-                return Ok(Some(sym.n_value + library_header_address));
-            }
+        if sym_name.to_bytes() == symbol.as_bytes() {
+            return Ok(Some(sym.n_value + shared_image_cache_slide));
         }
 
-        sym_addr += size;
+        sym_addr += sym_size;
     }
 
     Ok(None)
