@@ -27,7 +27,7 @@ const PROC_PIDPATHINFO_MAXSIZE: usize = (libproc::PROC_PIDPATHINFO_MAXSIZE - 1) 
 
 pub struct Process {
     pid: Pid,
-    task: mach_port_t,
+    pub task: mach_port_t,
     pathname: PathBuf,
 }
 

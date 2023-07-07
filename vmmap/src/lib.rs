@@ -1,4 +1,5 @@
 #![feature(return_position_impl_trait_in_trait)]
+#![feature(offset_of)]
 
 #[cfg(target_os = "macos")]
 pub mod macos;
