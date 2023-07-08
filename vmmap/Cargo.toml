@@ -22,5 +22,5 @@ features = [
 ]
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies.machx]
-version = "0.4.3"
+version = "0.4.4"
 default-features = false

@@ -3,8 +3,8 @@ use std::{fs::File, io::Read, mem, os::unix::prelude::OsStrExt, path::Path};
 use machx::{
     mach_types::thread_act_t,
     port::mach_port_t,
+    structs::arm_unified_thread_state_t,
     thread_status::{thread_state_t, ARM_THREAD_STATE64},
-    vm::arm_unified_thread_state_t,
     vm_prot::{VM_PROT_EXECUTE, VM_PROT_READ, VM_PROT_WRITE},
     vm_statistics::VM_FLAGS_ANYWHERE,
     vm_types::mach_vm_address_t,
