@@ -38,14 +38,14 @@ impl VirtualMemoryRead for Process {
     type Error = Error;
 
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
-        let code =
-            unsafe { ReadProcessMemory(self.handle, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut()) };
-        if code == 0 {
-            let error = unsafe { GetLastError() };
-            return Err(Error::ReadMemory(error));
+        unsafe {
+            let code = ReadProcessMemory(self.handle, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
+            if code == 0 {
+                let error = GetLastError();
+                return Err(Error::ReadMemory(error));
+            }
+            Ok(buf.len())
         }
-
-        Ok(buf.len())
     }
 }
 
@@ -53,15 +53,14 @@ impl VirtualMemoryWrite for Process {
     type Error = Error;
 
     fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error> {
-        let code =
-            unsafe { WriteProcessMemory(self.handle, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut()) };
-
-        if code == 0 {
-            let error = unsafe { GetLastError() };
-            return Err(Error::WriteMemory(error));
+        unsafe {
+            let code = WriteProcessMemory(self.handle, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
+            if code == 0 {
+                let error = GetLastError();
+                return Err(Error::WriteMemory(error));
+            }
+            Ok(())
         }
-
-        Ok(())
     }
 }
 
