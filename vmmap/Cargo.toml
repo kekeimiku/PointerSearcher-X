@@ -21,7 +21,6 @@ features = [
     "Win32_System_Environment",
 ]
 
-[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies.mach2]
-git = "https://github.com/kekeimiku/mach2/"
-branch = "dev"
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies.machx]
+version = "0.4.3"
 default-features = false

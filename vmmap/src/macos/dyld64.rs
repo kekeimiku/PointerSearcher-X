@@ -1,6 +1,6 @@
 use std::{ffi::CStr, mem, path::PathBuf};
 
-use mach2::{
+use machx::{
     dyld_images::{dyld_all_image_infos, dyld_image_info, mach_header_64, segment_command_64},
     kern_return::{kern_return_t, KERN_SUCCESS},
     message::mach_msg_type_number_t,
@@ -14,7 +14,7 @@ use mach2::{
 use super::vmmap64::Process;
 
 const TASK_DYLD_INFO_COUNT: mach_msg_type_number_t =
-    (mem::size_of::<task_dyld_info>() / mem::size_of::<mach2::vm_types::natural_t>()) as mach_msg_type_number_t;
+    (mem::size_of::<task_dyld_info>() / mem::size_of::<machx::vm_types::natural_t>()) as mach_msg_type_number_t;
 
 impl Process {
     pub fn get_dyld_infos(&self) -> Result<impl Iterator<Item = Result<DyldInfo, kern_return_t>>, kern_return_t> {

@@ -1,15 +1,18 @@
 use std::{fs::File, io::Read, mem, os::unix::prelude::OsStrExt, path::Path};
 
+use machx::{
+    mach_types::thread_act_t,
+    port::mach_port_t,
+    thread_status::{thread_state_t, ARM_THREAD_STATE64},
+    vm::arm_unified_thread_state_t,
+    vm_prot::{VM_PROT_EXECUTE, VM_PROT_READ, VM_PROT_WRITE},
+    vm_statistics::VM_FLAGS_ANYWHERE,
+    vm_types::mach_vm_address_t,
+};
+
 use super::{
-    bindgen::{
-        arm_unified_thread_state_t, mach_port_t, mach_vm_address_t, thread_act_t, thread_state_t, ARM_THREAD_STATE64,
-        VM_FLAGS_ANYWHERE,
-    },
     error::Error,
-    ffi::{
-        mach_vm_allocate, mach_vm_protect, mach_vm_write, thread_create_running, ARM_THREAD_STATE64_COUNT,
-        VM_PROT_EXECUTE, VM_PROT_READ, VM_PROT_WRITE,
-    },
+    ffi::{mach_vm_allocate, mach_vm_protect, mach_vm_write, thread_create_running, ARM_THREAD_STATE64_COUNT},
     utils,
 };
 

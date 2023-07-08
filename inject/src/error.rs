@@ -1,15 +1,15 @@
 use std::fmt::Display;
 
-use super::bindgen;
+use machx::kern_return::kern_return_t;
 
 #[derive(Debug)]
 pub enum Error {
-    Kern(bindgen::kern_return_t),
+    Kern(kern_return_t),
     Other(String),
 }
 
-impl From<bindgen::kern_return_t> for Error {
-    fn from(value: bindgen::kern_return_t) -> Self {
+impl From<machx::kern_return::kern_return_t> for Error {
+    fn from(value: kern_return_t) -> Self {
         Self::Kern(value)
     }
 }

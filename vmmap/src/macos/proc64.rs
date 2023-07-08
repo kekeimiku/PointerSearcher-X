@@ -5,7 +5,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use mach2::{
+use machx::{
     kern_return::{kern_return_t, KERN_SUCCESS},
     libproc,
     mach_types::vm_task_entry_t,

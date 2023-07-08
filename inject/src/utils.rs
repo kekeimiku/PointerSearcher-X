@@ -1,13 +1,17 @@
 use std::{ffi::CStr, mem, path::Path};
 
-use super::{
-    bindgen::{
-        dyld_all_image_infos, dyld_image_info, kern_return_t, load_command, mach_header_64, mach_msg_type_number_t,
-        mach_port_t, mach_vm_address_t, mach_vm_size_t, nlist_64, segment_command_64, symtab_command,
-        task_dyld_info_data_t, LC_SEGMENT, LC_SEGMENT_64, LC_SYMTAB, SEG_LINKEDIT, SEG_TEXT, TASK_DYLD_INFO,
-    },
-    ffi::{mach_vm_read_overwrite, task_info, TASK_DYLD_INFO_COUNT},
+use machx::{
+    dyld_images::{dyld_all_image_infos, dyld_image_info, mach_header_64, segment_command_64},
+    kern_return::kern_return_t,
+    loader::{load_command, symtab_command, LC_SEGMENT, LC_SEGMENT_64, LC_SYMTAB, SEG_LINKEDIT, SEG_TEXT},
+    message::mach_msg_type_number_t,
+    nlist::nlist_64,
+    port::mach_port_t,
+    task_info::{task_dyld_info_data_t, TASK_DYLD_INFO},
+    vm_types::{mach_vm_address_t, mach_vm_size_t},
 };
+
+use super::ffi::{mach_vm_read_overwrite, task_info, TASK_DYLD_INFO_COUNT};
 
 pub fn gen_asm(dlopen: u64) -> [u8; 136] {
     let mut asm: [u8; 136] = *include_bytes!("aarch64");

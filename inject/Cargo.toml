@@ -5,3 +5,7 @@ edition = "2021"
 
 [dependencies]
 argh = "0.1.10"
+
+[target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies.machx]
+version = "0.4.3"
+default-features = false
