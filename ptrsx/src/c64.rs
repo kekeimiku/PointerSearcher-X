@@ -114,14 +114,15 @@ pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
 #[cfg(target_os = "windows")]
 #[inline]
 pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
-    if page
-        .path()
-        .is_some_and(|d| d.starts_with("\\Device\\HarddiskVolume3\\Windows\\System32"))
-    {
+    let Some(path) = page.path() else {
+        return false;
+    };
+
+    if path.starts_with("\\Device\\HarddiskVolume3\\Windows\\System32") {
         return false;
     }
-    page.path()
-        .map_or(false, |f| f.extension().is_some_and(|s| s == "dll" || s == "exe"))
+
+    path.extension().is_some_and(|s| s == "dll" || s == "exe")
 }
 
 pub fn default_dump_ptr<P, W>(proc: &P, writer: &mut W) -> Result<(), io::Error>
