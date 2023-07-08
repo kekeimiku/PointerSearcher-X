@@ -82,8 +82,8 @@ pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
 
 #[cfg(target_os = "macos")]
 #[inline]
-fn check_exe<Q: VirtualQuery>(map: &Q) -> bool {
-    let Some(path) = map.path() else {
+fn check_exe<Q: VirtualQuery>(page: &Q) -> bool {
+    let Some(path) = page.path() else {
         return false;
     };
 
