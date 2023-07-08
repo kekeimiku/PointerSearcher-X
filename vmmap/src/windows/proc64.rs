@@ -10,13 +10,15 @@ use windows_sys::Win32::{
     Foundation::{GetLastError, FALSE, HANDLE, MAX_PATH, WIN32_ERROR},
     System::{
         Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory},
-        Environment::GetCurrentDirectoryW,
         Memory::{
             VirtualQueryEx, MEMORY_BASIC_INFORMATION, PAGE_EXECUTE, PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE,
             PAGE_EXECUTE_WRITECOPY, PAGE_READONLY, PAGE_READWRITE, PAGE_WRITECOPY,
         },
         ProcessStatus::GetMappedFileNameW,
-        Threading::{OpenProcess, PROCESS_QUERY_INFORMATION, PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE},
+        Threading::{
+            OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_NATIVE, PROCESS_QUERY_INFORMATION,
+            PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
+        },
     },
 };
 
@@ -77,15 +79,16 @@ impl Process {
                 return Err(Error::OpenProcess(error));
             }
 
-            let mut buffer: [u16; MAX_PATH as _] = [0; MAX_PATH as _];
+            let mut buffer = [0; MAX_PATH as _];
+            let mut lpdwsize = MAX_PATH;
 
-            let result = GetCurrentDirectoryW(MAX_PATH, buffer.as_mut_ptr());
+            let result = QueryFullProcessImageNameW(handle, PROCESS_NAME_NATIVE, buffer.as_mut_ptr(), &mut lpdwsize);
             if result == 0 {
                 let error = GetLastError();
                 return Err(Error::OpenProcess(error));
             }
 
-            let pathname = PathBuf::from(OsString::from_wide(&buffer[..result as _]));
+            let pathname = PathBuf::from(OsString::from_wide(&buffer[..lpdwsize as _]));
             Ok(Self { pid, handle, pathname })
         }
     }
@@ -159,12 +162,11 @@ impl VirtualQuery for Page {
 pub struct PageIter {
     handle: HANDLE,
     base: usize,
-    tmp: [u16; MAX_PATH as usize],
 }
 
 impl PageIter {
     pub const fn new(handle: HANDLE) -> Self {
-        Self { handle, base: 0, tmp: [0u16; MAX_PATH as usize] }
+        Self { handle, base: 0 }
     }
 }
 
@@ -186,7 +188,7 @@ impl Iterator for PageIter {
                 return None;
             }
 
-            let pathname = get_path_name(self.handle, self.base, &mut self.tmp).ok();
+            let pathname = get_path_name(self.handle, self.base).ok();
 
             let info = basic.assume_init();
             self.base = info.BaseAddress as usize + info.RegionSize;
@@ -202,7 +204,8 @@ impl Iterator for PageIter {
 }
 
 #[inline(always)]
-unsafe fn get_path_name(handle: HANDLE, base: usize, buf: &mut [u16; 260]) -> Result<PathBuf, WIN32_ERROR> {
+unsafe fn get_path_name(handle: HANDLE, base: usize) -> Result<PathBuf, WIN32_ERROR> {
+    let mut buf = [0; MAX_PATH as _];
     let result = GetMappedFileNameW(handle, base as _, buf.as_mut_ptr(), buf.len() as _);
     if result == 0 {
         return Err(GetLastError());
