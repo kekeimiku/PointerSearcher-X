@@ -77,7 +77,7 @@ pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     }
 
     #[cfg(target_os = "windows")]
-    check_exe(page)
+    (check_exe(page) || page.path().is_none())
 }
 
 #[cfg(target_os = "macos")]
@@ -114,6 +114,12 @@ pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
 #[cfg(target_os = "windows")]
 #[inline]
 pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
+    if page
+        .path()
+        .is_some_and(|d| d.starts_with("\\Device\\HarddiskVolume3\\Windows\\System32"))
+    {
+        return false;
+    }
     page.path()
         .map_or(false, |f| f.extension().is_some_and(|s| s == "dll" || s == "exe"))
 }
