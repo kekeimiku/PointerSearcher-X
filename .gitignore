@@ -1,11 +1,6 @@
 /target
-build/
 Cargo.lock
 .cargo/
 build.sh
 entitlements.plist
-rust-toolchain.toml
 **/.DS_Store
-**/*.ptrs
-vmmap/src/main.rs
-ptrsx/src/main.rs
