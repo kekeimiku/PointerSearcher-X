@@ -48,6 +48,10 @@ https://github.com/scanmem/scanmem/issues/431
 
 https://github.com/korcankaraokcu/PINCE/issues/15
 
+## FAQ
+
+[FAQ](./faq-zh.md)
+
 ## 免责声明
 
 编写它只是为了学习rust，没有恶意目的。
