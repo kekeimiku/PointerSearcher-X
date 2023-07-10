@@ -18,19 +18,19 @@ where
             };
             for (k, buf) in buf[..size].windows(4).enumerate() {
                 let addr = start + off + k as u32;
-                let out_addr = u32::from_le_bytes(unsafe { *(buf.as_ptr() as *const _) });
+                let content = u32::from_le_bytes(unsafe { *(buf.as_ptr() as *const _) });
                 if region
                     .binary_search_by(|&(a, s)| {
-                        if out_addr >= a && out_addr < a + s {
+                        if content >= a && content < a + s {
                             Ordering::Equal
                         } else {
-                            a.cmp(&out_addr)
+                            a.cmp(&content)
                         }
                     })
                     .is_ok()
                 {
                     out.write_all(&addr.to_le_bytes())?;
-                    out.write_all(&out_addr.to_le_bytes())?;
+                    out.write_all(&content.to_le_bytes())?;
                 }
             }
         }
