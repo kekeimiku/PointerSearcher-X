@@ -10,34 +10,33 @@ use std::{
 };
 
 use ptrsx::c64::Page;
-use terminal_size::{terminal_size, Height, Width};
+use terminal_size::terminal_size;
 
-pub fn select_module<'a>(items: &[Page<'a>]) -> Result<Vec<Page<'a>>, Box<dyn std::error::Error>> {
+pub fn select_base_module<'a>(items: &[Page<'a>]) -> Result<Vec<Page<'a>>, Box<dyn std::error::Error>> {
     let words = items
         .iter()
         .filter_map(|m| Path::new(m.path).file_name())
         .enumerate()
         .map(|(k, v)| format!("[\x1B[32m{k}\x1B[0m: {}] ", v.to_string_lossy()));
 
-    let (width, _) = terminal_size().unwrap_or((Width(80), Height(24)));
+    let (width, _) = terminal_size().ok_or("get terminal_size")?;
     let width = width.0 as usize;
 
     let mut s = String::with_capacity(0x2000);
     let mut current_line_len = 0;
     for word in words {
-        if current_line_len + word.len() + 1 > width {
+        let word_len = word.len() + 1;
+        if current_line_len + word_len > width {
             s.push('\n');
-            s.push_str(&word);
-            s.push(' ');
-            current_line_len = word.len() + 1;
+            current_line_len = word_len;
         } else {
-            s.push_str(&word);
             s.push(' ');
-            current_line_len += word.len() + 1;
+            current_line_len += word_len;
         }
+        s.push_str(&word);
     }
 
-    println!("{s}\n\x1B[33mSelect modules, multiple separated by spaces\x1B[0m");
+    println!("{s}\n\x1B[33mSelect base modules, multiple separated by spaces.\x1B[0m");
 
     let mut selected_items = vec![];
     let mut input = String::new();

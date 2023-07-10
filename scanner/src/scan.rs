@@ -5,7 +5,7 @@ use rayon::prelude::*;
 
 use super::{
     cmd::SubCommandScan,
-    utils::{select_module, Spinner},
+    utils::{select_base_module, Spinner},
 };
 
 impl SubCommandScan {
@@ -17,7 +17,7 @@ impl SubCommandScan {
         let ptrsx = PtrsxScanner::new(file)?;
         spinner.stop("cache loaded.");
 
-        let pages = select_module(ptrsx.pages())?;
+        let pages = select_base_module(ptrsx.pages())?;
         let mut spinner = Spinner::start("Start creating pointer maps...");
         let rev_map = ptrsx.get_rev_pointer_map();
         spinner.stop("Pointer map is created.");
