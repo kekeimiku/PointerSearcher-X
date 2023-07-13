@@ -18,7 +18,10 @@ pub const DEFAULT_BUF_SIZE: usize = 0x4000;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub const DEFAULT_BUF_SIZE: usize = 0x100000;
 
-#[cfg(all(target_os = "windows", target_arch = "x86_64"))]
+#[cfg(any(
+    all(target_os = "windows", target_arch = "x86_64"),
+    all(target_os = "macos", target_arch = "x86_64"),
+))]
 pub const DEFAULT_BUF_SIZE: usize = 0x1000;
 
 pub const PTRHEADER64: [u8; 8] = [b'P', b'T', b'R', 64, 0, 0, 0, 0];

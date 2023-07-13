@@ -114,7 +114,7 @@ unsafe fn inj(path: &[u8], pid: i32) -> Result<(), Error> {
     let mut thread: thread_act_t = 0;
     thread_create_running(
         remote_task,
-        ARM_THREAD_STATE64 as _,
+        ARM_THREAD_STATE64,
         &mut state.uts.ts_64 as *mut _ as thread_state_t,
         ARM_THREAD_STATE64_COUNT,
         &mut thread,

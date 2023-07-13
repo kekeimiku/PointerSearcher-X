@@ -5,7 +5,10 @@ use std::{io, io::Write};
 #[cfg(target_os = "linux")]
 pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
-#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+#[cfg(any(
+    all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "macos", target_arch = "x86_64"),
+))]
 pub const EXE: [[u8; 4]; 2] = [[0xCA, 0xFE, 0xBA, 0xBE], [0xCF, 0xFA, 0xED, 0xFE]];
 
 #[cfg(target_os = "linux")]
@@ -30,6 +33,7 @@ pub struct PageTryWrapper<T>(T);
 
 #[cfg(any(
     all(target_os = "macos", target_arch = "aarch64"),
+    all(target_os = "macos", target_arch = "x86_64"),
     all(target_os = "windows", target_arch = "x86_64")
 ))]
 impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<'a>
