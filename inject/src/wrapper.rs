@@ -2,7 +2,6 @@ use std::{fs::File, io::Read, mem, os::unix::prelude::OsStrExt, path::Path};
 
 use machx::{
     mach_types::thread_act_t,
-    port::mach_port_t,
     structs::arm_unified_thread_state_t,
     thread_status::{thread_state_t, ARM_THREAD_STATE64},
     vm_prot::{VM_PROT_EXECUTE, VM_PROT_READ, VM_PROT_WRITE},
@@ -12,25 +11,11 @@ use machx::{
 
 use super::{
     error::Error,
-    ffi::{mach_vm_allocate, mach_vm_protect, mach_vm_write, thread_create_running, ARM_THREAD_STATE64_COUNT},
-    utils,
+    ffi::{
+        mach_vm_allocate, mach_vm_protect, mach_vm_write, task_for_pid, thread_create_running, ARM_THREAD_STATE64_COUNT,
+    },
+    utils::{find_library_addr, find_symbol_addr, gen_code},
 };
-
-pub fn find_library_address(task: mach_port_t, library: &str) -> Result<u64, Error> {
-    unsafe { utils::find_library(task, library) }?.ok_or("library not found".into())
-}
-
-pub fn find_symbol_address(
-    task: mach_port_t,
-    library_header_address: mach_vm_address_t,
-    symbol: &str,
-) -> Result<u64, Error> {
-    unsafe { utils::find_symbol_addr(task, library_header_address, symbol) }?.ok_or("symbol not found".into())
-}
-
-pub fn task_for_pid(pid: i32) -> Result<mach_port_t, Error> {
-    Ok(unsafe { super::ffi::task_for_pid(pid) }?)
-}
 
 pub fn inject<P: AsRef<Path>>(pid: i32, path: P) -> Result<(), Error> {
     let mut header = [0; 4];
@@ -48,22 +33,28 @@ unsafe fn inj(path: &[u8], pid: i32) -> Result<(), Error> {
     let stack_size: u64 = 0x4000;
     let remote_task = task_for_pid(pid)?;
 
-    let libdyld = find_library_address(remote_task, "libdyld.dylib")?;
+    let libdyld = find_library_addr(remote_task, "libdyld.dylib")?.ok_or("find libdyld.dylib failed.")?;
 
-    let libsystem_pthread = find_library_address(remote_task, "libsystem_pthread.dylib")?;
+    let libsystem_pthread =
+        find_library_addr(remote_task, "libsystem_pthread.dylib")?.ok_or("find libsystem_pthread.dylib failed.")?;
 
-    let libsystem_kernel = find_library_address(remote_task, "libsystem_kernel.dylib")?;
+    let libsystem_kernel =
+        find_library_addr(remote_task, "libsystem_kernel.dylib")?.ok_or("find libsystem_kernel.dylib failed.")?;
 
-    let dlopen = find_symbol_address(remote_task, libdyld, "_dlopen")?;
+    let dlopen = find_symbol_addr(remote_task, libdyld, "_dlopen")?.ok_or("find dlopen failed.")?;
 
     let pthread_create_from_mach_thread =
-        find_symbol_address(remote_task, libsystem_pthread, "_pthread_create_from_mach_thread")?;
+        find_symbol_addr(remote_task, libsystem_pthread, "_pthread_create_from_mach_thread")?
+            .ok_or("find _pthread_create_from_mach_thread failed.")?;
 
-    let pthread_set_self = find_symbol_address(remote_task, libsystem_pthread, "__pthread_set_self")?;
+    let pthread_set_self = find_symbol_addr(remote_task, libsystem_pthread, "__pthread_set_self")?
+        .ok_or("find __pthread_set_self failed.")?;
 
-    let thread_suspend = find_symbol_address(remote_task, libsystem_kernel, "_thread_suspend")?;
+    let thread_suspend =
+        find_symbol_addr(remote_task, libsystem_kernel, "_thread_suspend")?.ok_or("find _thread_suspend failed.")?;
 
-    let mach_thread_self = find_symbol_address(remote_task, libsystem_kernel, "_mach_thread_self")?;
+    let mach_thread_self = find_symbol_addr(remote_task, libsystem_kernel, "_mach_thread_self")?
+        .ok_or("find _mach_thread_self failed.")?;
 
     let mut remote_path: mach_vm_address_t = 0;
     mach_vm_allocate(remote_task, &mut remote_path, (path.len() + 1) as _, VM_FLAGS_ANYWHERE)?;
@@ -72,7 +63,7 @@ unsafe fn inj(path: &[u8], pid: i32) -> Result<(), Error> {
 
     mach_vm_protect(remote_task, remote_path, (path.len() + 1) as _, 0, VM_PROT_READ | VM_PROT_WRITE)?;
 
-    let asm = utils::gen_asm(dlopen);
+    let asm = gen_code(dlopen);
     let mut remote_code: mach_vm_address_t = 0;
     mach_vm_allocate(remote_task, &mut remote_code, asm.len() as _, VM_FLAGS_ANYWHERE)?;
 
@@ -103,8 +94,6 @@ unsafe fn inj(path: &[u8], pid: i32) -> Result<(), Error> {
 
     let mut state = mem::zeroed::<arm_unified_thread_state_t>();
 
-    state.ash.flavor = ARM_THREAD_STATE64;
-    state.ash.count = ARM_THREAD_STATE64_COUNT;
     state.uts.ts_64.__x[0] = remote_parameters;
     state.uts.ts_64.__x[1] = remote_path;
     state.uts.ts_64.__pc = remote_code;

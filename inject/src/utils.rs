@@ -13,9 +13,17 @@ use machx::{
 
 use super::ffi::{mach_vm_read_overwrite, task_info, TASK_DYLD_INFO_COUNT};
 
-pub fn gen_asm(dlopen: u64) -> [u8; 136] {
-    let mut asm: [u8; 136] = *include_bytes!("aarch64");
-    let asm_size = asm.len();
+#[inline]
+pub fn gen_code(dlopen: u64) -> [u8; 136] {
+    let mut code: [u8; 136] = [
+        253, 123, 189, 169, 245, 11, 0, 249, 244, 79, 2, 169, 253, 3, 0, 145, 2, 76, 64, 169, 8, 80, 65, 169, 21, 16,
+        64, 249, 191, 15, 0, 249, 227, 3, 1, 170, 225, 3, 31, 170, 160, 99, 0, 145, 0, 1, 63, 214, 234, 3, 0, 170, 160,
+        15, 64, 249, 235, 3, 0, 170, 96, 2, 63, 214, 160, 2, 63, 214, 128, 2, 63, 214, 160, 15, 64, 249, 244, 79, 66,
+        169, 245, 11, 64, 249, 253, 123, 195, 168, 192, 3, 95, 214, 31, 32, 3, 213, 31, 32, 3, 213, 31, 32, 3, 213, 31,
+        32, 3, 213, 31, 32, 3, 213, 65, 0, 128, 82, 226, 221, 151, 210, 162, 213, 187, 242, 2, 0, 214, 242, 2, 0, 244,
+        242, 64, 0, 31, 214,
+    ];
+    let code_size = code.len() as isize;
 
     let copy_bits = |reg: &mut u32, value: u16| {
         for i in 0..=15 {
@@ -25,13 +33,12 @@ pub fn gen_asm(dlopen: u64) -> [u8; 136] {
         }
     };
 
-    let write_instruction_address = |address_intermediate: u32, asm: &mut [u8], offset: isize| {
+    let write_instruction_address = |address_intermediate: u32, code: &mut [u8], offset: isize| {
         let mut instructions = [0u8; 4];
-        instructions
-            .copy_from_slice(&asm[(asm_size as isize + offset) as usize..(asm_size as isize + offset + 4) as usize]);
+        instructions.copy_from_slice(&code[(code_size + offset) as usize..(code_size + offset + 4) as usize]);
         let mut instruction = u32::from_le_bytes(instructions);
         copy_bits(&mut instruction, (address_intermediate & 0xFFFF) as u16);
-        asm[(asm_size as isize + offset) as usize..(asm_size as isize + offset + 4) as usize]
+        code[(code_size + offset) as usize..(code_size + offset + 4) as usize]
             .copy_from_slice(&instruction.to_le_bytes());
     };
 
@@ -40,15 +47,16 @@ pub fn gen_asm(dlopen: u64) -> [u8; 136] {
     let b000 = ((dlopen & 0x0000FFFF00000000) >> 32) as u32;
     let a000 = ((dlopen & 0xFFFF000000000000) >> 48) as u32;
 
-    write_instruction_address(a000, &mut asm, -8);
-    write_instruction_address(b000, &mut asm, -12);
-    write_instruction_address(dead, &mut asm, -16);
-    write_instruction_address(beef, &mut asm, -20);
+    write_instruction_address(a000, &mut code, -8);
+    write_instruction_address(b000, &mut code, -12);
+    write_instruction_address(dead, &mut code, -16);
+    write_instruction_address(beef, &mut code, -20);
 
-    asm
+    code
 }
 
-pub unsafe fn find_library(task: mach_port_t, library: &str) -> Result<Option<u64>, kern_return_t> {
+#[inline]
+pub unsafe fn find_library_addr(task: mach_port_t, library: &str) -> Result<Option<u64>, kern_return_t> {
     let mut dyld_info: task_dyld_info_data_t = mem::zeroed();
     let mut count: mach_msg_type_number_t = TASK_DYLD_INFO_COUNT as _;
 
@@ -65,9 +73,8 @@ pub unsafe fn find_library(task: mach_port_t, library: &str) -> Result<Option<u6
         &mut size,
     )?;
 
+    let mut modules = vec![mem::zeroed::<dyld_image_info>(); image_infos.infoArrayCount as usize];
     size = (mem::size_of::<dyld_image_info>() * image_infos.infoArrayCount as usize) as mach_vm_size_t;
-
-    let mut modules = vec![mem::zeroed::<dyld_image_info>(); size as usize];
 
     mach_vm_read_overwrite(
         task,
@@ -92,6 +99,7 @@ pub unsafe fn find_library(task: mach_port_t, library: &str) -> Result<Option<u6
     Ok(None)
 }
 
+#[inline]
 pub unsafe fn find_symbol_addr(
     task: mach_port_t,
     library_header_address: mach_vm_address_t,

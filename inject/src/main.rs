@@ -3,11 +3,12 @@ use std::path::PathBuf;
 use argh::FromArgs;
 use inject::inject;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+fn main() {
     let cmds = argh::from_env::<Commands>();
-    inject(cmds.pid, cmds.path)?;
-    println!("Injected successfully");
-    Ok(())
+    match inject(cmds.pid, cmds.path) {
+        Ok(_) => println!("Injected successfully"),
+        Err(err) => println!("{err}"),
+    };
 }
 
 #[derive(FromArgs)]

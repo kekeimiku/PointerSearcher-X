@@ -1,9 +1,10 @@
 #![allow(non_snake_case, unused)]
 
-use std::mem;
+use std::{ffi::CStr, mem};
 
 use machx::{
     boolean::boolean_t,
+    error::mach_error_t,
     kern_return::{kern_return_t, KERN_SUCCESS},
     mach_types::{task_name_t, task_t, thread_act_t},
     message::mach_msg_type_number_t,
@@ -24,6 +25,13 @@ pub const ARM_THREAD_STATE64_COUNT: mach_msg_type_number_t =
 pub const THREAD_BASIC_INFO_COUNT: mach_msg_type_number_t =
     (mem::size_of::<thread_basic_info_data_t>() / mem::size_of::<natural_t>()) as mach_msg_type_number_t;
 
+#[inline]
+pub unsafe fn mach_error(error_value: mach_error_t) -> String {
+    let ptr = machx::error::mach_error_string(error_value);
+    String::from(std::str::from_utf8_unchecked(CStr::from_ptr(ptr).to_bytes()))
+}
+
+#[inline]
 pub unsafe fn task_for_pid(pid: i32) -> Result<mach_port_name_t, kern_return_t> {
     let mut task: mach_port_name_t = MACH_PORT_NULL;
     let result = unsafe { machx::traps::task_for_pid(machx::traps::mach_task_self(), pid, &mut task) };
@@ -33,6 +41,7 @@ pub unsafe fn task_for_pid(pid: i32) -> Result<mach_port_name_t, kern_return_t> 
     Ok(task)
 }
 
+#[inline]
 pub unsafe fn mach_vm_read_overwrite(
     target_task: mach_port_t,
     address: mach_vm_address_t,
@@ -47,6 +56,7 @@ pub unsafe fn mach_vm_read_overwrite(
     Ok(())
 }
 
+#[inline]
 pub unsafe fn task_info(
     target_task: task_name_t,
     flavor: task_flavor_t,
@@ -60,6 +70,7 @@ pub unsafe fn task_info(
     Ok(())
 }
 
+#[inline]
 pub unsafe fn mach_vm_allocate(
     target: vm_map_t,
     address: *mut mach_vm_address_t,
@@ -73,6 +84,7 @@ pub unsafe fn mach_vm_allocate(
     Ok(())
 }
 
+#[inline]
 pub unsafe fn mach_vm_write(
     target_task: vm_map_t,
     address: mach_vm_address_t,
@@ -86,6 +98,7 @@ pub unsafe fn mach_vm_write(
     Ok(())
 }
 
+#[inline]
 pub unsafe fn mach_vm_protect(
     target_task: vm_map_t,
     address: mach_vm_address_t,
@@ -100,6 +113,7 @@ pub unsafe fn mach_vm_protect(
     Ok(())
 }
 
+#[inline]
 pub unsafe fn thread_create_running(
     parent_task: task_t,
     flavor: thread_state_flavor_t,

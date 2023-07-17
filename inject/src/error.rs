@@ -2,10 +2,11 @@ use std::fmt::Display;
 
 use machx::kern_return::kern_return_t;
 
-#[derive(Debug)]
+use super::ffi::mach_error;
+
 pub enum Error {
     Kern(kern_return_t),
-    Other(String),
+    Other(&'static str),
 }
 
 impl From<machx::kern_return::kern_return_t> for Error {
@@ -14,20 +15,17 @@ impl From<machx::kern_return::kern_return_t> for Error {
     }
 }
 
-impl From<&str> for Error {
-    fn from(value: &str) -> Self {
-        Self::Other(String::from(value))
+impl From<&'static str> for Error {
+    fn from(value: &'static str) -> Self {
+        Self::Other(value)
     }
 }
 
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let s = match self {
-            Error::Kern(err) => format!("Kern: {err}"),
-            Error::Other(err) => format!("other: {err}"),
-        };
-        write!(f, "{s}")
+        match self {
+            Error::Kern(err) => write!(f, "{}. code: {err}", unsafe { mach_error(*err) }),
+            Error::Other(err) => write!(f, "{err}"),
+        }
     }
 }
-
-impl std::error::Error for Error {}
