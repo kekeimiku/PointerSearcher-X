@@ -24,15 +24,17 @@ ASLR导致程序内存地址在启动程序时始终不同。所谓的“静态�
 
 ## 平台支持:
 
-- [x] x86_64-linux
-
 - [x] aarch64-darwin
 
 - [ ] aarch64-android
 
 - [ ] nintendo-switch
 
+- [x] x86_64-linux
+
 - [x] x86_64-windows (版本大于等于 Windows 7)
+
+- [ ] x86_64-darwin
 
 ## 教程
 

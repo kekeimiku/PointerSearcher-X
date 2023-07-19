@@ -25,15 +25,17 @@ For example, generate a dump file on macOS and then perform scanning on a Linux 
 
 ## Support:
 
-- [x] x86_64-linux
-
 - [x] aarch64-darwin
 
 - [ ] aarch64-android
 
 - [ ] nintendo-switch
 
+- [x] x86_64-linux
+
 - [x] x86_64-windows (Version >= Windows 7)
+
+- [ ] x86_64-darwin
 
 Currently, it is only tested on 64-bit systems and 64-bit targets. Although it can be compiled to other architectures, it cannot run normally. Support for 32-bit targets and other operating systems is in progress.
 
