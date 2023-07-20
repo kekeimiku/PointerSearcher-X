@@ -28,7 +28,7 @@ pub const THREAD_BASIC_INFO_COUNT: mach_msg_type_number_t =
 #[inline]
 pub unsafe fn mach_error(error_value: mach_error_t) -> String {
     let ptr = machx::error::mach_error_string(error_value);
-    String::from(std::str::from_utf8_unchecked(CStr::from_ptr(ptr).to_bytes()))
+    String::from_utf8_unchecked(CStr::from_ptr(ptr).to_bytes().to_owned())
 }
 
 #[inline]
