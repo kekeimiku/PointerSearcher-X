@@ -11,10 +11,6 @@ crate-type = ["cdylib"]
 path = "../ptrsx"
 default-features = false
 
-[dependencies.rayon]
-version = "1.7.0"
-default-features = false
-
 [dependencies.vmmap]
 path = "../vmmap"
 default-features = false

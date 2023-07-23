@@ -1,7 +1,6 @@
 use std::{fs::OpenOptions, io::BufWriter, path::Path};
 
 use ptrsx::{s64::Params, sc64::PtrsxScanner};
-use rayon::prelude::*;
 
 use super::{
     cmd::SubCommandScan,
@@ -26,7 +25,7 @@ impl SubCommandScan {
 
         let mut spinner = Spinner::start("Start scanning pointer chain...");
         pages
-            .par_iter()
+            .iter()
             .map(|m| (m.start, m.path, ptrsx.range_address(m).collect::<Vec<_>>()))
             .try_for_each(|(base, name, points)| {
                 let name = Path::new(name)
