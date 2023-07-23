@@ -13,7 +13,7 @@ where
 
     for &(start, size) in region {
         for off in (0..size).step_by(DEFAULT_BUF_SIZE) {
-            let Ok (size) = proc.read_at((start + off) as _, buf.as_mut_slice()) else {
+            let Ok(size) = proc.read_at((start + off) as _, buf.as_mut_slice()) else {
                 break;
             };
             for (k, buf) in buf[..size].windows(4).enumerate() {
