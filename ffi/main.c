@@ -3,7 +3,7 @@
 
 int main()
 {
-    Scanner *scanner = scanner_init("WeChat-35247.dump");
+    Scanner *scanner = scanner_init("hello-51256.dump");
     if (!scanner)
     {
         printf("scanner_init error\n");
@@ -24,6 +24,10 @@ int main()
     {
         printf("[%llx %llx %s]\n", pages[i].start, pages[i].end, pages[i].path);
     }
+
+    struct FFIParams param = {4, 200, 200, 0x600001ef0060, "./"};
+
+    scanner_pointer_chain(scanner, pages, 1, param);
 
     return 0;
 }

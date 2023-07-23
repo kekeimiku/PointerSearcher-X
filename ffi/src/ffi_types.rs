@@ -1,5 +1,4 @@
-use core::ffi;
-use std::ffi::{CString, NulError};
+use std::ffi::{self, CStr};
 
 use ptrsx::c64::Page;
 
@@ -10,28 +9,25 @@ pub struct FFIPAGE {
     pub path: *const ffi::c_char,
 }
 
-impl Drop for FFIPAGE {
-    fn drop(&mut self) {
+impl From<&Page<'_>> for FFIPAGE {
+    fn from(value: &Page<'_>) -> Self {
+        let path = value.path.as_ptr() as _;
+        Self { start: value.start, end: value.end, path }
+    }
+}
+
+impl From<&FFIPAGE> for Page<'_> {
+    fn from(value: &FFIPAGE) -> Self {
         unsafe {
-            let _ = CString::from_raw(self.path as _);
+            let path = std::str::from_utf8_unchecked(CStr::from_ptr(value.path).to_bytes());
+            Self { start: value.start, end: value.end, path }
         }
     }
 }
 
-impl TryFrom<&Page<'_>> for FFIPAGE {
-    type Error = NulError;
-
-    fn try_from(value: &Page<'_>) -> Result<Self, Self::Error> {
-        let path = CString::new(value.path)?.into_raw();
-        Ok(Self { start: value.start, end: value.end, path })
-    }
-}
-
 #[repr(C)]
-pub struct Params {
-    pub base: ffi::c_ulonglong,
+pub struct FFIParams {
     pub depth: ffi::c_ulonglong,
-    pub ignore: ffi::c_ulonglong,
     pub rangel: ffi::c_ulonglong,
     pub ranger: ffi::c_ulonglong,
     pub target: ffi::c_ulonglong,

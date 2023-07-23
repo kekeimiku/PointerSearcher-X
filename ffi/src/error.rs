@@ -1,4 +1,4 @@
-use std::{cell::RefCell, error::Error, ffi, ptr, slice};
+use std::{cell::RefCell, error::Error, ffi, fmt::Display, ptr, slice};
 
 thread_local! {
     static LAST_ERROR: RefCell<Option<Box<dyn Error>>> = RefCell::new(None);
@@ -6,7 +6,7 @@ thread_local! {
 
 pub fn set_last_error<E>(err: E)
 where
-    E: Error + 'static,
+    E: std::error::Error + 'static,
 {
     LAST_ERROR.with(|prev| {
         *prev.borrow_mut() = Some(Box::new(err));
@@ -17,6 +17,15 @@ where
 fn take_last_error() -> Option<Box<dyn Error>> {
     LAST_ERROR.with(|prev| prev.borrow_mut().take())
 }
+
+#[derive(Debug)]
+pub struct StrErrorWrap(pub &'static str);
+impl Display for StrErrorWrap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl Error for StrErrorWrap {}
 
 #[macro_export]
 macro_rules! ffi_try_result {
