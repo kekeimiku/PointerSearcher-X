@@ -50,7 +50,7 @@ pub unsafe extern "C" fn scanner_get_pages(ptr: *mut Scanner) -> *mut FFIPAGE {
 pub unsafe extern "C" fn scanner_pointer_chain(
     ptr: *mut Scanner,
     pages: *const FFIPAGE,
-    len: u64,
+    len: ffi::c_ulonglong,
     params: FFIParams,
 ) -> ffi::c_int {
     let ptrsx = &(*ptr).0;
