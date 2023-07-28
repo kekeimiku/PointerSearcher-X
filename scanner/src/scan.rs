@@ -11,7 +11,6 @@ impl SubCommandScan {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
         let SubCommandScan { ref file, target, depth, offset, dir } = self;
 
-        let file_name = file.file_stem().and_then(|f| f.to_str()).ok_or("get filename error")?;
         let mut spinner = Spinner::start("Start loading cache...");
         let ptrsx = PtrsxScanner::new(file)?;
         spinner.stop("cache loaded.");
@@ -32,7 +31,7 @@ impl SubCommandScan {
                     .file_name()
                     .and_then(|f| f.to_str())
                     .expect("get region name error");
-                let file = dir.join(format!("{file_name}-{name}.scandata"));
+                let file = dir.join(name).with_extension("scandata");
                 let file = OpenOptions::new()
                     .write(true)
                     .append(true)
