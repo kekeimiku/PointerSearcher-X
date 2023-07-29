@@ -14,7 +14,8 @@ use machx::{
 use super::ffi::{mach_vm_read_overwrite, task_info, TASK_DYLD_INFO_COUNT};
 
 #[inline]
-pub fn gen_code(dlopen: u64) -> [u8; 136] {
+pub unsafe fn gen_code(dlopen: u64) -> [u8; 136] {
+    // http://shell-storm.org/online/Online-Assembler-and-Disassembler/?opcodes=FD7BBDA9F50B00F9F44F02A9FD030091024C40A9085041A9151040F9BF0F00F9E30301AAE1031FAAA063009100013FD6EA0300AAA00F40F9EB0300AA60023FD6A0023FD680023FD6A00F40F9F44F42A9F50B40F9FD7BC3A8C0035FD61F2003D51F2003D51F2003D51F2003D51F2003D541008052E2DD97D2A2D5BBF20200D6F20200F4F240001FD6&arch=arm64&endianness=little&baddr=0x00000000&dis_with_addr=True&dis_with_raw=True&dis_with_ins=True#disassembly
     let mut code: [u8; 136] = [
         0xFD, 0x7B, 0xBD, 0xA9, 0xF5, 0x0B, 0x00, 0xF9, 0xF4, 0x4F, 0x02, 0xA9, 0xFD, 0x03, 0x00, 0x91, 0x02, 0x4C,
         0x40, 0xA9, 0x08, 0x50, 0x41, 0xA9, 0x15, 0x10, 0x40, 0xF9, 0xBF, 0x0F, 0x00, 0xF9, 0xE3, 0x03, 0x01, 0xAA,
@@ -25,34 +26,28 @@ pub fn gen_code(dlopen: u64) -> [u8; 136] {
         0x1F, 0x20, 0x03, 0xD5, 0x41, 0x00, 0x80, 0x52, 0xE2, 0xDD, 0x97, 0xD2, 0xA2, 0xD5, 0xBB, 0xF2, 0x02, 0x00,
         0xD6, 0xF2, 0x02, 0x00, 0xF4, 0xF2, 0x40, 0x00, 0x1F, 0xD6,
     ];
-    let code_size = code.len() as isize;
 
-    let copy_bits = |reg: &mut u32, value: u16| {
+    #[inline]
+    unsafe fn set_bits(reg: &mut [u8], value: u16) {
+        let mut reg_u32 = u32::from_le_bytes(*(reg.as_ptr() as *const _));
         for i in 0..=15 {
             let bit_to_set = ((value >> i) & 1) != 0;
-            *reg &= !(1 << (i + 5));
-            *reg |= (bit_to_set as u32) << (i + 5);
+            reg_u32 &= !(1 << (i + 5));
+            reg_u32 |= (bit_to_set as u32) << (i + 5);
         }
-    };
+        reg.as_mut_ptr()
+            .copy_from_nonoverlapping(reg_u32.to_le_bytes().as_ptr(), 4);
+    }
 
-    let write_instruction_address = |address_intermediate: u32, code: &mut [u8], offset: isize| {
-        let mut instructions = [0u8; 4];
-        instructions.copy_from_slice(&code[(code_size + offset) as usize..(code_size + offset + 4) as usize]);
-        let mut instruction = u32::from_le_bytes(instructions);
-        copy_bits(&mut instruction, (address_intermediate & 0xFFFF) as u16);
-        code[(code_size + offset) as usize..(code_size + offset + 4) as usize]
-            .copy_from_slice(&instruction.to_le_bytes());
-    };
+    let beef = (dlopen & 0x000000000000FFFF) as u16;
+    let dead = ((dlopen & 0x00000000FFFF0000) >> 16) as u16;
+    let b000 = ((dlopen & 0x0000FFFF00000000) >> 32) as u16;
+    let a000 = ((dlopen & 0xFFFF000000000000) >> 48) as u16;
 
-    let beef = (dlopen & 0x000000000000FFFF) as u32;
-    let dead = ((dlopen & 0x00000000FFFF0000) >> 16) as u32;
-    let b000 = ((dlopen & 0x0000FFFF00000000) >> 32) as u32;
-    let a000 = ((dlopen & 0xFFFF000000000000) >> 48) as u32;
-
-    write_instruction_address(a000, &mut code, -8);
-    write_instruction_address(b000, &mut code, -12);
-    write_instruction_address(dead, &mut code, -16);
-    write_instruction_address(beef, &mut code, -20);
+    set_bits(code.get_unchecked_mut(116..120), beef);
+    set_bits(code.get_unchecked_mut(120..124), dead);
+    set_bits(code.get_unchecked_mut(124..128), b000);
+    set_bits(code.get_unchecked_mut(128..132), a000);
 
     code
 }
