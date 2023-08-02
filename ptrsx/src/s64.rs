@@ -39,13 +39,19 @@ where
 
     let idx = points.binary_search(&min).unwrap_or_else(|x| x);
 
-    let mut iter = points.iter().skip(idx).take_while(|&v| v <= &max).copied();
+    let m = points
+        .iter()
+        .skip(idx)
+        .copied()
+        .take_while(|&x| x <= max)
+        .min_by_key(|&x| signed_diff(target, x).abs());
 
-    if let Some(m) = iter.next() {
-        let m = iter.min_by_key(|&e| signed_diff(target, e)).unwrap_or(m);
-        let off = signed_diff(target, m);
-        tmp_v.push(off);
-        tmp_s.push_str(itoa.format(m - base));
+    if let Some(e) = m {
+        let off = signed_diff(target, e);
+        tmp_s.push_str(itoa.format(e - base));
+        tmp_s.push('@');
+        tmp_s.push_str(itoa.format(off));
+
         for &s in tmp_v.iter().rev() {
             tmp_s.push('@');
             tmp_s.push_str(itoa.format(s))
@@ -53,7 +59,6 @@ where
         tmp_s.push('\n');
         writer.write_all(tmp_s.as_bytes())?;
         tmp_s.clear();
-        tmp_v.pop();
     }
 
     if lv < depth {
@@ -77,9 +82,7 @@ where
 
 #[inline(always)]
 fn signed_diff(a: usize, b: usize) -> isize {
-    a.checked_sub(b)
-        .map(|a| a as isize)
-        .unwrap_or_else(|| -((b - a) as isize))
+    a.wrapping_sub(b) as isize
 }
 
 #[test]
