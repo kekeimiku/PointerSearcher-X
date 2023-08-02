@@ -7,7 +7,7 @@ use std::{
 };
 
 use windows_sys::Win32::{
-    Foundation::{GetLastError, FALSE, HANDLE, MAX_PATH, WIN32_ERROR},
+    Foundation::{CloseHandle, GetLastError, FALSE, HANDLE, MAX_PATH, WIN32_ERROR},
     System::{
         Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory},
         Memory::{
@@ -27,11 +27,20 @@ use super::{
     Error, Pid,
 };
 
-#[derive(Debug, Clone)]
 pub struct Process {
     pid: Pid,
-    handle: HANDLE,
+    handle: HandleInner,
     pathname: PathBuf,
+}
+
+struct HandleInner(HANDLE);
+
+impl Drop for HandleInner {
+    fn drop(&mut self) {
+        unsafe {
+            CloseHandle(self.0);
+        }
+    }
 }
 
 impl VirtualMemoryRead for Process {
@@ -39,7 +48,7 @@ impl VirtualMemoryRead for Process {
 
     fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
         unsafe {
-            let code = ReadProcessMemory(self.handle, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
+            let code = ReadProcessMemory(self.handle.0, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
             if code == 0 {
                 let error = GetLastError();
                 return Err(Error::ReadMemory(error));
@@ -54,7 +63,7 @@ impl VirtualMemoryWrite for Process {
 
     fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error> {
         unsafe {
-            let code = WriteProcessMemory(self.handle, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
+            let code = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
             if code == 0 {
                 let error = GetLastError();
                 return Err(Error::WriteMemory(error));
@@ -67,28 +76,32 @@ impl VirtualMemoryWrite for Process {
 impl Process {
     pub fn open(pid: Pid) -> Result<Self, Error> {
         unsafe {
-            let handle = OpenProcess(
-                PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION,
-                FALSE,
-                pid,
-            );
+            || -> _ {
+                let handle = OpenProcess(
+                    PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION,
+                    FALSE,
+                    pid,
+                );
 
-            if handle == 0 {
-                let error = GetLastError();
-                return Err(Error::OpenProcess(error));
-            }
+                if handle == 0 {
+                    let error = GetLastError();
+                    return Err(error);
+                }
 
-            let mut buffer = [0; MAX_PATH as _];
-            let mut lpdwsize = MAX_PATH;
+                let mut buffer = [0; MAX_PATH as _];
+                let mut lpdwsize = 0;
 
-            let result = QueryFullProcessImageNameW(handle, PROCESS_NAME_NATIVE, buffer.as_mut_ptr(), &mut lpdwsize);
-            if result == 0 {
-                let error = GetLastError();
-                return Err(Error::OpenProcess(error));
-            }
+                let result =
+                    QueryFullProcessImageNameW(handle, PROCESS_NAME_NATIVE, buffer.as_mut_ptr(), &mut lpdwsize);
+                if result == 0 {
+                    let error = GetLastError();
+                    return Err(error);
+                }
 
-            let pathname = PathBuf::from(OsString::from_wide(&buffer[..lpdwsize as _]));
-            Ok(Self { pid, handle, pathname })
+                let pathname = PathBuf::from(OsString::from_wide(&buffer[..lpdwsize as _]));
+                Ok(Self { pid, handle: HandleInner(handle), pathname })
+            }()
+            .map_err(Error::OpenProcess)
         }
     }
 }
@@ -107,7 +120,7 @@ impl ProcessInfo for Process {
             let last = iter.next();
             iter.scan(last, |state, item| mem::replace(state, Some(item)))
         }
-        skip_last(PageIter::new(self.handle).skip(1))
+        skip_last(PageIter::new(self.handle.0).skip(1))
     }
 }
 

@@ -35,13 +35,14 @@ impl VirtualMemoryRead for Process {
     type Error = Error;
 
     fn read_at(&self, address: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
-        let mut out = 0;
-        let result =
-            unsafe { mach_vm_read_overwrite(self.task, address, buf.len() as _, buf.as_mut_ptr() as _, &mut out) };
-        if result != KERN_SUCCESS {
-            return Err(Error::ReadMemory(result));
+        unsafe {
+            let mut out = 0;
+            let result = mach_vm_read_overwrite(self.task, address, buf.len() as _, buf.as_mut_ptr() as _, &mut out);
+            if result != KERN_SUCCESS {
+                return Err(Error::ReadMemory(result));
+            }
+            Ok(out as _)
         }
-        Ok(out as _)
     }
 }
 
@@ -49,11 +50,13 @@ impl VirtualMemoryWrite for Process {
     type Error = Error;
 
     fn write_at(&self, address: u64, buf: &[u8]) -> Result<(), Self::Error> {
-        let result = unsafe { mach_vm_write(self.task, address, buf.as_ptr() as _, buf.len() as _) };
-        if result != KERN_SUCCESS {
-            return Err(Error::WriteMemory(result));
+        unsafe {
+            let result = mach_vm_write(self.task, address, buf.as_ptr() as _, buf.len() as _);
+            if result != KERN_SUCCESS {
+                return Err(Error::WriteMemory(result));
+            }
+            Ok(())
         }
-        Ok(())
     }
 }
 
@@ -79,17 +82,18 @@ impl ProcessInfo for Process {
 
 impl Process {
     pub fn open(pid: Pid) -> Result<Self, Error> {
-        Self::o(pid).map_err(Error::OpenProcess)
-    }
-
-    fn o(pid: Pid) -> Result<Self, kern_return_t> {
-        let mut task: mach_port_name_t = MACH_PORT_NULL;
-        let result = unsafe { task_for_pid(mach_task_self(), pid, &mut task) };
-        if result != KERN_SUCCESS {
-            return Err(result);
+        unsafe {
+            || -> _ {
+                let mut task: mach_port_name_t = MACH_PORT_NULL;
+                let result = task_for_pid(mach_task_self(), pid, &mut task);
+                if result != KERN_SUCCESS {
+                    return Err(result);
+                }
+                let pathname = proc_pidpath(pid)?;
+                Ok(Self { pid, task, pathname })
+            }()
+            .map_err(Error::OpenProcess)
         }
-        let pathname = proc_pidpath(pid)?;
-        Ok(Self { pid, task, pathname })
     }
 }
 
@@ -192,23 +196,17 @@ impl PageIter {
     }
 }
 
-impl Default for PageIter {
-    fn default() -> Self {
-        Self { task: unsafe { mach_task_self() }, addr: 1 }
-    }
-}
-
 impl Iterator for PageIter {
     type Item = PageRange;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut count = mem::size_of::<vm_region_extended_info_data_t>() as mach_msg_type_number_t;
-        let mut object_name = 0;
-        let mut size = unsafe { mem::zeroed::<mach_vm_size_t>() };
-        let mut info = unsafe { mem::zeroed::<vm_region_extended_info_data_t>() };
+        unsafe {
+            let mut count = mem::size_of::<vm_region_extended_info_data_t>() as mach_msg_type_number_t;
+            let mut object_name = 0;
+            let mut size = mem::zeroed::<mach_vm_size_t>();
+            let mut info = mem::zeroed::<vm_region_extended_info_data_t>();
 
-        let result = unsafe {
-            mach_vm_region(
+            let result = mach_vm_region(
                 self.task,
                 &mut self.addr,
                 &mut size,
@@ -216,14 +214,14 @@ impl Iterator for PageIter {
                 &mut info as *mut _ as vm_region_info_t,
                 &mut count,
                 &mut object_name,
-            )
-        };
+            );
 
-        if result != KERN_SUCCESS {
-            return None;
+            if result != KERN_SUCCESS {
+                return None;
+            }
+            let region = PageRange { addr: self.addr, size, count, info };
+            self.addr += region.size;
+            Some(region)
         }
-        let region = PageRange { addr: self.addr, size, count, info };
-        self.addr += region.size;
-        Some(region)
     }
 }

@@ -1,7 +1,6 @@
 use std::{
     fs,
     fs::File,
-    io,
     os::unix::prelude::FileExt,
     path::{Path, PathBuf},
 };
@@ -50,14 +49,13 @@ impl ProcessInfo for Process {
 
 impl Process {
     pub fn open(pid: Pid) -> Result<Self, Error> {
-        Self::o(pid).map_err(Error::OpenProcess)
-    }
-
-    fn o(pid: Pid) -> Result<Self, io::Error> {
-        let maps = fs::read_to_string(format!("/proc/{pid}/maps"))?;
-        let pathname = fs::read_link(format!("/proc/{pid}/exe"))?;
-        let handle = File::open(format!("/proc/{pid}/mem"))?;
-        Ok(Self { pid, pathname, maps, handle })
+        || -> _ {
+            let maps = fs::read_to_string(format!("/proc/{pid}/maps"))?;
+            let pathname = fs::read_link(format!("/proc/{pid}/exe"))?;
+            let handle = File::open(format!("/proc/{pid}/mem"))?;
+            Ok(Self { pid, pathname, maps, handle })
+        }()
+        .map_err(Error::OpenProcess)
     }
 }
 

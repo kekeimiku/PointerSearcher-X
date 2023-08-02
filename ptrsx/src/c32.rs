@@ -1,3 +1,4 @@
+#[cfg(target_os = "linux")]
 use std::{fs::File, io::Read};
 
 #[cfg(target_os = "linux")]
@@ -5,6 +6,8 @@ pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
 use vmmap::vmmap32::VirtualQuery;
 #[cfg(target_os = "linux")]
+use vmmap::vmmap32::VirtualQueryExt;
+#[cfg(target_os = "windows")]
 use vmmap::vmmap32::VirtualQueryExt;
 
 #[inline]
