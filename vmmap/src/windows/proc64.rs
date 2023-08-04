@@ -115,12 +115,12 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_> {
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
         fn skip_last<T>(mut iter: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
             let last = iter.next();
             iter.scan(last, |state, item| mem::replace(state, Some(item)))
         }
-        skip_last(PageIter::new(self.handle.0).skip(1))
+        Box::new(skip_last(PageIter::new(self.handle.0).skip(1)))
     }
 }
 

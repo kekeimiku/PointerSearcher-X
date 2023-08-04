@@ -1,6 +1,3 @@
-#![feature(return_position_impl_trait_in_trait)]
-#![feature(offset_of)]
-
 #[cfg(target_os = "macos")]
 pub mod macos;
 
@@ -23,11 +20,11 @@ pub mod vmmap64 {
     use std::path::Path;
 
     #[cfg(target_os = "linux")]
-    pub use super::linux::proc64::Process;
+    pub use super::linux::proc64::{Page, Process};
     #[cfg(target_os = "macos")]
-    pub use super::macos::proc64::Process;
+    pub use super::macos::proc64::{Page, Process};
     #[cfg(target_os = "windows")]
-    pub use super::windows::proc64::Process;
+    pub use super::windows::proc64::{Page, Process};
     use super::Pid;
 
     pub trait VirtualMemoryRead {
@@ -59,7 +56,7 @@ pub mod vmmap64 {
         fn path(&self) -> Option<&Path>;
     }
 
-    pub trait VirtualQuery: VirtualQueryExt {
+    pub trait VirtualQuery {
         fn start(&self) -> u64;
         fn end(&self) -> u64;
         fn size(&self) -> u64;
@@ -71,16 +68,16 @@ pub mod vmmap64 {
     pub trait ProcessInfo {
         fn pid(&self) -> Pid;
         fn app_path(&self) -> &Path;
-        fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_>;
+        fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_>;
     }
 }
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 pub mod vmmap32 {
     use std::path::Path;
 
     #[cfg(target_os = "linux")]
-    pub use super::linux::proc32::Process;
+    pub use super::linux::proc32::{Page, Process};
     use super::Pid;
 
     pub trait VirtualMemoryRead {
@@ -119,6 +116,6 @@ pub mod vmmap32 {
 
         fn pid(&self) -> Pid;
         fn app_path(&self) -> &Path;
-        fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_>;
+        fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_>;
     }
 }

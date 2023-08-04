@@ -69,14 +69,14 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_> {
-        PageIter::new(self.task).map(|m| Page {
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
+        Box::new(PageIter::new(self.task).map(|m| Page {
             addr: m.addr,
             size: m.size,
             count: m.count,
             info: m.info,
             pathname: proc_regionfilename(self.pid, m.addr).ok().and_then(|p| p),
-        })
+        }))
     }
 }
 
@@ -98,7 +98,7 @@ impl Process {
 }
 
 #[allow(dead_code)]
-struct Page {
+pub struct Page {
     addr: mach_vm_address_t,
     size: mach_vm_size_t,
     count: mach_msg_type_number_t,

@@ -86,7 +86,7 @@ pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
 
 #[cfg(target_os = "macos")]
 #[inline]
-fn check_exe<Q: VirtualQuery>(page: &Q) -> bool {
+fn check_exe<Q: VirtualQueryExt>(page: &Q) -> bool {
     let Some(path) = page.path() else {
         return false;
     };
@@ -103,7 +103,7 @@ fn check_exe<Q: VirtualQuery>(page: &Q) -> bool {
 
 #[cfg(target_os = "linux")]
 #[inline]
-pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
+pub fn check_exe<Q: VirtualQueryExt>(page: &Q) -> bool {
     let path = std::path::Path::new(page.name());
     if !path.exists() || path.starts_with("/dev") || path.starts_with("/usr") {
         return false;

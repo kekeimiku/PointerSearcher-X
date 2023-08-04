@@ -42,8 +42,8 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> impl Iterator<Item = impl VirtualQuery + '_> {
-        PageIter::new(&self.maps)
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
+        Box::new(PageIter::new(&self.maps))
     }
 }
 
@@ -60,7 +60,7 @@ impl Process {
 }
 
 #[allow(dead_code)]
-struct Page<'a> {
+pub struct Page<'a> {
     start: u64,
     end: u64,
     flags: &'a str,
