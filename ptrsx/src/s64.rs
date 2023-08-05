@@ -39,23 +39,19 @@ where
 
     let idx = points.binary_search(&min).unwrap_or_else(|x| x);
 
-    let m = points
+    if points
         .iter()
         .skip(idx)
         .copied()
         .take_while(|&x| x <= max)
-        .min_by_key(|&x| signed_diff(target, x).abs());
-
-    if let Some(e) = m {
-        let off = signed_diff(target, e);
-        tmp_s.push_str(itoa.format(e - base));
-        tmp_s.push('@');
-        tmp_s.push_str(itoa.format(off));
-
+        .min_by_key(|&x| (target.wrapping_sub(x) as isize).abs())
+        .map_or(false, |_| tmp_v.len() >= 3)
+    {
+        tmp_s.push_str(itoa.format(target - base));
         for &s in tmp_v.iter().rev() {
             tmp_s.push('@');
             tmp_s.push_str(itoa.format(s))
-        }
+        }        
         tmp_s.push('\n');
         writer.write_all(tmp_s.as_bytes())?;
         tmp_s.clear();
@@ -63,8 +59,7 @@ where
 
     if lv < depth {
         for (&k, vec) in map.range((Included(min), Included(max))) {
-            let off = signed_diff(target, k);
-            tmp_v.push(off);
+            tmp_v.push(target.wrapping_sub(k) as isize);
             for &target in vec {
                 walk_down_binary(
                     map,
@@ -78,11 +73,6 @@ where
     }
 
     Ok(())
-}
-
-#[inline(always)]
-fn signed_diff(a: usize, b: usize) -> isize {
-    a.wrapping_sub(b) as isize
 }
 
 #[test]
@@ -125,8 +115,8 @@ fn test_path_find_helpers() {
     assert_eq!(
         out,
         [
-            54, 53, 53, 55, 54, 64, 48, 64, 48, 64, 49, 54, 64, 49, 54, 64, 48, 10, 54, 53, 53, 55, 54, 64, 48, 64, 48,
-            64, 49, 54, 64, 48, 10, 54, 53, 53, 55, 54, 64, 48, 64, 48, 64, 48, 10
+            54, 53, 53, 55, 54, 64, 48, 64, 49, 54, 64, 49, 54, 64, 48, 10, 54, 53, 53, 55, 54, 64, 48, 64, 49, 54, 64,
+            48, 10, 54, 53, 53, 55, 54, 64, 48, 64, 48, 10
         ]
     );
 }
