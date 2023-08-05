@@ -9,7 +9,7 @@ use super::{
 
 impl SubCommandScan {
     pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
-        let SubCommandScan { ref file, target, depth, offset, dir } = self;
+        let SubCommandScan { ref file, target, depth, offset, node, dir } = self;
 
         let mut spinner = Spinner::start("Start loading cache...");
         let ptrsx = PtrsxScanner::new(file)?;
@@ -40,9 +40,10 @@ impl SubCommandScan {
                 let params = Params {
                     base: base as usize,
                     depth,
+                    target: target.0,
+                    node,
                     range: offset.0,
                     points: &points,
-                    target: target.0,
                     writer: &mut BufWriter::new(file),
                 };
                 ptrsx.scan(&rev_map, params)

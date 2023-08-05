@@ -5,9 +5,10 @@ use arrayvec::{ArrayString, ArrayVec};
 pub struct Params<'a, W> {
     pub base: usize,
     pub depth: usize,
+    pub target: usize,
+    pub node: usize,
     pub range: (usize, usize),
     pub points: &'a [usize],
-    pub target: usize,
     pub writer: &'a mut W,
 }
 
@@ -32,7 +33,7 @@ fn walk_down_binary<W>(
 where
     W: io::Write,
 {
-    let Params { base, depth, range: (lr, ur), points, target, writer } = params;
+    let Params { base, depth, target, node, range: (lr, ur), points, writer } = params;
 
     let min = target.saturating_sub(ur);
     let max = target.saturating_add(lr);
@@ -45,13 +46,13 @@ where
         .copied()
         .take_while(|&x| x <= max)
         .min_by_key(|&x| (target.wrapping_sub(x) as isize).abs())
-        .map_or(false, |_| tmp_v.len() >= 3)
+        .map_or(false, |_| tmp_v.len() >= node)
     {
         tmp_s.push_str(itoa.format(target - base));
         for &s in tmp_v.iter().rev() {
             tmp_s.push('@');
             tmp_s.push_str(itoa.format(s))
-        }        
+        }
         tmp_s.push('\n');
         writer.write_all(tmp_s.as_bytes())?;
         tmp_s.clear();
@@ -63,7 +64,7 @@ where
             for &target in vec {
                 walk_down_binary(
                     map,
-                    Params { base, depth, range: (lr, ur), points, target, writer },
+                    Params { base, depth, target, node, range: (lr, ur), points, writer },
                     lv + 1,
                     (tmp_v, tmp_s, itoa),
                 )?;
@@ -102,9 +103,10 @@ fn test_path_find_helpers() {
         Params {
             base: 0x104B18000,
             depth: 5,
+            target: 0x125F04080,
+            node: 3,
             range: (0, 16),
             points: &points,
-            target: 0x125F04080,
             writer: &mut out,
         },
     )
@@ -116,7 +118,7 @@ fn test_path_find_helpers() {
         out,
         [
             54, 53, 53, 55, 54, 64, 48, 64, 49, 54, 64, 49, 54, 64, 48, 10, 54, 53, 53, 55, 54, 64, 48, 64, 49, 54, 64,
-            48, 10, 54, 53, 53, 55, 54, 64, 48, 64, 48, 10
+            48, 10
         ]
     );
 }
