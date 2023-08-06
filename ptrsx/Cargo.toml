@@ -14,3 +14,7 @@ default-features = false
 [dependencies.arrayvec]
 version = "0.7.4"
 default-features = false
+
+[dependencies.self_cell]
+version = "1.0.1"
+default-features = false

@@ -185,15 +185,15 @@ fn encode_page_info<W: io::Write>(pages: &[Page<'_>], writer: &mut W) -> io::Res
 pub fn decode_page_info(bytes: &[u8]) -> Vec<Page<'_>> {
     unsafe {
         let mut i = 0;
-        let len = u32::from_le_bytes(*(bytes.as_ptr() as *const _)) as usize;
+        let len = u32::from_le_bytes(*(bytes.as_ptr().cast())) as usize;
         let mut pages = Vec::with_capacity(len);
         i += 4;
         for _ in 0..len {
-            let start = usize::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
+            let start = usize::from_le_bytes(*(bytes.as_ptr().add(i).cast()));
             i += 8;
-            let end = usize::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
+            let end = usize::from_le_bytes(*(bytes.as_ptr().add(i).cast()));
             i += 8;
-            let len = u32::from_le_bytes(*(bytes.as_ptr().add(i) as *const _)) as usize;
+            let len = u32::from_le_bytes(*(bytes.as_ptr().add(i).cast())) as usize;
             i += 4;
             let name = core::str::from_utf8_unchecked(bytes.get_unchecked(i..i + len));
             i += len;

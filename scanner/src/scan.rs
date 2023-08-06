@@ -12,7 +12,7 @@ impl SubCommandScan {
         let SubCommandScan { ref file, target, depth, offset, node, dir } = self;
 
         let mut spinner = Spinner::start("Start loading cache...");
-        let ptrsx = PtrsxScanner::new(file)?;
+        let ptrsx = PtrsxScanner::load(file)?;
         spinner.stop("cache loaded.");
 
         let pages = select_base_module(ptrsx.pages())?;

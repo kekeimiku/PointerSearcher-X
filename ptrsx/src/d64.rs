@@ -16,7 +16,7 @@ where
         for off in (0..size).step_by(DEFAULT_BUF_SIZE) {
             let size = proc.read_at(buf.as_mut_slice(), start + off)?;
             for (k, buf) in buf[..size].windows(mem::size_of::<usize>()).enumerate() {
-                let value = usize::from_le_bytes(unsafe { *(buf.as_ptr() as *const _) });
+                let value = usize::from_le_bytes(unsafe { *(buf.as_ptr().cast()) });
                 if region
                     .binary_search_by(|&(start, size)| {
                         if (start..start + size).contains(&value) {
@@ -49,7 +49,7 @@ where
         for off in (0..size).step_by(DEFAULT_BUF_SIZE) {
             let size = proc.read_at(buf.as_mut_slice(), start + off)?;
             for (k, buf) in buf[..size].windows(mem::size_of::<usize>()).enumerate() {
-                let value = usize::from_le_bytes(unsafe { *(buf.as_ptr() as *const _) });
+                let value = usize::from_le_bytes(unsafe { *(buf.as_ptr().cast()) });
                 if region
                     .binary_search_by(|&(start, size)| {
                         if (start..start + size).contains(&value) {
