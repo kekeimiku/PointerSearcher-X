@@ -1,4 +1,3 @@
-#[derive(Debug)]
 pub enum Error {
     #[cfg(target_os = "linux")]
     OpenProcess(std::io::Error),
@@ -61,5 +60,3 @@ impl std::fmt::Display for Error {
         }
     }
 }
-
-impl std::error::Error for Error {}

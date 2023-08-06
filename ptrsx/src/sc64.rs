@@ -39,7 +39,7 @@ impl WindowsMetadataExt for std::fs::Metadata {
 use super::{
     c64::{decode_page_info, Page},
     error::Error,
-    s64::{pointer_search, Params},
+    s64::{pointer_chain_scanner, Params},
     PTRHEADER64,
 };
 
@@ -121,6 +121,6 @@ impl<'a> PtrsxScanner<'a> {
     }
 
     pub fn scan<W: io::Write>(&self, map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()> {
-        pointer_search(map, params)
+        pointer_chain_scanner(map, params)
     }
 }

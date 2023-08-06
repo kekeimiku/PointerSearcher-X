@@ -6,7 +6,7 @@ use vmmap::vmmap64::{Process, ProcessInfo};
 use crate::{cmd::SubCommandDisk, utils::Spinner};
 
 impl SubCommandDisk {
-    pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn init(self) -> Result<(), super::error::Error> {
         let SubCommandDisk { pid, out } = self;
         let proc = Process::open(pid)?;
         let name = proc

@@ -25,18 +25,14 @@ pub mod vmmap64 {
     pub use super::macos::proc64::{Page, Process};
     #[cfg(target_os = "windows")]
     pub use super::windows::proc64::{Page, Process};
-    use super::Pid;
+    use super::{Error, Pid};
 
     pub trait VirtualMemoryRead {
-        type Error: std::error::Error;
-
-        fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error>;
+        fn read_at(&self, buf: &mut [u8], address: usize) -> Result<usize, Error>;
     }
 
     pub trait VirtualMemoryWrite {
-        type Error: std::error::Error;
-
-        fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error>;
+        fn write_at(&self, buf: &[u8], address: usize) -> Result<(), Error>;
     }
 
     #[cfg(target_os = "macos")]

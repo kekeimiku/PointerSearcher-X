@@ -7,7 +7,7 @@ use std::{
 use super::cmd::SubCommandDiff;
 
 impl SubCommandDiff {
-    pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn init(self) -> Result<(), super::error::Error> {
         let SubCommandDiff { f1, f2, out } = self;
 
         let h1 = fs::read_to_string(f1)?;

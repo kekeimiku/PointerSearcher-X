@@ -12,28 +12,21 @@ pub struct Params<'a, W> {
     pub writer: &'a mut W,
 }
 
-pub fn pointer_search<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()>
+type Tmp<'a> = (&'a mut ArrayVec<isize, 32>, &'a mut ArrayString<0x400>, &'a mut itoa::Buffer);
+
+pub fn pointer_chain_scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()>
 where
     W: io::Write,
 {
-    walk_down_binary(
-        map,
-        params,
-        1,
-        (&mut ArrayVec::new_const(), &mut ArrayString::new_const(), &mut itoa::Buffer::new()),
-    )
+    scanner(map, params, 1, (&mut ArrayVec::new_const(), &mut ArrayString::new_const(), &mut itoa::Buffer::new()))
 }
 
-fn walk_down_binary<W>(
-    map: &BTreeMap<usize, Vec<usize>>,
-    params: Params<W>,
-    lv: usize,
-    (tmp_v, tmp_s, itoa): (&mut ArrayVec<isize, 32>, &mut ArrayString<0x400>, &mut itoa::Buffer),
-) -> io::Result<()>
+fn scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>, lv: usize, tmp: Tmp) -> io::Result<()>
 where
     W: io::Write,
 {
     let Params { base, depth, target, node, range: (lr, ur), points, writer } = params;
+    let (avec, astr, itoa) = tmp;
 
     let min = target.saturating_sub(ur);
     let max = target.saturating_add(lr);
@@ -46,30 +39,30 @@ where
         .copied()
         .take_while(|&x| x <= max)
         .min_by_key(|&x| (target.wrapping_sub(x) as isize).abs())
-        .map_or(false, |_| tmp_v.len() >= node)
+        .map_or(false, |_| avec.len() >= node)
     {
-        tmp_s.push_str(itoa.format(target - base));
-        for &s in tmp_v.iter().rev() {
-            tmp_s.push('@');
-            tmp_s.push_str(itoa.format(s))
+        astr.push_str(itoa.format(target - base));
+        for &s in avec.iter().rev() {
+            astr.push('@');
+            astr.push_str(itoa.format(s))
         }
-        tmp_s.push('\n');
-        writer.write_all(tmp_s.as_bytes())?;
-        tmp_s.clear();
+        astr.push('\n');
+        writer.write_all(astr.as_bytes())?;
+        astr.clear();
     }
 
     if lv < depth {
         for (&k, vec) in map.range((Included(min), Included(max))) {
-            tmp_v.push(target.wrapping_sub(k) as isize);
+            avec.push(target.wrapping_sub(k) as isize);
             for &target in vec {
-                walk_down_binary(
+                scanner(
                     map,
                     Params { base, depth, target, node, range: (lr, ur), points, writer },
                     lv + 1,
-                    (tmp_v, tmp_s, itoa),
+                    (avec, astr, itoa),
                 )?;
             }
-            tmp_v.pop();
+            avec.pop();
         }
     }
 
@@ -77,7 +70,7 @@ where
 }
 
 #[test]
-fn test_path_find_helpers() {
+fn test_pointer_chain_scanner() {
     let ptrs = BTreeMap::from([
         (0x104B28008, 0x125F040A0),
         (0x104B28028, 0x125F04090),
@@ -98,7 +91,7 @@ fn test_path_find_helpers() {
 
     let mut out = vec![];
 
-    pointer_search(
+    pointer_chain_scanner(
         &map,
         Params {
             base: 0x104B18000,

@@ -8,7 +8,7 @@ use super::{
 };
 
 impl SubCommandScan {
-    pub fn init(self) -> Result<(), Box<dyn std::error::Error>> {
+    pub fn init(self) -> Result<(), super::error::Error> {
         let SubCommandScan { ref file, target, depth, offset, node, dir } = self;
 
         let mut spinner = Spinner::start("Start loading cache...");

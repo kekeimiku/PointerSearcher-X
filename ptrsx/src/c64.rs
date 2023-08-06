@@ -19,7 +19,7 @@ use vmmap::vmmap64::VirtualQueryExt;
 use vmmap::vmmap64::VirtualQueryExt;
 use vmmap::vmmap64::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
-use super::{d64::create_pointer_map_writer, PTRHEADER64};
+use super::{d64::create_pointer_map_with_writer, PTRHEADER64};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Page<'a> {
@@ -129,17 +129,20 @@ pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     path.extension().is_some_and(|s| s == "dll" || s == "exe")
 }
 
-pub fn default_dump_ptr<P, W>(proc: &P, writer: &mut W) -> Result<(), io::Error>
+pub fn default_dump_ptr<P, W>(proc: &P, writer: &mut W) -> Result<(), super::error::Error>
 where
     P: ProcessInfo + VirtualMemoryRead,
     W: io::Write,
 {
     let pages = proc.get_maps().filter(check_region).collect::<Vec<_>>();
-    let region = pages.iter().map(|m| (m.start(), m.size())).collect::<Vec<_>>();
+    let region = pages
+        .iter()
+        .map(|m| (m.start() as usize, m.size() as usize))
+        .collect::<Vec<_>>();
     let pages_info =
         merge_bases(pages.iter().flat_map(|x| PageTryWrapper(x).try_into())).expect("error: pages is_empty");
     encode_page_info(&pages_info, writer)?;
-    create_pointer_map_writer(proc, &region, writer)
+    create_pointer_map_with_writer(proc, &region, writer)
 }
 
 #[inline]
