@@ -35,6 +35,9 @@ impl SubCommandTest {
         let (name, offv, last) = parse_path(&path).ok_or("parse path error")?;
         let mut address = find_base_address(&proc, name)? as usize;
 
+        #[cfg(target_pointer_width = "32")]
+        let mut buf = [0; 4];
+        #[cfg(target_pointer_width = "64")]
         let mut buf = [0; 8];
 
         for off in offv {

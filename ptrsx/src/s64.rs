@@ -69,6 +69,7 @@ where
     Ok(())
 }
 
+#[cfg(target_pointer_width = "64")]
 #[test]
 fn test_pointer_chain_scanner() {
     let ptrs = BTreeMap::from([

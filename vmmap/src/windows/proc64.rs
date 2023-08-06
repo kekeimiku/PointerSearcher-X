@@ -88,7 +88,7 @@ impl Process {
                 }
 
                 let mut buffer = [0; MAX_PATH as _];
-                let mut lpdwsize = 0;
+                let mut lpdwsize = MAX_PATH;
 
                 let result =
                     QueryFullProcessImageNameW(handle, PROCESS_NAME_NATIVE, buffer.as_mut_ptr(), &mut lpdwsize);
