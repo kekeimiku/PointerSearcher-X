@@ -42,10 +42,10 @@ where
         .map_or(false, |_| avec.len() >= node)
     {
         astr.push_str(itoa.format(target - base));
-        for &s in avec.iter().rev() {
+        avec.iter().rev().for_each(|&off| {
             astr.push('@');
-            astr.push_str(itoa.format(s))
-        }
+            astr.push_str(itoa.format(off))
+        });
         astr.push('\n');
         writer.write_all(astr.as_bytes())?;
         astr.clear();

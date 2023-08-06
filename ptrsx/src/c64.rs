@@ -2,7 +2,7 @@
 use std::{fs::File, io::Read};
 use std::{io, io::Write};
 
-use super::{error::Error, *};
+use super::*;
 
 #[cfg(target_os = "linux")]
 pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];

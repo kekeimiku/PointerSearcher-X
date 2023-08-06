@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::BTreeMap, io, mem};
 
 use vmmap::VirtualMemoryRead;
 
-use super::{Error, DEFAULT_BUF_SIZE};
+use super::*;
 
 pub fn create_pointer_map<P>(proc: &P, region: &[(usize, usize)]) -> Result<BTreeMap<usize, usize>, Error>
 where
