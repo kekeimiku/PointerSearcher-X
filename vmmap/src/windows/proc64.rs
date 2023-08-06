@@ -23,8 +23,7 @@ use windows_sys::Win32::{
 };
 
 use super::{
-    vmmap64::{ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt},
-    Error, Pid,
+    Error, Pid, ProcessInfo, ProcessInfoExt, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt,
 };
 
 pub struct Process {
@@ -46,7 +45,7 @@ impl Drop for HandleInner {
 impl VirtualMemoryRead for Process {
     type Error = Error;
 
-    fn read_at(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Self::Error> {
+    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Self::Error> {
         unsafe {
             let code = ReadProcessMemory(self.handle.0, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
             if code == 0 {
@@ -61,7 +60,7 @@ impl VirtualMemoryRead for Process {
 impl VirtualMemoryWrite for Process {
     type Error = Error;
 
-    fn write_at(&self, offset: u64, buf: &[u8]) -> Result<(), Self::Error> {
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<(), Self::Error> {
         unsafe {
             let code = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
             if code == 0 {
@@ -124,30 +123,30 @@ impl ProcessInfo for Process {
     }
 }
 
+impl ProcessInfoExt for Process {
+    fn handle(&self) -> isize {
+        self.handle.0
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Page {
-    start: u64,
-    size: u64,
+    start: usize,
+    size: usize,
     flags: u32,
     pathname: Option<PathBuf>,
 }
 
-impl VirtualQueryExt for Page {
-    fn path(&self) -> Option<&Path> {
-        self.pathname.as_deref()
-    }
-}
-
 impl VirtualQuery for Page {
-    fn start(&self) -> u64 {
+    fn start(&self) -> usize {
         self.start
     }
 
-    fn end(&self) -> u64 {
+    fn end(&self) -> usize {
         self.start + self.size
     }
 
-    fn size(&self) -> u64 {
+    fn size(&self) -> usize {
         self.size
     }
 
@@ -171,13 +170,19 @@ impl VirtualQuery for Page {
     }
 }
 
-pub struct PageIter {
+impl VirtualQueryExt for Page {
+    fn path(&self) -> Option<&Path> {
+        self.pathname.as_deref()
+    }
+}
+
+struct PageIter {
     handle: HANDLE,
     base: usize,
 }
 
 impl PageIter {
-    pub const fn new(handle: HANDLE) -> Self {
+    const fn new(handle: HANDLE) -> Self {
         Self { handle, base: 0 }
     }
 }

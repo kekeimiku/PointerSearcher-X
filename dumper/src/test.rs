@@ -1,9 +1,15 @@
-use vmmap::vmmap64::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery, VirtualQueryExt};
+#[cfg(target_os = "linux")]
+use vmmap::linux::VirtualQueryExt;
+#[cfg(target_os = "macos")]
+use vmmap::macos::VirtualQueryExt;
+#[cfg(target_os = "windows")]
+use vmmap::windows::VirtualQueryExt;
+use vmmap::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 use super::cmd::SubCommandTest;
 
 #[cfg(target_os = "linux")]
-pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<u64, &'static str> {
+pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
     use std::path::Path;
 
     proc.get_maps()
@@ -14,7 +20,7 @@ pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<u64, &'
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<u64, &'static str> {
+pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
     proc.get_maps()
         .filter(|m| m.is_read() && m.path().is_some())
         .find(|m| m.path().and_then(|f| f.file_name()).is_some_and(|n| n.eq(name)))

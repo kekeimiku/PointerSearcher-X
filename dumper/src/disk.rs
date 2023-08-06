@@ -1,7 +1,7 @@
 use std::{fs::OpenOptions, io::BufWriter};
 
-use ptrsx::{c64::default_dump_ptr, DEFAULT_BUF_SIZE};
-use vmmap::vmmap64::{Process, ProcessInfo};
+use ptrsx::{default_dump_ptr, DEFAULT_BUF_SIZE};
+use vmmap::{Process, ProcessInfo};
 
 use crate::{cmd::SubCommandDisk, utils::Spinner};
 

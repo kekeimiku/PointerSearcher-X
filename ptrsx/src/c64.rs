@@ -2,6 +2,8 @@
 use std::{fs::File, io::Read};
 use std::{io, io::Write};
 
+use super::{error::Error, *};
+
 #[cfg(target_os = "linux")]
 pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 
@@ -12,19 +14,17 @@ pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];
 pub const EXE: [[u8; 4]; 2] = [[0xCA, 0xFE, 0xBA, 0xBE], [0xCF, 0xFA, 0xED, 0xFE]];
 
 #[cfg(target_os = "linux")]
-use vmmap::vmmap64::VirtualQueryExt;
-#[cfg(target_os = "windows")]
-use vmmap::vmmap64::VirtualQueryExt;
+use vmmap::linux::VirtualQueryExt;
 #[cfg(target_os = "macos")]
-use vmmap::vmmap64::VirtualQueryExt;
-use vmmap::vmmap64::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
-
-use super::{d64::create_pointer_map_with_writer, PTRHEADER64};
+use vmmap::macos::VirtualQueryExt;
+#[cfg(target_os = "windows")]
+use vmmap::windows::VirtualQueryExt;
+use vmmap::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 #[derive(Debug, Default, Clone, PartialEq)]
 pub struct Page<'a> {
-    pub start: u64,
-    pub end: u64,
+    pub start: usize,
+    pub end: usize,
     pub path: &'a str,
 }
 
@@ -129,16 +129,14 @@ pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     path.extension().is_some_and(|s| s == "dll" || s == "exe")
 }
 
-pub fn default_dump_ptr<P, W>(proc: &P, writer: &mut W) -> Result<(), super::error::Error>
+pub fn default_dump_ptr<P, W>(proc: &P, writer: &mut W) -> Result<(), Error>
 where
     P: ProcessInfo + VirtualMemoryRead,
     W: io::Write,
+    Error: From<P::Error>,
 {
     let pages = proc.get_maps().filter(check_region).collect::<Vec<_>>();
-    let region = pages
-        .iter()
-        .map(|m| (m.start() as usize, m.size() as usize))
-        .collect::<Vec<_>>();
+    let region = pages.iter().map(|m| (m.start(), m.size())).collect::<Vec<_>>();
     let pages_info =
         merge_bases(pages.iter().flat_map(|x| PageTryWrapper(x).try_into())).expect("error: pages is_empty");
     encode_page_info(&pages_info, writer)?;
@@ -175,7 +173,10 @@ fn encode_page_info<W: io::Write>(pages: &[Page<'_>], writer: &mut W) -> io::Res
         tmp.write_all(path.as_bytes())?;
     }
     // header 表示这是一个64位ptr文件
+    #[cfg(target_pointer_width = "64")]
     writer.write_all(&PTRHEADER64)?;
+    #[cfg(target_pointer_width = "32")]
+    writer.write_all(&PTRHEADER32)?;
     // pages 长度
     writer.write_all(&(tmp.len() as u32).to_le_bytes())?;
     writer.write_all(&tmp)
@@ -188,9 +189,9 @@ pub fn decode_page_info(bytes: &[u8]) -> Vec<Page<'_>> {
         let mut pages = Vec::with_capacity(len);
         i += 4;
         for _ in 0..len {
-            let start = u64::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
+            let start = usize::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
             i += 8;
-            let end = u64::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
+            let end = usize::from_le_bytes(*(bytes.as_ptr().add(i) as *const _));
             i += 8;
             let len = u32::from_le_bytes(*(bytes.as_ptr().add(i) as *const _)) as usize;
             i += 4;

@@ -13,7 +13,6 @@ pub struct Commands {
 #[derive(FromArgs)]
 #[argh(subcommand)]
 pub enum CommandEnum {
-    WithNet(SubCommandNet),
     WithDisk(SubCommandDisk),
     TestPtrs(SubCommandTest),
 }

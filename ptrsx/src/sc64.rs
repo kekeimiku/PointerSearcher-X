@@ -36,12 +36,9 @@ impl WindowsMetadataExt for std::fs::Metadata {
     }
 }
 
-use super::{
-    c64::{decode_page_info, Page},
-    error::Error,
-    s64::{pointer_chain_scanner, Params},
-    PTRHEADER64,
-};
+use super::*;
+
+const PTRSIZE: usize = std::mem::size_of::<usize>();
 
 #[derive(Default)]
 pub struct PtrsxScanner<'a> {
@@ -58,7 +55,7 @@ impl<'a> PtrsxScanner<'a> {
 
     pub fn range_address(&'a self, page: &Page<'a>) -> impl Iterator<Item = usize> + 'a {
         self.map
-            .range((Included(page.start as usize), (Included(page.end as _))))
+            .range((Included(page.start), (Included(page.end as _))))
             .map(|(&k, _)| k)
     }
 
@@ -80,8 +77,13 @@ impl<'a> PtrsxScanner<'a> {
             let (header, len) = buf.split_at(8);
             let len = u32::from_le_bytes(*(len.as_ptr() as *const _));
 
+            #[cfg(target_pointer_width = "64")]
             if !PTRHEADER64.eq(header) {
                 return Err("this file is not ptr64".into());
+            }
+            #[cfg(target_pointer_width = "32")]
+            if !PTRHEADER32.eq(header) {
+                return Err("this file is not ptr32".into());
             }
 
             let mut tmp = vec![0; len as usize];
@@ -97,18 +99,18 @@ impl<'a> PtrsxScanner<'a> {
             pin.pages = decode_page_info(raw_tmp.as_ref());
 
             let size = std::fs::metadata(path)?.size();
-            if (size - seek) % 16 != 0 {
+            if (size - seek) % (PTRSIZE * 2) as u64 != 0 {
                 return Err("this file is may be corrupted".into());
             }
 
-            let mut tmp = vec![0; 16 * 1000];
+            let mut tmp = vec![0; (PTRSIZE * 2) * 1000];
             loop {
                 let size = file.read_at(&mut tmp, seek)?;
                 if size == 0 {
                     break;
                 }
-                for b in tmp[..size].chunks(16) {
-                    let (addr, content) = b.split_at(8);
+                for b in tmp[..size].chunks(PTRSIZE * 2) {
+                    let (addr, content) = b.split_at(PTRSIZE);
                     let addr = usize::from_le_bytes(*(addr.as_ptr() as *const _));
                     let content = usize::from_le_bytes(*(content.as_ptr() as *const _));
                     pin.map.insert(addr, content);

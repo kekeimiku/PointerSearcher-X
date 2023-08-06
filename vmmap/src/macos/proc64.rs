@@ -19,11 +19,10 @@ use machx::{
 };
 
 use super::{
-    vmmap64::{ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt},
-    Error, Pid,
+    Error, Pid, ProcessInfo, ProcessInfoExt, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt,
 };
 
-const PROC_PIDPATHINFO_MAXSIZE: usize = (libproc::PROC_PIDPATHINFO_MAXSIZE - 1) as _;
+const PROC_PIDPATHINFO_MAXSIZE: usize = (libproc::PROC_PIDPATHINFO_MAXSIZE - 1) as usize;
 
 pub struct Process {
     pid: Pid,
@@ -32,7 +31,9 @@ pub struct Process {
 }
 
 impl VirtualMemoryRead for Process {
-    fn read_at(&self, buf: &mut [u8], address: usize) -> Result<usize, Error> {
+    type Error = Error;
+
+    fn read_at(&self, buf: &mut [u8], address: usize) -> Result<usize, Self::Error> {
         unsafe {
             let mut out = 0;
             let result =
@@ -46,50 +47,15 @@ impl VirtualMemoryRead for Process {
 }
 
 impl VirtualMemoryWrite for Process {
-    fn write_at(&self, buf: &[u8], address: usize) -> Result<(), Error> {
+    type Error = Error;
+
+    fn write_at(&self, buf: &[u8], address: usize) -> Result<(), Self::Error> {
         unsafe {
             let result = mach_vm_write(self.task, address as u64, buf.as_ptr() as _, buf.len() as _);
             if result != KERN_SUCCESS {
                 return Err(Error::WriteMemory(result));
             }
             Ok(())
-        }
-    }
-}
-
-impl ProcessInfo for Process {
-    fn pid(&self) -> Pid {
-        self.pid
-    }
-
-    fn app_path(&self) -> &Path {
-        &self.pathname
-    }
-
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
-        Box::new(PageIter::new(self.task).map(|m| Page {
-            addr: m.addr,
-            size: m.size,
-            count: m.count,
-            info: m.info,
-            pathname: proc_regionfilename(self.pid, m.addr).ok(),
-        }))
-    }
-}
-
-impl Process {
-    pub fn open(pid: Pid) -> Result<Self, Error> {
-        unsafe {
-            || -> _ {
-                let mut task: mach_port_name_t = MACH_PORT_NULL;
-                let result = task_for_pid(mach_task_self(), pid, &mut task);
-                if result != KERN_SUCCESS {
-                    return Err(result);
-                }
-                let pathname = proc_pidpath(pid)?;
-                Ok(Self { pid, task, pathname })
-            }()
-            .map_err(Error::OpenProcess)
         }
     }
 }
@@ -104,16 +70,16 @@ pub struct Page {
 }
 
 impl VirtualQuery for Page {
-    fn start(&self) -> u64 {
-        self.addr
+    fn start(&self) -> usize {
+        self.addr as usize
     }
 
-    fn end(&self) -> u64 {
-        self.addr + self.size
+    fn end(&self) -> usize {
+        (self.addr + self.size) as usize
     }
 
-    fn size(&self) -> u64 {
-        self.size
+    fn size(&self) -> usize {
+        self.size as usize
     }
 
     fn is_read(&self) -> bool {
@@ -143,6 +109,49 @@ impl VirtualQueryExt for Page {
     }
 }
 
+impl ProcessInfo for Process {
+    fn pid(&self) -> Pid {
+        self.pid
+    }
+
+    fn app_path(&self) -> &Path {
+        &self.pathname
+    }
+
+    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
+        Box::new(PageIter::new(self.task).map(|m| Page {
+            addr: m.addr,
+            size: m.size,
+            count: m.count,
+            info: m.info,
+            pathname: proc_regionfilename(self.pid, m.addr).ok(),
+        }))
+    }
+}
+
+impl ProcessInfoExt for Process {
+    fn task(&self) -> u32 {
+        self.task
+    }
+}
+
+impl Process {
+    pub fn open(pid: Pid) -> Result<Self, Error> {
+        unsafe {
+            || -> _ {
+                let mut task: mach_port_name_t = MACH_PORT_NULL;
+                let result = task_for_pid(mach_task_self(), pid, &mut task);
+                if result != KERN_SUCCESS {
+                    return Err(result);
+                }
+                let pathname = proc_pidpath(pid)?;
+                Ok(Self { pid, task, pathname })
+            }()
+            .map_err(Error::OpenProcess)
+        }
+    }
+}
+
 #[inline(always)]
 #[allow(clippy::comparison_chain)]
 fn proc_regionfilename(pid: Pid, address: u64) -> Result<PathBuf, kern_return_t> {
@@ -152,7 +161,7 @@ fn proc_regionfilename(pid: Pid, address: u64) -> Result<PathBuf, kern_return_t>
         if result <= 0 {
             Err(result)
         } else {
-            buf.set_len(result as _);
+            buf.set_len(result as usize);
             Ok(PathBuf::from(OsString::from_vec(buf)))
         }
     }
@@ -174,10 +183,10 @@ fn proc_pidpath(pid: Pid) -> Result<PathBuf, kern_return_t> {
 
 #[allow(unused)]
 struct PageRange {
-    pub addr: mach_vm_address_t,
-    pub size: mach_vm_size_t,
-    pub count: mach_msg_type_number_t,
-    pub info: vm_region_extended_info,
+    addr: mach_vm_address_t,
+    size: mach_vm_size_t,
+    count: mach_msg_type_number_t,
+    info: vm_region_extended_info,
 }
 
 struct PageIter {

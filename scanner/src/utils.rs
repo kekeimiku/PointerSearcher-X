@@ -9,7 +9,7 @@ use std::{
     thread, time,
 };
 
-use ptrsx::c64::Page;
+use ptrsx::Page;
 use terminal_size::terminal_size;
 
 pub fn select_base_module<'a>(items: &[Page<'a>]) -> Result<Vec<Page<'a>>, super::error::Error> {

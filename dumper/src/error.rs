@@ -1,8 +1,8 @@
 #[derive(Debug)]
 pub struct Error(pub String);
 
-impl From<ptrsx::error::Error> for Error {
-    fn from(value: ptrsx::error::Error) -> Self {
+impl From<ptrsx::Error> for Error {
+    fn from(value: ptrsx::Error) -> Self {
         Self(value.to_string())
     }
 }

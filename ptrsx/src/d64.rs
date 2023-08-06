@@ -1,12 +1,13 @@
 use std::{cmp::Ordering, collections::BTreeMap, io, mem};
 
-use vmmap::vmmap64::VirtualMemoryRead;
+use vmmap::VirtualMemoryRead;
 
-use super::{error::Error, DEFAULT_BUF_SIZE};
+use super::{Error, DEFAULT_BUF_SIZE};
 
 pub fn create_pointer_map<P>(proc: &P, region: &[(usize, usize)]) -> Result<BTreeMap<usize, usize>, Error>
 where
     P: VirtualMemoryRead,
+    Error: From<P::Error>,
 {
     let mut buf = [0; DEFAULT_BUF_SIZE];
     let mut map = BTreeMap::new();
@@ -40,6 +41,7 @@ pub fn create_pointer_map_with_writer<P, W>(proc: &P, region: &[(usize, usize)],
 where
     P: VirtualMemoryRead,
     W: io::Write,
+    Error: From<P::Error>,
 {
     let mut buf = [0; DEFAULT_BUF_SIZE];
 

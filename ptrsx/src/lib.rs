@@ -1,16 +1,14 @@
-// #[cfg(not(target_os = "macos"))]
-// pub mod c32;
-// #[cfg(not(target_os = "macos"))]
-// pub mod d32;
-// pub mod s32;
+mod c64;
+mod d64;
+mod error;
+mod s64;
+mod sc64;
 
-pub mod c64;
-pub mod d64;
-pub mod s64;
-
-pub mod sc64;
-
-pub mod error;
+pub use c64::*;
+pub use d64::*;
+pub use error::Error;
+pub use s64::*;
+pub use sc64::*;
 
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub const DEFAULT_BUF_SIZE: usize = 0x4000;

@@ -1,4 +1,9 @@
-pub mod proc32;
-pub mod proc64;
+mod proc;
 
-use super::{vmmap32, vmmap64, Error, Pid};
+pub use proc::{Page, Process};
+
+use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+
+pub trait VirtualQueryExt {
+    fn name(&self) -> &str;
+}

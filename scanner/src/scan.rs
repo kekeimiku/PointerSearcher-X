@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io::BufWriter, path::Path};
 
-use ptrsx::{s64::Params, sc64::PtrsxScanner};
+use ptrsx::{Params, PtrsxScanner};
 
 use super::{
     cmd::SubCommandScan,
@@ -38,7 +38,7 @@ impl SubCommandScan {
                     .create_new(true)
                     .open(file)?;
                 let params = Params {
-                    base: base as usize,
+                    base,
                     depth,
                     target: target.0,
                     node,
