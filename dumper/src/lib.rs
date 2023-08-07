@@ -1,5 +1,11 @@
-pub mod cmd;
-pub mod disk;
-pub mod error;
-pub mod test;
-pub mod utils;
+mod cmd;
+mod disk;
+mod error;
+mod test;
+mod utils;
+
+pub use cmd::*;
+pub use disk::*;
+pub use error::*;
+pub use test::*;
+pub use utils::*;

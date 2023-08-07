@@ -1,6 +1,4 @@
 /target
+/build
 Cargo.lock
-.cargo/
-build.sh
-entitlements.plist
 **/.DS_Store

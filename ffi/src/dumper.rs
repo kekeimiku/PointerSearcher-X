@@ -6,8 +6,8 @@ use std::{
     path::Path,
 };
 
-use ptrsx::c64::default_dump_ptr;
-use vmmap::vmmap64::Process;
+use ptrsx::default_dump_ptr;
+use vmmap::Process;
 
 use super::ffi_try_result;
 

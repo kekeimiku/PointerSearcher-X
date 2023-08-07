@@ -6,10 +6,10 @@ use vmmap::macos::VirtualQueryExt;
 use vmmap::windows::VirtualQueryExt;
 use vmmap::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
-use super::cmd::SubCommandTest;
+use super::{Error, SubCommandTest};
 
 #[cfg(target_os = "linux")]
-pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
+fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
     use std::path::Path;
 
     proc.get_maps()
@@ -20,7 +20,7 @@ pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, 
 }
 
 #[cfg(any(target_os = "macos", target_os = "windows"))]
-pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
+fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
     proc.get_maps()
         .filter(|m| m.is_read() && m.path().is_some())
         .find(|m| m.path().and_then(|f| f.file_name()).is_some_and(|n| n.eq(name)))
@@ -29,7 +29,7 @@ pub fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, 
 }
 
 impl SubCommandTest {
-    pub fn init(self) -> Result<(), super::error::Error> {
+    pub fn init(self) -> Result<(), Error> {
         let SubCommandTest { pid, path, num } = self;
         let proc = Process::open(pid)?;
         let (name, offv, last) = parse_path(&path).ok_or("parse path error")?;
@@ -72,6 +72,6 @@ fn parse_path(path: &str) -> Option<(&str, Vec<isize>, isize)> {
 }
 
 #[inline(always)]
-pub fn wrap_add(u: usize, i: isize) -> Result<usize, &'static str> {
+fn wrap_add(u: usize, i: isize) -> Result<usize, &'static str> {
     u.checked_add_signed(i).ok_or("pointer overflow")
 }

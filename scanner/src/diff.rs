@@ -4,10 +4,10 @@ use std::{
     io::{self, BufWriter, Write},
 };
 
-use super::cmd::SubCommandDiff;
+use super::{Error, SubCommandDiff};
 
 impl SubCommandDiff {
-    pub fn init(self) -> Result<(), super::error::Error> {
+    pub fn init(self) -> Result<(), Error> {
         let SubCommandDiff { f1, f2, out } = self;
 
         let h1 = fs::read_to_string(f1)?;

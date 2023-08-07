@@ -4,24 +4,19 @@ use std::{
     io::BufWriter,
     os::unix::prelude::OsStrExt,
     path::Path,
-    pin::Pin,
     ptr::{self, slice_from_raw_parts},
 };
 
-use ptrsx::{c64::Page, s64::Params, sc64::PtrsxScanner};
+use ptrsx::{Page, Params, PtrsxScanner};
 
-use crate::{
-    error::StrErrorWrap,
-    ffi_try_result,
-    ffi_types::{FFIParams, FFIPAGE},
-};
+use super::{ffi_try_result, FFIParams, StrErrorWrap, FFIPAGE};
 
-pub struct Scanner<'a>(Pin<Box<PtrsxScanner<'a>>>);
+pub struct Scanner<'a>(PtrsxScanner<'a>);
 
 #[no_mangle]
 pub unsafe extern "C" fn scanner_init<'a>(in_file: *const ffi::c_char) -> *mut Scanner<'a> {
     let in_file = Path::new(OsStr::from_bytes(CStr::from_ptr(in_file).to_bytes()));
-    let scanner = ffi_try_result![PtrsxScanner::new(in_file), ptr::null_mut()];
+    let scanner = ffi_try_result![PtrsxScanner::load(in_file), ptr::null_mut()];
     Box::into_raw(Box::new(Scanner(scanner)))
 }
 
@@ -50,11 +45,11 @@ pub unsafe extern "C" fn scanner_get_pages(ptr: *mut Scanner) -> *mut FFIPAGE {
 pub unsafe extern "C" fn scanner_pointer_chain(
     ptr: *mut Scanner,
     pages: *const FFIPAGE,
-    len: ffi::c_ulonglong,
+    len: usize,
     params: FFIParams,
 ) -> ffi::c_int {
     let ptrsx = &(*ptr).0;
-    let ffi_map = &*slice_from_raw_parts(pages, len as _);
+    let ffi_map = &*slice_from_raw_parts(pages, len);
     let pages = ffi_map.iter().map(Page::from);
     let rev_map = ptrsx.get_rev_pointer_map();
     let dir = Path::new(OsStr::from_bytes(CStr::from_ptr(params.out_dir).to_bytes()));
@@ -72,11 +67,12 @@ pub unsafe extern "C" fn scanner_pointer_chain(
             .open(dir.join(name).with_extension("scandata"));
         let file = ffi_try_result![file, -1];
         let params = Params {
-            base: page.start as usize,
-            depth: params.depth as usize,
-            range: (params.rangel as usize, params.ranger as usize),
+            base: page.start,
+            depth: params.depth,
+            node: params.node,
+            range: (params.rangel, params.ranger),
             points: &points,
-            target: params.target as usize,
+            target: params.target,
             writer: &mut BufWriter::new(file),
         };
         ffi_try_result![ptrsx.scan(&rev_map, params), -1]

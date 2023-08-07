@@ -1,5 +1,6 @@
 use std::{fmt::Display, io};
 
+#[derive(Debug)]
 pub enum Error {
     Vmmap(vmmap::Error),
     Io(io::Error),
@@ -39,3 +40,5 @@ impl Display for Error {
         }
     }
 }
+
+impl std::error::Error for Error {}

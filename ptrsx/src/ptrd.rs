@@ -48,7 +48,7 @@ where
     for &(start, size) in region {
         for off in (0..size).step_by(DEFAULT_BUF_SIZE) {
             let Ok(size) = proc.read_at(buf.as_mut_slice(), start + off) else {
-                println!("todo! [read_err: {start:x}]");
+                println!("skip! [read_err: {start:x}]");
                 break;
             };
             for (k, buf) in buf[..size].windows(mem::size_of::<usize>()).enumerate() {

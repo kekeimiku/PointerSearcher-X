@@ -1,18 +1,19 @@
+#include <stddef.h>
+
 typedef struct Scanner Scanner;
 
-typedef struct FFIPAGE
-{
-  unsigned long long start;
-  unsigned long long end;
+typedef struct FFIPAGE {
+  size_t start;
+  size_t end;
   const char *path;
 } FFIPAGE;
 
-typedef struct FFIParams
-{
-  unsigned long long depth;
-  unsigned long long rangel;
-  unsigned long long ranger;
-  unsigned long long target;
+typedef struct FFIParams {
+  size_t depth;
+  size_t node;
+  size_t rangel;
+  size_t ranger;
+  size_t target;
   const char *out_dir;
 } FFIParams;
 
@@ -32,5 +33,5 @@ struct FFIPAGE *scanner_get_pages(struct Scanner *ptr);
 
 int scanner_pointer_chain(struct Scanner *ptr,
                           const struct FFIPAGE *pages,
-                          unsigned long long len,
+                          size_t len,
                           struct FFIParams params);

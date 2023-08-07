@@ -18,28 +18,6 @@ fn take_last_error() -> Option<Box<dyn Error>> {
     LAST_ERROR.with(|prev| prev.borrow_mut().take())
 }
 
-#[derive(Debug)]
-pub struct StrErrorWrap(pub &'static str);
-impl Display for StrErrorWrap {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-impl Error for StrErrorWrap {}
-
-#[macro_export]
-macro_rules! ffi_try_result {
-    ($expr:expr, $ret_value:expr) => {
-        match $expr {
-            Ok(val) => val,
-            Err(err) => {
-                super::error::set_last_error(err);
-                return $ret_value;
-            }
-        }
-    };
-}
-
 #[no_mangle]
 pub extern "C" fn last_error_length() -> ffi::c_int {
     LAST_ERROR.with(|prev| match *prev.borrow() {
@@ -61,7 +39,7 @@ pub unsafe extern "C" fn last_error_message(buffer: *mut ffi::c_char, length: ff
 
     let error_message = last_error.to_string();
 
-    let buffer = slice::from_raw_parts_mut(buffer as *mut u8, length as usize);
+    let buffer = slice::from_raw_parts_mut(buffer.cast(), length as usize);
 
     if error_message.len() >= buffer.len() {
         return -1;
@@ -71,4 +49,26 @@ pub unsafe extern "C" fn last_error_message(buffer: *mut ffi::c_char, length: ff
     buffer[error_message.len()] = 0;
 
     error_message.len() as ffi::c_int
+}
+
+#[derive(Debug)]
+pub struct StrErrorWrap(pub &'static str);
+impl Display for StrErrorWrap {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+impl Error for StrErrorWrap {}
+
+#[macro_export]
+macro_rules! ffi_try_result {
+    ($expr:expr, $ret_value:expr) => {
+        match $expr {
+            Ok(val) => val,
+            Err(err) => {
+                super::error::set_last_error(err);
+                return $ret_value;
+            }
+        }
+    };
 }

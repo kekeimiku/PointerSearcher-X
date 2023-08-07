@@ -33,8 +33,9 @@ pub struct PageTryWrapper<T>(T);
 
 #[cfg(any(
     all(target_os = "macos", target_arch = "aarch64"),
+    // TODO
     all(target_os = "macos", target_arch = "x86_64"),
-    all(target_os = "windows")
+    target_os = "windows"
 ))]
 impl<'a, V> TryFrom<PageTryWrapper<&'a V>> for Page<'a>
 where

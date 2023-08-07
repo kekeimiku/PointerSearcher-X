@@ -32,9 +32,9 @@ impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         unsafe {
             match self {
-                Error::OpenProcess(err) => write!(f, "{}. code: {err}", mach_error(*err)),
-                Error::ReadMemory(err) => write!(f, "{}. code: {err}", mach_error(*err)),
-                Error::WriteMemory(err) => write!(f, "{}. code: {err}", mach_error(*err)),
+                Error::OpenProcess(err) => write!(f, "OpenProcess, {}. code: {err}", mach_error(*err)),
+                Error::ReadMemory(err) => write!(f, "ReadMemory, {}. code: {err}", mach_error(*err)),
+                Error::WriteMemory(err) => write!(f, "WriteMemory, {}. code: {err}", mach_error(*err)),
             }
         }
     }
@@ -44,9 +44,9 @@ impl std::fmt::Display for Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::OpenProcess(err) => write!(f, "{err}"),
-            Error::ReadMemory(err) => write!(f, "{err}"),
-            Error::WriteMemory(err) => write!(f, "{err}"),
+            Error::OpenProcess(err) => write!(f, "OpenProcess, {err}"),
+            Error::ReadMemory(err) => write!(f, "ReadMemory, {err}"),
+            Error::WriteMemory(err) => write!(f, "WriteMemory, {err}"),
         }
     }
 }

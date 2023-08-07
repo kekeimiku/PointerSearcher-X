@@ -3,10 +3,10 @@ use std::{fs::OpenOptions, io::BufWriter};
 use ptrsx::{default_dump_ptr, DEFAULT_BUF_SIZE};
 use vmmap::{Process, ProcessInfo};
 
-use crate::{cmd::SubCommandDisk, utils::Spinner};
+use super::{Error, Spinner, SubCommandDisk};
 
 impl SubCommandDisk {
-    pub fn init(self) -> Result<(), super::error::Error> {
+    pub fn init(self) -> Result<(), Error> {
         let SubCommandDisk { pid, out } = self;
         let proc = Process::open(pid)?;
         let name = proc

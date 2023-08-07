@@ -2,13 +2,10 @@ use std::{fs::OpenOptions, io::BufWriter, path::Path};
 
 use ptrsx::{Params, PtrsxScanner};
 
-use super::{
-    cmd::SubCommandScan,
-    utils::{select_base_module, Spinner},
-};
+use super::{select_base_module, Error, Spinner, SubCommandScan};
 
 impl SubCommandScan {
-    pub fn init(self) -> Result<(), super::error::Error> {
+    pub fn init(self) -> Result<(), Error> {
         let SubCommandScan { ref file, target, depth, offset, node, dir } = self;
 
         let mut spinner = Spinner::start("Start loading cache...");
