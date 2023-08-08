@@ -1,54 +1,32 @@
-use std::{cell::RefCell, error::Error, ffi, fmt::Display, ptr, slice};
+use std::{
+    cell::RefCell,
+    error::Error,
+    ffi::{c_char, CString},
+    fmt::Display,
+    ptr,
+};
 
 thread_local! {
-    static LAST_ERROR: RefCell<Option<Box<dyn Error>>> = RefCell::new(None);
+    static LAST_ERROR: RefCell<Option<CString>> = RefCell::new(None);
 }
 
 pub fn set_last_error<E>(err: E)
 where
-    E: std::error::Error + 'static,
+    E: Error + 'static,
 {
-    LAST_ERROR.with(|prev| {
-        *prev.borrow_mut() = Some(Box::new(err));
-    });
-}
-
-#[inline]
-fn take_last_error() -> Option<Box<dyn Error>> {
-    LAST_ERROR.with(|prev| prev.borrow_mut().take())
+    unsafe {
+        LAST_ERROR.with(|prev| {
+            *prev.borrow_mut() = Some(CString::from_vec_unchecked(err.to_string().into()));
+        });
+    }
 }
 
 #[no_mangle]
-pub extern "C" fn last_error_length() -> ffi::c_int {
-    LAST_ERROR.with(|prev| match *prev.borrow() {
-        Some(ref err) => err.to_string().len() as ffi::c_int + 1,
-        None => 0,
-    })
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn last_error_message(buffer: *mut ffi::c_char, length: ffi::c_int) -> ffi::c_int {
-    if buffer.is_null() {
-        return -1;
+pub unsafe extern "C" fn last_error_message() -> *mut c_char {
+    match LAST_ERROR.with(|prev| prev.borrow_mut().take()) {
+        Some(err) => err.into_raw(),
+        None => ptr::null_mut(),
     }
-
-    let last_error = match take_last_error() {
-        Some(err) => err,
-        None => return 0,
-    };
-
-    let error_message = last_error.to_string();
-
-    let buffer = slice::from_raw_parts_mut(buffer.cast(), length as usize);
-
-    if error_message.len() >= buffer.len() {
-        return -1;
-    }
-
-    ptr::copy_nonoverlapping(error_message.as_ptr(), buffer.as_mut_ptr(), error_message.len());
-    buffer[error_message.len()] = 0;
-
-    error_message.len() as ffi::c_int
 }
 
 #[derive(Debug)]
