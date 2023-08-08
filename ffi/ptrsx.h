@@ -19,9 +19,7 @@ typedef struct FFIParams {
 
 int ptrsx_dumper_init(int pid, const char *out_file);
 
-int last_error_length(void);
-
-int last_error_message(char *buffer, int length);
+const char *last_error_message(void);
 
 struct Scanner *scanner_init(const char *in_file);
 

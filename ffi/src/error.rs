@@ -22,11 +22,11 @@ where
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn last_error_message() -> *mut c_char {
-    match LAST_ERROR.with(|prev| prev.borrow_mut().take()) {
-        Some(err) => err.into_raw(),
+pub unsafe extern "C" fn last_error_message() -> *const c_char {
+    LAST_ERROR.with(|prev| match prev.borrow().as_ref() {
+        Some(err) => err.as_ptr(),
         None => ptr::null_mut(),
-    }
+    })
 }
 
 #[derive(Debug)]
