@@ -44,6 +44,7 @@ type Dependent<'a> = Vec<Page<'a>>;
 pub struct Owner {
     vec: Vec<u8>,
     map: BTreeMap<usize, usize>,
+    inv: BTreeMap<usize, Vec<usize>>,
 }
 
 self_cell!(
@@ -67,17 +68,7 @@ impl<'a> PtrsxScanner<'a> {
             .map(|(&k, _)| k)
     }
 
-    pub fn get_rev_pointer_map(&self) -> BTreeMap<usize, Vec<usize>> {
-        self.borrow_owner()
-            .map
-            .iter()
-            .fold(BTreeMap::new(), |mut acc, (&k, &v)| {
-                acc.entry(v).or_default().push(k);
-                acc
-            })
-    }
-
-    pub fn load<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
+    pub fn load_with_file<P: AsRef<Path>>(path: P) -> Result<Self, Error> {
         unsafe {
             let file = File::open(&path)?;
             let mut buf = [0; 12];
@@ -114,19 +105,24 @@ impl<'a> PtrsxScanner<'a> {
                     break;
                 }
                 for b in tmp[..size].chunks(PTRSIZE * 2) {
-                    let (addr, content) = b.split_at(PTRSIZE);
-                    let addr = usize::from_le_bytes(*(addr.as_ptr().cast()));
-                    let content = usize::from_le_bytes(*(content.as_ptr().cast()));
-                    map.insert(addr, content);
+                    let (key, value) = b.split_at(PTRSIZE);
+                    let key = usize::from_le_bytes(*(key.as_ptr().cast()));
+                    let value = usize::from_le_bytes(*(value.as_ptr().cast()));
+                    map.insert(key, value);
                 }
                 seek += size as u64;
             }
 
-            Ok(Self::new(Owner { vec, map }, |x| decode_page_info(&x.vec)))
+            let mut inv: BTreeMap<_, Vec<_>> = BTreeMap::new();
+            for (&k, &v) in &map {
+                inv.entry(v).or_default().push(k);
+            }
+
+            Ok(Self::new(Owner { vec, map, inv }, |x| decode_page_info(&x.vec)))
         }
     }
 
-    pub fn scan<W: io::Write>(&self, map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()> {
-        pointer_chain_scanner(map, params)
+    pub fn scan<W: io::Write>(&self, params: Params<W>) -> io::Result<()> {
+        pointer_chain_scanner(&self.borrow_owner().inv, params)
     }
 }

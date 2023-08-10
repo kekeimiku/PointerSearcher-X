@@ -9,12 +9,11 @@ impl SubCommandScan {
         let SubCommandScan { ref file, target, depth, offset, node, dir } = self;
 
         let mut spinner = Spinner::start("Start loading cache...");
-        let ptrsx = PtrsxScanner::load(file)?;
+        let ptrsx = PtrsxScanner::load_with_file(file)?;
         spinner.stop("cache loaded.");
 
         let pages = select_base_module(ptrsx.pages())?;
         let mut spinner = Spinner::start("Start creating pointer maps...");
-        let rev_map = ptrsx.get_rev_pointer_map();
         spinner.stop("Pointer map is created.");
 
         let dir = dir.unwrap_or_default();
@@ -43,7 +42,7 @@ impl SubCommandScan {
                     points: &points,
                     writer: &mut BufWriter::new(file),
                 };
-                ptrsx.scan(&rev_map, params)
+                ptrsx.scan(params)
             })?;
         spinner.stop("Pointer chain is scanned.");
 

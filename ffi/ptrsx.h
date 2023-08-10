@@ -2,34 +2,36 @@
 
 typedef struct Scanner Scanner;
 
-typedef struct FFIPAGE {
+typedef struct Page {
   size_t start;
   size_t end;
-  const char *path;
-} FFIPAGE;
+  char *path;
+} Page;
 
-typedef struct FFIParams {
+typedef struct PageVec {
+  size_t len;
+  const struct Page *data;
+} PageVec;
+
+typedef struct Params {
+  size_t target;
   size_t depth;
   size_t node;
   size_t rangel;
   size_t ranger;
-  size_t target;
-  const char *out_dir;
-} FFIParams;
+  const char *dir;
+} Params;
 
-int ptrsx_dumper_init(int pid, const char *out_file);
+int dumper_to_file(int pid, const char *path);
 
-const char *last_error_message(void);
+const char *get_last_error(void);
 
-struct Scanner *scanner_init(const char *in_file);
+void clear_last_error(void);
+
+int scanner_init_with_file(const char *path, struct Scanner **ptr);
 
 void scanner_free(struct Scanner *ptr);
 
-int scanner_get_pages_len(struct Scanner *ptr);
+struct PageVec scanner_get_pages(const struct Scanner *ptr);
 
-struct FFIPAGE *scanner_get_pages(struct Scanner *ptr);
-
-int scanner_pointer_chain(struct Scanner *ptr,
-                          const struct FFIPAGE *pages,
-                          size_t len,
-                          struct FFIParams params);
+int scanner_pointer_chain(struct Scanner *ptr, const struct PageVec *pages, struct Params params);

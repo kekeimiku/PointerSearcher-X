@@ -1,37 +1,32 @@
-use std::ffi::{c_char, CStr};
-
-use ptrsx::Page;
+use std::ffi::{c_char, CString};
 
 #[repr(C)]
-pub struct FFIPAGE {
+pub struct Page {
     pub start: usize,
     pub end: usize,
-    pub path: *const c_char,
+    pub path: *mut c_char,
 }
 
-impl From<&Page<'_>> for FFIPAGE {
-    fn from(value: &Page<'_>) -> Self {
-        let path = value.path.as_ptr() as _;
-        Self { start: value.start, end: value.end, path }
-    }
+#[repr(C)]
+pub struct PageVec {
+    pub len: usize,
+    pub data: *const Page,
 }
 
-// TODO ub
-impl From<&FFIPAGE> for Page<'_> {
-    fn from(value: &FFIPAGE) -> Self {
+impl Drop for Page {
+    fn drop(&mut self) {
         unsafe {
-            let path = std::str::from_utf8_unchecked(CStr::from_ptr(value.path).to_bytes());
-            Self { start: value.start, end: value.end, path }
+            let _ = CString::from_raw(self.path);
         }
     }
 }
 
 #[repr(C)]
-pub struct FFIParams {
+pub struct Params {
+    pub target: usize,
     pub depth: usize,
     pub node: usize,
     pub rangel: usize,
     pub ranger: usize,
-    pub target: usize,
-    pub out_dir: *const c_char,
+    pub dir: *const c_char,
 }
