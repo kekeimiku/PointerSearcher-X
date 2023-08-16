@@ -12,5 +12,5 @@ path = "../ptrsx"
 default-features = false
 
 [dependencies.argh]
-version = "0.1.10"
+version = "0.1.12"
 default-features = false

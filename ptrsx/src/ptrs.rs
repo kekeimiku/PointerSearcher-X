@@ -21,6 +21,7 @@ where
     scanner(map, params, 1, (&mut ArrayVec::new_const(), &mut ArrayString::new_const(), &mut itoa::Buffer::new()))
 }
 
+#[inline(always)]
 fn scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>, lv: usize, tmp: Tmp) -> io::Result<()>
 where
     W: io::Write,
@@ -39,7 +40,7 @@ where
         .copied()
         .take_while(|&x| x <= max)
         .min_by_key(|&x| (target.wrapping_sub(x) as isize).abs())
-        .map_or(false, |_| avec.len() >= node)
+        .is_some_and(|_| avec.len() >= node)
     {
         astr.push_str(itoa.format(target - base));
         avec.iter().rev().for_each(|&off| {

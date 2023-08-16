@@ -106,7 +106,7 @@ fn check_exe<Q: VirtualQueryExt>(page: &Q) -> bool {
 #[inline]
 pub fn check_exe<Q: VirtualQueryExt>(page: &Q) -> bool {
     let path = std::path::Path::new(page.name());
-    if !path.exists() || path.starts_with("/dev") || path.starts_with("/usr") {
+    if !path.exists() || path.starts_with("/dev") {
         return false;
     }
 
