@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, io, ops::Bound::Included};
 
-use arrayvec::{ArrayString, ArrayVec};
+use arrayvec::ArrayVec;
 
 pub struct Params<'a, W> {
     pub base: usize,
@@ -12,22 +12,21 @@ pub struct Params<'a, W> {
     pub writer: &'a mut W,
 }
 
-type Tmp<'a> = (&'a mut ArrayVec<isize, 32>, &'a mut ArrayString<0x400>, &'a mut itoa::Buffer);
+type Tmp<'a> = (&'a mut ArrayVec<isize, 32>, &'a mut itoa::Buffer);
 
-pub fn pointer_chain_scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()>
-where
-    W: io::Write,
-{
-    scanner(map, params, 1, (&mut ArrayVec::new_const(), &mut ArrayString::new_const(), &mut itoa::Buffer::new()))
+pub fn pointer_chain_scanner<W: io::Write>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()> {
+    unsafe { scanner(map, params, 1, (&mut ArrayVec::new_const(), &mut itoa::Buffer::new())) }
 }
 
 #[inline(always)]
-fn scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>, lv: usize, tmp: Tmp) -> io::Result<()>
-where
-    W: io::Write,
-{
+unsafe fn scanner<W: io::Write>(
+    map: &BTreeMap<usize, Vec<usize>>,
+    params: Params<W>,
+    lv: usize,
+    tmp: Tmp,
+) -> io::Result<()> {
     let Params { base, depth, target, node, range: (lr, ur), points, writer } = params;
-    let (avec, astr, itoa) = tmp;
+    let (avec, itoa) = tmp;
 
     let min = target.saturating_sub(ur);
     let max = target.saturating_add(lr);
@@ -42,25 +41,23 @@ where
         .min_by_key(|&x| (target.wrapping_sub(x) as isize).abs())
         .is_some_and(|_| avec.len() >= node)
     {
-        astr.push_str(itoa.format(target - base));
-        avec.iter().rev().for_each(|&off| {
-            astr.push('@');
-            astr.push_str(itoa.format(off))
-        });
-        astr.push('\n');
-        writer.write_all(astr.as_bytes())?;
-        astr.clear();
+        writer.write_all(itoa.format(target - base).as_bytes())?;
+        for &off in avec.iter().rev() {
+            writer.write_all(b"@")?;
+            writer.write_all(itoa.format(off).as_bytes())?;
+        }
+        writer.write_all(b"\n")?;
     }
 
     if lv < depth {
         for (&k, vec) in map.range((Included(min), Included(max))) {
-            avec.push(target.wrapping_sub(k) as isize);
+            avec.push_unchecked(target.wrapping_sub(k) as isize);
             for &target in vec {
                 scanner(
                     map,
                     Params { base, depth, target, node, range: (lr, ur), points, writer },
                     lv + 1,
-                    (avec, astr, itoa),
+                    (avec, itoa),
                 )?;
             }
             avec.pop();
