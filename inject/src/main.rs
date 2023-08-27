@@ -26,7 +26,7 @@ cfg_if::cfg_if! {
         }
     }else {
         fn main(){
-            panic!("not support.");
+            // panic!("not support.");
         }
     }
 }

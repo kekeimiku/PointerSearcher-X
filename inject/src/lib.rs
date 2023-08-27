@@ -6,6 +6,6 @@ cfg_if::cfg_if! {
         mod wrapper;
         pub use wrapper::inject;
     }else {
-        panic!("not support.");
+        // panic!("not support.");
     }
 }
