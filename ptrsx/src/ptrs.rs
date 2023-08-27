@@ -12,6 +12,37 @@ pub struct Params<'a, W> {
     pub writer: &'a mut W,
 }
 
+use std::{
+    cmp::{Ordering::*, *},
+    usize,
+};
+
+// [usize] no dups optimized binary_search
+#[inline(always)]
+pub unsafe fn binary_search_by<'a, T, F>(slice: &'a [T], mut f: F) -> Result<usize, usize>
+where
+    F: FnMut(&'a T) -> Ordering,
+{
+    let mut size = slice.len();
+    if size == 0 {
+        return Err(0);
+    }
+    let mut base = 0usize;
+    while size > 1 {
+        let half = size / 2;
+        let mid = base + half;
+        let cmp = f(slice.get_unchecked(mid));
+        base = if cmp == Greater { base } else { mid };
+        size -= half;
+    }
+    let cmp: Ordering = f(slice.get_unchecked(base));
+    if cmp == Equal {
+        Ok(base)
+    } else {
+        Err(base + (cmp == Less) as usize)
+    }
+}
+
 type Tmp<'a> = (&'a mut ArrayVec<isize, 32>, &'a mut itoa::Buffer);
 
 pub fn pointer_chain_scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()>
@@ -32,7 +63,7 @@ where
     let min = target.saturating_sub(ur);
     let max = target.saturating_add(lr);
 
-    let idx = points.binary_search(&min).unwrap_or_else(|x| x);
+    let idx = binary_search_by(points, |p| p.cmp(&min)).unwrap_or_else(|x| x);
 
     if points
         .iter()
