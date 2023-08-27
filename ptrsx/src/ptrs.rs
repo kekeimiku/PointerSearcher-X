@@ -14,17 +14,18 @@ pub struct Params<'a, W> {
 
 type Tmp<'a> = (&'a mut ArrayVec<isize, 32>, &'a mut itoa::Buffer);
 
-pub fn pointer_chain_scanner<W: io::Write>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()> {
+pub fn pointer_chain_scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>) -> io::Result<()>
+where
+    W: io::Write,
+{
     unsafe { scanner(map, params, 1, (&mut ArrayVec::new_const(), &mut itoa::Buffer::new())) }
 }
 
 #[inline(always)]
-unsafe fn scanner<W: io::Write>(
-    map: &BTreeMap<usize, Vec<usize>>,
-    params: Params<W>,
-    lv: usize,
-    tmp: Tmp,
-) -> io::Result<()> {
+unsafe fn scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>, lv: usize, tmp: Tmp) -> io::Result<()>
+where
+    W: io::Write,
+{
     let Params { base, depth, target, node, range: (lr, ur), points, writer } = params;
     let (avec, itoa) = tmp;
 
