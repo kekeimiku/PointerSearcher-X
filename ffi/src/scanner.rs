@@ -71,7 +71,7 @@ pub unsafe extern "C" fn scanner_pointer_chain(ptr: *mut Scanner, pages: *const 
             .write(true)
             .append(true)
             .create_new(true)
-            .open(dir.join(name).with_extension("scandata"));
+            .open(dir.join(format!("{name}.scandata")));
         let file = ffi_try_result![file, -1];
         let params = ptrsx::Params {
             base: page.start,

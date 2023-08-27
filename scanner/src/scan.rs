@@ -27,7 +27,7 @@ impl SubCommandScan {
                     .file_name()
                     .and_then(|f| f.to_str())
                     .expect("get region name error");
-                let file = dir.join(name).with_extension("scandata");
+                let file = dir.join(format!("{name}.scandata"));
                 let file = OpenOptions::new()
                     .write(true)
                     .append(true)
