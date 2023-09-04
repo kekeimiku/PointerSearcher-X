@@ -8,6 +8,10 @@ impl SubCommandScan {
     pub fn init(self) -> Result<(), Error> {
         let SubCommandScan { ref file, target, depth, offset, node, dir } = self;
 
+        if depth <= node {
+            println!("Error: depth must be greater than node. current depth({depth}), node({node}).")
+        }
+
         let mut spinner = Spinner::start("Start loading cache...");
         let ptrsx = PtrsxScanner::load_with_file(file)?;
         spinner.stop("cache loaded.");

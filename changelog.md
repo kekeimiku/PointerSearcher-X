@@ -1,3 +1,9 @@
+## v0.3.0
+
+Add `--node/n` option to ignore short pointer chains, default is 3. 
+
+and some performance improvements
+
 ## v0.2.2
 
 Bugfix: wrong dyld_image size, Injection failed on some programs, error Kern(2)
