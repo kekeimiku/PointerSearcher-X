@@ -1,4 +1,4 @@
-use std::{collections::BTreeMap, io, ops::Bound::Included};
+use std::{cmp::Ordering, collections::BTreeMap, io, ops::Bound::Included};
 
 use arrayvec::ArrayVec;
 
@@ -12,14 +12,9 @@ pub struct Params<'a, W> {
     pub writer: &'a mut W,
 }
 
-use std::{
-    cmp::{Ordering::*, *},
-    usize,
-};
-
 // [usize] no dups optimized binary_search
 #[inline(always)]
-pub unsafe fn binary_search_by<'a, T, F>(slice: &'a [T], mut f: F) -> Result<usize, usize>
+unsafe fn binary_search_by<'a, T, F>(slice: &'a [T], mut f: F) -> Result<usize, usize>
 where
     F: FnMut(&'a T) -> Ordering,
 {
@@ -32,14 +27,14 @@ where
         let half = size / 2;
         let mid = base + half;
         let cmp = f(slice.get_unchecked(mid));
-        base = if cmp == Greater { base } else { mid };
+        base = if cmp == Ordering::Greater { base } else { mid };
         size -= half;
     }
     let cmp: Ordering = f(slice.get_unchecked(base));
-    if cmp == Equal {
+    if cmp == Ordering::Equal {
         Ok(base)
     } else {
-        Err(base + (cmp == Less) as usize)
+        Err(base + (cmp == Ordering::Less) as usize)
     }
 }
 
