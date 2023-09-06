@@ -1,3 +1,5 @@
+use std::fmt::Write;
+
 #[cfg(target_os = "linux")]
 use vmmap::linux::VirtualQueryExt;
 #[cfg(target_os = "macos")]
@@ -33,7 +35,7 @@ impl SubCommandTest {
         let SubCommandTest { pid, path, num } = self;
         let proc = Process::open(pid)?;
         let (name, offv, last) = parse_path(&path).ok_or("parse path error")?;
-        let mut address = find_base_address(&proc, name)? as usize;
+        let mut address = find_base_address(&proc, name)?;
 
         #[cfg(target_pointer_width = "32")]
         let mut buf = [0; 4];
@@ -41,17 +43,17 @@ impl SubCommandTest {
         let mut buf = [0; 8];
 
         for off in offv {
-            proc.read_at(&mut buf, wrap_add(address, off)?)?;
+            proc.read_at(&mut buf, address.checked_add_signed(off).ok_or("pointer overflow")?)?;
             address = usize::from_le_bytes(buf);
         }
 
-        let address = wrap_add(address, last)?;
+        let address = address.checked_add_signed(last).ok_or("pointer overflow")?;
         println!("{address:#x}");
 
         if let Some(num) = num {
             let mut buf = vec![0; num];
             proc.read_at(&mut buf, address)?;
-            println!("{}", buf.iter().map(|x| format!("{x:02x}")).collect::<String>());
+            println!("{}", hex_encode(&buf));
         }
 
         Ok(())
@@ -72,6 +74,9 @@ fn parse_path(path: &str) -> Option<(&str, Vec<isize>, isize)> {
 }
 
 #[inline(always)]
-fn wrap_add(u: usize, i: isize) -> Result<usize, &'static str> {
-    u.checked_add_signed(i).ok_or("pointer overflow")
+fn hex_encode(bytes: &[u8]) -> String {
+    bytes.iter().fold(String::with_capacity(256), |mut output, b| {
+        let _ = write!(output, "{b:02X}");
+        output
+    })
 }

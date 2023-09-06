@@ -37,8 +37,6 @@ use self_cell::self_cell;
 
 use super::*;
 
-const PTRSIZE: usize = std::mem::size_of::<usize>();
-
 type Dependent<'a> = Vec<Page<'a>>;
 
 pub struct Owner {

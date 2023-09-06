@@ -13,11 +13,13 @@ pub use ptrd::*;
 pub use ptrs::*;
 pub use sc64::*;
 
+pub const PTRSIZE: usize = core::mem::size_of::<usize>();
+
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 pub const DEFAULT_BUF_SIZE: usize = 0x4000;
 
 #[cfg(any(target_os = "linux", target_os = "android"))]
-pub const DEFAULT_BUF_SIZE: usize = 0x100000;
+pub const DEFAULT_BUF_SIZE: usize = 0x40000;
 
 #[cfg(any(target_os = "windows", all(target_os = "macos", target_arch = "x86_64"),))]
 pub const DEFAULT_BUF_SIZE: usize = 0x1000;

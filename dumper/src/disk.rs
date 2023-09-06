@@ -7,7 +7,7 @@ use super::{Error, Spinner, SubCommandDisk};
 
 impl SubCommandDisk {
     pub fn init(self) -> Result<(), Error> {
-        let SubCommandDisk { pid, out } = self;
+        let SubCommandDisk { pid, out, align } = self;
         let proc = Process::open(pid)?;
         let name = proc
             .app_path()
@@ -24,7 +24,7 @@ impl SubCommandDisk {
         }?;
         let mut spinner = Spinner::start("Start dump pointers...");
         let mut writer = BufWriter::with_capacity(DEFAULT_BUF_SIZE, out);
-        default_dump_ptr(&proc, &mut writer)?;
+        default_dump_ptr(&proc, align, &mut writer)?;
         spinner.stop("Dump completed.");
 
         Ok(())

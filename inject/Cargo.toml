@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-argh = "0.1.10"
+argh = "0.1.12"
 memoffset = "0.9.0"
 cfg-if = "1.0"
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies.machx]
-version = "0.4.4"
+version = "0.4.5"
 default-features = false

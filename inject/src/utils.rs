@@ -29,7 +29,7 @@ pub unsafe fn gen_code(dlopen: u64) -> [u8; 136] {
 
     #[inline]
     unsafe fn set_bits(reg: &mut [u8], value: u16) {
-        let mut reg_u32 = u32::from_le_bytes(*(reg.as_ptr() as *const _));
+        let mut reg_u32 = u32::from_le_bytes(*(reg.as_ptr().cast()));
         for i in 0..=15 {
             let bit_to_set = ((value >> i) & 1) != 0;
             reg_u32 &= !(1 << (i + 5));

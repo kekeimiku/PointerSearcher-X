@@ -12,5 +12,5 @@ version = "0.1.12"
 default-features = false
 
 [dependencies.terminal_size]
-version = "0.2.6"
+version = "0.3.0"
 default-features = false

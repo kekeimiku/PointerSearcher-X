@@ -99,7 +99,7 @@ fn check_exe<Q: VirtualQueryExt>(page: &Q) -> bool {
     let mut header = [0; 4];
     File::open(path)
         .and_then(|mut f| f.read_exact(&mut header))
-        .map_or(false, |_| EXE.contains(&header))
+        .is_ok_and(|_| EXE.contains(&header))
 }
 
 #[cfg(target_os = "linux")]
@@ -113,7 +113,7 @@ pub fn check_exe<Q: VirtualQueryExt>(page: &Q) -> bool {
     let mut header = [0; 4];
     File::open(path)
         .and_then(|mut f| f.read_exact(&mut header))
-        .map_or(false, |_| EXE.eq(&header))
+        .is_ok_and(|_| EXE.eq(&header))
 }
 
 #[cfg(target_os = "windows")]
@@ -130,7 +130,7 @@ pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
     path.extension().is_some_and(|s| s == "dll" || s == "exe")
 }
 
-pub fn default_dump_ptr<P, W>(proc: &P, writer: &mut W) -> Result<(), Error>
+pub fn default_dump_ptr<P, W>(proc: &P, align: bool, writer: &mut W) -> Result<(), Error>
 where
     P: ProcessInfo + VirtualMemoryRead,
     W: io::Write,
@@ -141,7 +141,7 @@ where
     let pages_info =
         merge_bases(pages.iter().flat_map(|x| PageTryWrapper(x).try_into())).expect("error: pages is_empty");
     encode_page_info(&pages_info, writer)?;
-    create_pointer_map_with_writer(proc, &region, writer)
+    create_pointer_map_with_writer(proc, &region, align, writer)
 }
 
 #[inline]

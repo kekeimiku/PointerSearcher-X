@@ -25,6 +25,9 @@ pub struct SubCommandDisk {
 
     #[argh(option, description = "out dir path")]
     pub out: Option<PathBuf>,
+
+    #[argh(switch, description = "pointer align, default true")]
+    pub align: bool,
 }
 
 #[derive(FromArgs)]

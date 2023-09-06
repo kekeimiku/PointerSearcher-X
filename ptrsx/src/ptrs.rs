@@ -7,7 +7,7 @@ pub struct Params<'a, W> {
     pub depth: usize,
     pub target: usize,
     pub node: usize,
-    pub range: (usize, usize),
+    pub offset: (usize, usize),
     pub points: &'a [usize],
     pub writer: &'a mut W,
 }
@@ -52,7 +52,7 @@ unsafe fn scanner<W>(map: &BTreeMap<usize, Vec<usize>>, params: Params<W>, lv: u
 where
     W: io::Write,
 {
-    let Params { base, depth, target, node, range: (lr, ur), points, writer } = params;
+    let Params { base, depth, target, node, offset: (lr, ur), points, writer } = params;
     let (avec, itoa) = tmp;
 
     let min = target.saturating_sub(ur);
@@ -76,13 +76,13 @@ where
         writer.write_all(b"\n")?;
     }
 
-    if lv < depth {
+    if lv <= depth {
         for (&k, vec) in map.range((Included(min), Included(max))) {
             avec.push_unchecked(target.wrapping_sub(k) as isize);
             for &target in vec {
                 scanner(
                     map,
-                    Params { base, depth, target, node, range: (lr, ur), points, writer },
+                    Params { base, depth, target, node, offset: (lr, ur), points, writer },
                     lv + 1,
                     (avec, itoa),
                 )?;
@@ -96,7 +96,7 @@ where
 
 #[cfg(target_pointer_width = "64")]
 #[test]
-fn test_pointer_chain_scanner() {
+fn test_pointer_chain_scanner_s1() {
     let ptrs = BTreeMap::from([
         (0x104B28008, 0x125F040A0),
         (0x104B28028, 0x125F04090),
@@ -115,29 +115,55 @@ fn test_pointer_chain_scanner() {
         map.entry(v).or_default().push(k);
     }
 
-    let mut out = vec![];
+    let mut out = Vec::with_capacity(10);
 
     pointer_chain_scanner(
         &map,
         Params {
             base: 0x104B18000,
-            depth: 5,
+            depth: 4,
             target: 0x125F04080,
             node: 3,
-            range: (0, 16),
+            offset: (0, 16),
             points: &points,
             writer: &mut out,
         },
     )
     .unwrap();
 
-    println!("{}", String::from_utf8(out.clone()).unwrap());
+    assert_eq!(String::from_utf8(out).unwrap(), "65576@0@16@16@0\n65576@0@16@0\n");
+}
 
-    assert_eq!(
-        out,
-        [
-            54, 53, 53, 55, 54, 64, 48, 64, 49, 54, 64, 49, 54, 64, 48, 10, 54, 53, 53, 55, 54, 64, 48, 64, 49, 54, 64,
-            48, 10
-        ]
-    );
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn test_pointer_chain_scanner_s2() {
+    let ptrs = BTreeMap::from([
+        (0x104B28008, 0x125F040A0),
+        (0x104B28028, 0x125F04090),
+        (0x104B281B0, 0x125F040E0),
+        (0x125F04090, 0x125F04080),
+    ]);
+
+    let mut map: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
+    for (k, v) in ptrs {
+        map.entry(v).or_default().push(k);
+    }
+
+    let mut out = Vec::with_capacity(10);
+
+    pointer_chain_scanner(
+        &map,
+        Params {
+            base: 0,
+            depth: 4,
+            target: 0x125F04080,
+            node: 3,
+            offset: (0, 16),
+            points: &[0x125F04090],
+            writer: &mut out,
+        },
+    )
+	.unwrap();
+    
+    assert_eq!(String::from_utf8(out).unwrap(), "4931469456@16@16@0\n4931469456@16@16@16@0\n");
 }
