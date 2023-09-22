@@ -7,7 +7,7 @@ use super::*;
 pub fn create_pointer_map<P>(
     proc: &P,
     region: &[(usize, usize)],
-    align: bool,
+    is_align: bool,
 ) -> Result<BTreeMap<usize, usize>, P::Error>
 where
     P: VirtualMemoryRead,
@@ -15,7 +15,7 @@ where
     let mut buf = [0; DEFAULT_BUF_SIZE];
     let mut map = BTreeMap::new();
 
-    if align {
+    if is_align {
         for &(start, size) in region {
             for off in (0..size).step_by(DEFAULT_BUF_SIZE) {
                 let size = proc.read_at(buf.as_mut_slice(), start + off)?;
@@ -67,7 +67,7 @@ where
 pub fn create_pointer_map_with_writer<P, W>(
     proc: &P,
     region: &[(usize, usize)],
-    align: bool,
+    is_align: bool,
     writer: &mut W,
 ) -> Result<(), Error>
 where
@@ -77,7 +77,7 @@ where
 {
     let mut buf = [0; DEFAULT_BUF_SIZE];
 
-    if align {
+    if is_align {
         for &(start, size) in region {
             for off in (0..size).step_by(DEFAULT_BUF_SIZE) {
                 let size = proc.read_at(buf.as_mut_slice(), start + off)?;
