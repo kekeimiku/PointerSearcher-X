@@ -163,7 +163,7 @@ fn test_pointer_chain_scanner_s2() {
             writer: &mut out,
         },
     )
-	.unwrap();
-    
+    .unwrap();
+
     assert_eq!(String::from_utf8(out).unwrap(), "4931469456@16@16@0\n4931469456@16@16@16@0\n");
 }

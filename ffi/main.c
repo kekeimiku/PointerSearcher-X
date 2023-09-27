@@ -1,16 +1,17 @@
 #include "ptrsx.h"
+#include <stdbool.h>
 #include <stdio.h>
 
 int main() {
 
   // dump pointer file
-  // int pid = 80805;
-  // int r = dumper_to_file(pid, "./aabb.dump");
-  // if (r != 0) {
-  //   const char *err = get_last_error();
-  //   printf("%s\n", err);
-  //   return -1;
-  // }
+  int pid = 80805;
+  int r = dumper_to_file(pid, false, "./aabb.dump");
+  if (r != 0) {
+    const char *err = get_last_error();
+    printf("%s\n", err);
+    return -1;
+  }
 
   Scanner *scanner = NULL;
 

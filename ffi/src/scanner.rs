@@ -77,7 +77,7 @@ pub unsafe extern "C" fn scanner_pointer_chain(ptr: *mut Scanner, pages: *const 
             base: page.start,
             depth: params.depth,
             node: params.node,
-            range: (params.rangel, params.ranger),
+            offset: (params.rangel, params.ranger),
             points: &points,
             target: params.target,
             writer: &mut BufWriter::new(file),

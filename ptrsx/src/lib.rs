@@ -2,12 +2,14 @@
 panic!("32-bit is not supported.");
 
 mod c64;
+mod check;
 mod error;
 mod ptrd;
 mod ptrs;
 mod sc64;
 
 pub use c64::*;
+pub use check::*;
 pub use error::Error;
 pub use ptrd::*;
 pub use ptrs::*;

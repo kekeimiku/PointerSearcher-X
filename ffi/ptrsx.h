@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef struct Scanner Scanner;
 
@@ -22,7 +23,7 @@ typedef struct Params {
   const char *dir;
 } Params;
 
-int dumper_to_file(int pid, const char *path);
+int dumper_to_file(int pid, const char *path, bool align);
 
 const char *get_last_error(void);
 
