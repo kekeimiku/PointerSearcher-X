@@ -1,5 +1,4 @@
-#include "ptrsx.h"
-#include <stdbool.h>
+#include "ptrsx_unix.h"
 #include <stdio.h>
 
 int main() {
@@ -55,6 +54,7 @@ int main() {
   }
 
   clear_last_error();
+  ptrsx_free(ptr);
   return 0;
 }
 

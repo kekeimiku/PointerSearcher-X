@@ -1,4 +1,7 @@
-use std::ffi::{c_char, CString};
+use std::ffi::{c_char, c_int, CString};
+
+// vmmap Pid
+pub type Pid = c_int;
 
 #[repr(C)]
 pub struct Module {

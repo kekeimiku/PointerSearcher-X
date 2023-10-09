@@ -14,7 +14,7 @@ use std::{
 pub use error::*;
 pub use ffi_types::*;
 use ptrsx::PtrsxScanner;
-use vmmap::{Pid, Process};
+use vmmap::Process;
 
 #[derive(Default)]
 pub struct PointerSearcherX {

@@ -1,8 +1,8 @@
 #include <stddef.h>
 
-typedef int Pid;
-
 typedef struct PointerSearcherX PointerSearcherX;
+
+typedef int Pid;
 
 typedef struct Module {
   size_t start;
