@@ -31,9 +31,7 @@ pub struct Process {
 }
 
 impl VirtualMemoryRead for Process {
-    type Error = Error;
-
-    fn read_at(&self, buf: &mut [u8], address: usize) -> Result<usize, Self::Error> {
+    fn read_at(&self, buf: &mut [u8], address: usize) -> Result<usize, Error> {
         unsafe {
             let mut out = 0;
             let result =
@@ -47,9 +45,7 @@ impl VirtualMemoryRead for Process {
 }
 
 impl VirtualMemoryWrite for Process {
-    type Error = Error;
-
-    fn write_at(&self, buf: &[u8], address: usize) -> Result<(), Self::Error> {
+    fn write_at(&self, buf: &[u8], address: usize) -> Result<(), Error> {
         unsafe {
             let result = mach_vm_write(self.task, address as u64, buf.as_ptr() as _, buf.len() as _);
             if result != KERN_SUCCESS {
@@ -62,11 +58,11 @@ impl VirtualMemoryWrite for Process {
 
 #[allow(dead_code)]
 pub struct Page {
-    addr: mach_vm_address_t,
-    size: mach_vm_size_t,
-    count: mach_msg_type_number_t,
-    info: vm_region_extended_info,
-    pathname: Option<PathBuf>,
+    pub addr: mach_vm_address_t,
+    pub size: mach_vm_size_t,
+    pub count: mach_msg_type_number_t,
+    pub info: vm_region_extended_info,
+    pub pathname: Option<String>,
 }
 
 impl VirtualQuery for Page {
@@ -93,6 +89,10 @@ impl VirtualQuery for Page {
     fn is_exec(&self) -> bool {
         self.info.protection & VM_PROT_EXECUTE != 0
     }
+
+    fn name(&self) -> Option<&str> {
+        self.pathname.as_deref()
+    }
 }
 
 impl VirtualQueryExt for Page {
@@ -102,10 +102,6 @@ impl VirtualQueryExt for Page {
 
     fn is_reserve(&self) -> bool {
         self.start() == 0xfc0000000 || self.start() == 0x1000000000
-    }
-
-    fn path(&self) -> Option<&Path> {
-        self.pathname.as_deref()
     }
 }
 
@@ -118,14 +114,14 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
-        Box::new(PageIter::new(self.task).map(|m| Page {
+    fn get_maps(&self) -> impl Iterator<Item = Page> {
+        PageIter::new(self.task).map(|m| Page {
             addr: m.addr,
             size: m.size,
             count: m.count,
             info: m.info,
             pathname: proc_regionfilename(self.pid, m.addr).ok(),
-        }))
+        })
     }
 }
 
@@ -154,7 +150,7 @@ impl Process {
 
 #[inline(always)]
 #[allow(clippy::comparison_chain)]
-fn proc_regionfilename(pid: Pid, address: u64) -> Result<PathBuf, kern_return_t> {
+fn proc_regionfilename(pid: Pid, address: u64) -> Result<String, kern_return_t> {
     unsafe {
         let mut buf: Vec<u8> = Vec::with_capacity(PROC_PIDPATHINFO_MAXSIZE);
         let result = libproc::proc_regionfilename(pid, address, buf.as_mut_ptr() as _, buf.capacity() as _);
@@ -162,7 +158,7 @@ fn proc_regionfilename(pid: Pid, address: u64) -> Result<PathBuf, kern_return_t>
             Err(result)
         } else {
             buf.set_len(result as usize);
-            Ok(PathBuf::from(OsString::from_vec(buf)))
+            Ok(String::from_utf8_unchecked(buf))
         }
     }
 }

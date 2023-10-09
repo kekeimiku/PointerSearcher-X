@@ -4,27 +4,23 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt};
+use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
 
 pub struct Process {
-    pid: Pid,
-    pathname: PathBuf,
-    maps: String,
-    handle: fs::File,
+    pub pid: Pid,
+    pub pathname: PathBuf,
+    pub maps: String,
+    pub handle: fs::File,
 }
 
 impl VirtualMemoryRead for Process {
-    type Error = Error;
-
-    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Self::Error> {
+    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Error> {
         self.handle.read_at(buf, offset as u64).map_err(Error::ReadMemory)
     }
 }
 
 impl VirtualMemoryWrite for Process {
-    type Error = Error;
-
-    fn write_at(&self, buf: &[u8], offset: usize) -> Result<(), Self::Error> {
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<(), Error> {
         self.handle.write_all_at(buf, offset as u64).map_err(Error::WriteMemory)
     }
 }
@@ -38,8 +34,8 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
-        Box::new(PageIter::new(&self.maps))
+    fn get_maps(&self) -> impl Iterator<Item = Page> {
+        PageIter::new(&self.maps)
     }
 }
 
@@ -57,13 +53,13 @@ impl Process {
 
 #[allow(dead_code)]
 pub struct Page<'a> {
-    start: usize,
-    end: usize,
-    flags: &'a str,
-    offset: usize,
-    dev: &'a str,
-    inode: usize,
-    pathname: &'a str,
+    pub start: usize,
+    pub end: usize,
+    pub flags: &'a str,
+    pub offset: usize,
+    pub dev: &'a str,
+    pub inode: usize,
+    pub name: Option<&'a str>,
 }
 
 impl VirtualQuery for Page<'_> {
@@ -90,11 +86,9 @@ impl VirtualQuery for Page<'_> {
     fn is_exec(&self) -> bool {
         &self.flags[2..3] == "x"
     }
-}
 
-impl VirtualQueryExt for Page<'_> {
-    fn name(&self) -> &str {
-        self.pathname
+    fn name(&self) -> Option<&str> {
+        self.name
     }
 }
 
@@ -120,8 +114,9 @@ impl<'a> Iterator for PageIter<'a> {
         let offset = usize::from_str_radix(split.next()?, 16).ok()?;
         let dev = split.next()?;
         let inode = split.next()?.parse().ok()?;
-        let pathname = split.next()?.trim_start();
+        let name = split.next()?.trim_start();
+        let name = if name.is_empty() { None } else { Some(name) };
 
-        Some(Page { start, end, flags, offset, dev, inode, pathname })
+        Some(Page { start, end, flags, offset, dev, inode, name })
     }
 }

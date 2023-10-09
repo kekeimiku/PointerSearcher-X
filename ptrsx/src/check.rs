@@ -1,77 +1,74 @@
-use vmmap::{macos::VirtualQueryExt, VirtualQuery};
+use std::{fs::File, io::Read, path::Path};
+
+use vmmap::VirtualQuery;
+
+#[cfg(target_os = "macos")]
+#[inline(always)]
+pub fn check_region<Q: VirtualQuery + vmmap::macos::VirtualQueryExt>(page: &Q) -> bool {
+    if !page.is_read() || page.is_reserve() {
+        return false;
+    }
+
+    let Some(name) = page.name() else {
+        return matches!(page.tag(), |1..=9| 11 | 30 | 33 | 60 | 61);
+    };
+    let path = Path::new(name);
+    if path.starts_with("/usr") {
+        return false;
+    }
+    let mut buf = [0; 8];
+    File::open(path)
+        .and_then(|mut f| f.read_exact(&mut buf))
+        .is_ok_and(|_| match buf[0..4] {
+            [width, 0xfa, 0xed, 0xfe] if width == 0xcf || width == 0xce => true,
+            [0xfe, 0xed, 0xfa, width] if width == 0xcf || width == 0xce => true,
+            [0xca, 0xfe, 0xba, 0xbe] => u32::from_be_bytes([buf[4], buf[5], buf[6], buf[7]]) < 45,
+            _ => false,
+        })
+}
 
 #[cfg(target_os = "linux")]
-pub const EXE: [u8; 4] = [0x7f, b'E', b'L', b'F'];
-
-#[cfg(any(
-    all(target_os = "macos", target_arch = "aarch64"),
-    all(target_os = "macos", target_arch = "x86_64"),
-))]
-pub const EXE: [[u8; 4]; 2] = [[0xCA, 0xFE, 0xBA, 0xBE], [0xCF, 0xFA, 0xED, 0xFE]];
-
-#[inline]
-pub fn check_region<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
+#[inline(always)]
+pub fn check_region<Q: VirtualQuery>(page: &Q) -> bool {
     if !page.is_read() {
         return false;
     }
 
-    #[cfg(target_os = "macos")]
-    {
-        check_exe(page) || page.path().is_none() && matches!(page.tag(), |1..=9| 11 | 30 | 33 | 60 | 61)
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        matches!(page.name(), "[stack]" | "[heap]") || check_exe(page) || page.name().is_empty()
-    }
-
-    #[cfg(target_os = "windows")]
-    (check_exe(page) || page.path().is_none())
-}
-
-#[cfg(target_os = "macos")]
-#[inline]
-fn check_exe<Q: VirtualQueryExt>(page: &Q) -> bool {
-    use std::{fs::File, io::Read};
-
-    let Some(path) = page.path() else {
-        return false;
+    let Some(name) = page.name() else {
+        return true;
     };
-
-    if path.starts_with("/usr") {
+    if name.eq("[stack]") || name.eq("[heap]") {
+        return true;
+    }
+    let path = Path::new(name);
+    if !path.has_root() || path.starts_with("/dev") {
         return false;
     }
-
-    let mut header = [0; 4];
+    let mut buf = [0; 8];
     File::open(path)
-        .and_then(|mut f| f.read_exact(&mut header))
-        .is_ok_and(|_| EXE.contains(&header))
-}
-
-#[cfg(target_os = "linux")]
-#[inline]
-pub fn check_exe<Q: VirtualQueryExt>(page: &Q) -> bool {
-    let path = std::path::Path::new(page.name());
-    if !path.exists() || path.starts_with("/dev") {
-        return false;
-    }
-
-    let mut header = [0; 4];
-    File::open(path)
-        .and_then(|mut f| f.read_exact(&mut header))
-        .is_ok_and(|_| EXE.eq(&header))
+        .and_then(|mut f| f.read_exact(&mut buf))
+        .is_ok_and(|_| [0x7f, b'E', b'L', b'F'].eq(&buf[0..4]))
 }
 
 #[cfg(target_os = "windows")]
-#[inline]
-pub fn check_exe<Q: VirtualQuery + VirtualQueryExt>(page: &Q) -> bool {
-    let Some(path) = page.path() else {
-        return false;
-    };
-
-    if path.starts_with("\\Device\\HarddiskVolume3\\Windows\\System32") {
+#[inline(always)]
+pub fn check_region<Q: VirtualQuery>(page: &Q) -> bool {
+    if !page.is_read() {
         return false;
     }
 
-    path.extension().is_some_and(|s| s == "dll" || s == "exe")
+    let Some(name) = page.name() else {
+        return true;
+    };
+    if name.contains("\\Windows\\System32\\") {
+        return false;
+    }
+    let path = Path::new(name);
+    if !path.has_root() {
+        return false;
+    }
+    let mut buf = [0; 8];
+    File::open(path)
+        .and_then(|mut f| f.read_exact(&mut buf))
+        .is_ok_and(|_| [0x7f, 0x45, 0x4c, 0x46].eq(&buf[0..4]))
 }

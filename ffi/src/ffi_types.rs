@@ -1,22 +1,22 @@
 use std::ffi::{c_char, CString};
 
 #[repr(C)]
-pub struct Page {
+pub struct Module {
     pub start: usize,
     pub end: usize,
-    pub path: *mut c_char,
+    pub name: *mut c_char,
 }
 
 #[repr(C)]
-pub struct PageVec {
+pub struct Modules {
     pub len: usize,
-    pub data: *const Page,
+    pub data: *const Module,
 }
 
-impl Drop for Page {
+impl Drop for Module {
     fn drop(&mut self) {
         unsafe {
-            let _ = CString::from_raw(self.path);
+            let _ = CString::from_raw(self.name);
         }
     }
 }
@@ -28,5 +28,5 @@ pub struct Params {
     pub node: usize,
     pub rangel: usize,
     pub ranger: usize,
-    pub dir: *const c_char,
+    pub file_name: *const c_char,
 }

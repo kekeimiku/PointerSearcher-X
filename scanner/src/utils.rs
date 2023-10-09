@@ -9,13 +9,13 @@ use std::{
     thread, time,
 };
 
-use ptrsx::Page;
+use ptrsx::Module;
 use terminal_size::terminal_size;
 
-pub fn select_base_module<'a>(items: &[Page<'a>]) -> Result<Vec<Page<'a>>, super::error::Error> {
+pub fn select_base_module(items: &[Module]) -> Result<Vec<Module>, super::error::Error> {
     let words = items
         .iter()
-        .filter_map(|m| Path::new(m.path).file_name())
+        .filter_map(|m| Path::new(&m.name).file_name())
         .enumerate()
         .map(|(k, v)| format!("[\x1B[32m{k}\x1B[0m: {}] ", v.to_string_lossy()));
 

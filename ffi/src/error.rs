@@ -35,7 +35,7 @@ macro_rules! ffi_try_result {
         match $expr {
             Ok(val) => val,
             Err(err) => {
-                super::set_last_error(err);
+                set_last_error(err);
                 return $ret;
             }
         }

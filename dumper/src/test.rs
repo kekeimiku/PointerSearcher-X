@@ -1,31 +1,16 @@
-use std::fmt::Write;
+use std::{fmt::Write, mem, path::Path};
 
-#[cfg(target_os = "linux")]
-use vmmap::linux::VirtualQueryExt;
-#[cfg(target_os = "macos")]
-use vmmap::macos::VirtualQueryExt;
-#[cfg(target_os = "windows")]
-use vmmap::windows::VirtualQueryExt;
 use vmmap::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 use super::{Error, SubCommandTest};
 
-#[cfg(target_os = "linux")]
-fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
-    use std::path::Path;
-
-    proc.get_maps()
-        .filter(|m| m.is_read() && !m.name().is_empty())
-        .find(|m| Path::new(m.name()).file_name().map_or(false, |n| n.eq(name)))
-        .map(|m| m.start())
-        .ok_or("find modules error")
-}
-
-#[cfg(any(target_os = "macos", target_os = "windows"))]
 fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
     proc.get_maps()
-        .filter(|m| m.is_read() && m.path().is_some())
-        .find(|m| m.path().and_then(|f| f.file_name()).is_some_and(|n| n.eq(name)))
+        .filter(|m| m.is_read())
+        .find(|m| {
+            m.name()
+                .is_some_and(|s| Path::new(s).file_name().is_some_and(|n| n.eq(name)))
+        })
         .map(|m| m.start())
         .ok_or("find modules error")
 }
@@ -37,10 +22,7 @@ impl SubCommandTest {
         let (name, offv, last) = parse_path(&path).ok_or("parse path error")?;
         let mut address = find_base_address(&proc, name)?;
 
-        #[cfg(target_pointer_width = "32")]
-        let mut buf = [0; 4];
-        #[cfg(target_pointer_width = "64")]
-        let mut buf = [0; 8];
+        let mut buf = [0; mem::size_of::<usize>()];
 
         for off in offv {
             proc.read_at(&mut buf, address.checked_add_signed(off).ok_or("pointer overflow")?)?;

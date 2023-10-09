@@ -1,18 +1,19 @@
 #include <stddef.h>
-#include <stdbool.h>
 
-typedef struct Scanner Scanner;
+typedef int Pid;
 
-typedef struct Page {
+typedef struct PointerSearcherX PointerSearcherX;
+
+typedef struct Module {
   size_t start;
   size_t end;
-  char *path;
-} Page;
+  char *name;
+} Module;
 
-typedef struct PageVec {
+typedef struct Modules {
   size_t len;
-  const struct Page *data;
-} PageVec;
+  const struct Module *data;
+} Modules;
 
 typedef struct Params {
   size_t target;
@@ -20,19 +21,25 @@ typedef struct Params {
   size_t node;
   size_t rangel;
   size_t ranger;
-  const char *dir;
+  const char *file_name;
 } Params;
 
-int dumper_to_file(int pid, const char *path, bool align);
+struct PointerSearcherX *ptrsx_init(void);
+
+void ptrsx_free(struct PointerSearcherX *ptr);
+
+int create_pointer_map_file(struct PointerSearcherX *ptr, Pid pid, const char *file_name);
+
+int create_pointer_map(struct PointerSearcherX *ptr, Pid pid);
+
+int load_pointer_map_file(struct PointerSearcherX *ptr, char *file_name);
+
+struct Modules get_modules(struct PointerSearcherX *ptr);
+
+int scanner_pointer_chain_with_module(struct PointerSearcherX *ptr,
+                                      struct Module module,
+                                      struct Params params);
 
 const char *get_last_error(void);
 
 void clear_last_error(void);
-
-int scanner_init_with_file(const char *path, struct Scanner **ptr);
-
-void scanner_free(struct Scanner *ptr);
-
-struct PageVec scanner_get_pages(const struct Scanner *ptr);
-
-int scanner_pointer_chain(struct Scanner *ptr, const struct PageVec *pages, struct Params params);

@@ -1,22 +1,24 @@
+#[cfg(target_os = "macos")]
 #[derive(Debug)]
 pub enum Error {
-    #[cfg(target_os = "linux")]
-    OpenProcess(std::io::Error),
-    #[cfg(target_os = "linux")]
-    ReadMemory(std::io::Error),
-    #[cfg(target_os = "linux")]
-    WriteMemory(std::io::Error),
-    #[cfg(target_os = "macos")]
     OpenProcess(machx::kern_return::kern_return_t),
-    #[cfg(target_os = "macos")]
     ReadMemory(machx::kern_return::kern_return_t),
-    #[cfg(target_os = "macos")]
     WriteMemory(machx::kern_return::kern_return_t),
-    #[cfg(target_os = "windows")]
+}
+
+#[cfg(target_os = "linux")]
+#[derive(Debug)]
+pub enum Error {
+    OpenProcess(std::io::Error),
+    ReadMemory(std::io::Error),
+    WriteMemory(std::io::Error),
+}
+
+#[cfg(target_os = "windows")]
+#[derive(Debug)]
+pub enum Error {
     OpenProcess(windows_sys::Win32::Foundation::WIN32_ERROR),
-    #[cfg(target_os = "windows")]
     ReadMemory(windows_sys::Win32::Foundation::WIN32_ERROR),
-    #[cfg(target_os = "windows")]
     WriteMemory(windows_sys::Win32::Foundation::WIN32_ERROR),
 }
 
@@ -27,9 +29,9 @@ pub unsafe fn mach_error(error_value: machx::error::mach_error_t) -> String {
     String::from_utf8_unchecked(std::ffi::CStr::from_ptr(ptr).to_bytes().to_owned())
 }
 
-#[cfg(target_os = "macos")]
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        #[cfg(target_os = "macos")]
         unsafe {
             match self {
                 Error::OpenProcess(err) => write!(f, "OpenProcess, {}. code: {err}", mach_error(*err)),
@@ -37,23 +39,13 @@ impl std::fmt::Display for Error {
                 Error::WriteMemory(err) => write!(f, "WriteMemory, {}. code: {err}", mach_error(*err)),
             }
         }
-    }
-}
-
-#[cfg(target_os = "linux")]
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        #[cfg(target_os = "linux")]
         match self {
             Error::OpenProcess(err) => write!(f, "OpenProcess, {err}"),
             Error::ReadMemory(err) => write!(f, "ReadMemory, {err}"),
             Error::WriteMemory(err) => write!(f, "WriteMemory, {err}"),
         }
-    }
-}
-
-#[cfg(target_os = "windows")]
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        #[cfg(target_os = "windows")]
         match self {
             Error::OpenProcess(err) => write!(f, "OpenProcess, code: {err}"),
             Error::ReadMemory(err) => write!(f, "ReadMemory, code: {err}"),
