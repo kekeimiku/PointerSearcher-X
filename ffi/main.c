@@ -11,7 +11,7 @@ int main() {
   // create a pointer map in file
   // ret = create_pointer_map_file(ptr, pid, "./1.map");
   // if (ret != 0) {
-  //   const char *error = get_last_error();
+  //   const char *error = get_last_error(ptr);
   //   printf("%s\n", error);
   //   return 0;
   // }
@@ -19,7 +19,7 @@ int main() {
   // create a pointer map in memory
   // ret = create_pointer_map(ptr, pid);
   // if (ret != 0) {
-  //   const char *error = get_last_error();
+  //   const char *error = get_last_error(ptr);
   //   printf("%s\n", error);
   //   return 0;
   // }
@@ -27,7 +27,7 @@ int main() {
   // load pointer file
   ret = load_pointer_map_file(ptr, "1.dump");
   if (ret != 0) {
-    const char *error = get_last_error();
+    const char *error = get_last_error(ptr);
     printf("%s\n", error);
     return 0;
   }
@@ -48,12 +48,11 @@ int main() {
   // start scanner
   ret = scanner_pointer_chain_with_module(ptr, module, params);
   if (ret != 0) {
-    const char *error = get_last_error();
+    const char *error = get_last_error(ptr);
     printf("%s\n", error);
     return 0;
   }
 
-  clear_last_error();
   ptrsx_free(ptr);
   return 0;
 }

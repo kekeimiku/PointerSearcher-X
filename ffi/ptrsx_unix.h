@@ -40,6 +40,4 @@ int scanner_pointer_chain_with_module(struct PointerSearcherX *ptr,
                                       struct Module module,
                                       struct Params params);
 
-const char *get_last_error(void);
-
-void clear_last_error(void);
+const char *get_last_error(struct PointerSearcherX *ptr);
