@@ -1,4 +1,4 @@
-use std::ffi::{c_char, c_int, CString};
+use core::ffi::{c_char, c_int};
 
 // vmmap Pid
 pub type Pid = c_int;
@@ -14,14 +14,6 @@ pub struct Module {
 pub struct Modules {
     pub len: usize,
     pub data: *const Module,
-}
-
-impl Drop for Module {
-    fn drop(&mut self) {
-        unsafe {
-            let _ = CString::from_raw(self.name);
-        }
-    }
 }
 
 #[repr(C)]
