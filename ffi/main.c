@@ -25,7 +25,7 @@ int main() {
   // }
 
   // load pointer file
-  ret = load_pointer_map_file(ptr, "1.dump");
+  ret = load_pointer_map_file(ptr, "1.map");
   if (ret != 0) {
     const char *error = get_last_error(ptr);
     printf("%s\n", error);
