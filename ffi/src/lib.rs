@@ -155,10 +155,9 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
     ));
 
     let module = ptrsx::Module { start: module.start, end: module.end, name };
+    #[rustfmt::skip]
     let params = ptrsx::Params {
-        depth,
-        target,
-        node,
+        depth, target, node,
         offset: (rangel, ranger),
         writer: &mut writer,
     };
