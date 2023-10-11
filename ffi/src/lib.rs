@@ -49,6 +49,15 @@ impl PointerSearcherX {
 }
 
 #[no_mangle]
+pub unsafe extern "C" fn get_last_error(ptr: *mut PointerSearcherX) -> *const c_char {
+    let ptrsx = &(*ptr);
+    match &ptrsx.last_error {
+        Some(err) => err.as_ptr(),
+        None => ptr::null(),
+    }
+}
+
+#[no_mangle]
 pub extern "C" fn ptrsx_init() -> *mut PointerSearcherX {
     Box::into_raw(Box::default())
 }
@@ -143,7 +152,6 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
     let scanner = &ptrsx.inner;
     let Params { target, depth, node, rangel, ranger, file_name } = params;
     let file_name = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
-    let name = String::from_utf8_unchecked(CStr::from_ptr(module.name).to_bytes().to_vec());
     let mut writer = BufWriter::new(try_result!(
         ptrsx,
         OpenOptions::new()
@@ -154,7 +162,7 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
             .open(file_name)
     ));
 
-    let module = ptrsx::Module { start: module.start, end: module.end, name };
+    let module = ptrsx::Module { start: module.start, end: module.end, ..Default::default() };
     #[rustfmt::skip]
     let params = ptrsx::Params {
         depth, target, node,
@@ -168,10 +176,31 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_last_error(ptr: *mut PointerSearcherX) -> *const c_char {
-    let ptrsx = &(*ptr);
-    match &ptrsx.last_error {
-        Some(err) => err.as_ptr(),
-        None => ptr::null(),
-    }
+pub unsafe extern "C" fn scanner_pointer_chain_with_address(
+    ptr: *mut PointerSearcherX,
+    address: usize,
+    params: Params,
+) -> c_int {
+    let ptrsx = &mut (*ptr);
+    let scanner = &ptrsx.inner;
+    let Params { target, depth, node, rangel, ranger, file_name } = params;
+    let file_name = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
+    let mut writer = BufWriter::new(try_result!(
+        ptrsx,
+        OpenOptions::new()
+            .write(true)
+            .read(true)
+            .append(true)
+            .create_new(true)
+            .open(file_name)
+    ));
+    #[rustfmt::skip]
+    let params = ptrsx::Params {
+        depth, target, node,
+        offset: (rangel, ranger),
+        writer: &mut writer,
+    };
+    try_result!(ptrsx, scanner.scanner_with_address(address, params));
+
+    0
 }

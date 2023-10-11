@@ -24,6 +24,8 @@ typedef struct Params {
   const char *file_name;
 } Params;
 
+const char *get_last_error(struct PointerSearcherX *ptr);
+
 struct PointerSearcherX *ptrsx_init(void);
 
 void ptrsx_free(struct PointerSearcherX *ptr);
@@ -40,4 +42,6 @@ int scanner_pointer_chain_with_module(struct PointerSearcherX *ptr,
                                       struct Module module,
                                       struct Params params);
 
-const char *get_last_error(struct PointerSearcherX *ptr);
+int scanner_pointer_chain_with_address(struct PointerSearcherX *ptr,
+                                       size_t address,
+                                       struct Params params);
