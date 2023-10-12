@@ -40,6 +40,9 @@ pub fn check_region<Q: VirtualQuery>(page: &Q) -> bool {
     if name.eq("[stack]") || name.eq("[heap]") {
         return true;
     }
+    if name.get(0..7).is_some_and(|s| s.eq("/memfd:")) {
+        return false;
+    }
     let path = Path::new(name);
     if !path.has_root() || path.starts_with("/dev") {
         return false;
