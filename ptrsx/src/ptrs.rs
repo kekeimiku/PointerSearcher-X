@@ -2,7 +2,7 @@ use std::{cmp::Ordering, collections::BTreeMap, io, ops::Bound::Included};
 
 use arrayvec::ArrayVec;
 
-pub struct Params<'a, W> {
+pub(super) struct Params<'a, W> {
     pub base: usize,
     pub depth: usize,
     pub target: usize,

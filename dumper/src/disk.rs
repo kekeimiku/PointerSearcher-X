@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io::BufWriter};
 
-use ptrsx::{default_dump_ptr, DEFAULT_BUF_SIZE};
+use ptrsx::{PtrsxScanner, DEFAULT_BUF_SIZE};
 use vmmap::{Process, ProcessInfo};
 
 use super::{Error, Spinner, SubCommandDisk};
@@ -19,12 +19,13 @@ impl SubCommandDisk {
             None => OpenOptions::new()
                 .write(true)
                 .append(true)
-                .create(true)
+                .create_new(true)
                 .open(format!("{name}-{pid}.dump")),
         }?;
         let mut spinner = Spinner::start("Start dump pointers...");
+        let ptrsx = PtrsxScanner::default();
         let mut writer = BufWriter::with_capacity(DEFAULT_BUF_SIZE, out);
-        default_dump_ptr(&proc, align, &mut writer)?;
+        ptrsx.create_pointer_map_file(&mut writer, pid, align)?;
         spinner.stop("Dump completed.");
 
         Ok(())

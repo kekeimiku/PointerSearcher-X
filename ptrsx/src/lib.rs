@@ -1,19 +1,19 @@
 #[cfg(target_pointer_width = "32")]
 panic!("32-bit is not supported.");
 
-mod c64;
+mod bin;
 mod check;
 mod error;
+pub mod file;
 mod ptrd;
 mod ptrs;
-mod sc64;
+mod ptrsx;
 
-pub use c64::*;
+pub use bin::*;
 pub use check::*;
 pub use error::Error;
 pub use ptrd::*;
-pub use ptrs::*;
-pub use sc64::*;
+pub use ptrsx::*;
 
 pub const PTRSIZE: usize = core::mem::size_of::<usize>();
 

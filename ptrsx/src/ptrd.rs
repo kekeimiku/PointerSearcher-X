@@ -8,7 +8,7 @@ pub fn create_pointer_map<P>(
     proc: &P,
     region: &[(usize, usize)],
     is_align: bool,
-) -> Result<BTreeMap<usize, usize>, P::Error>
+) -> Result<BTreeMap<usize, usize>, Error>
 where
     P: VirtualMemoryRead,
 {
@@ -73,7 +73,6 @@ pub fn create_pointer_map_with_writer<P, W>(
 where
     P: VirtualMemoryRead,
     W: io::Write,
-    Error: From<P::Error>,
 {
     let mut buf = [0; DEFAULT_BUF_SIZE];
 

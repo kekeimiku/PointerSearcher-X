@@ -34,9 +34,9 @@ impl From<io::Error> for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Vmmap(err) => write!(f, "vmmap: {err}"),
-            Error::Other(err) => write!(f, "other: {err}"),
-            Error::Io(err) => write!(f, "io: {err}"),
+            Error::Vmmap(err) => write!(f, "{err}"),
+            Error::Other(err) => write!(f, "{err}"),
+            Error::Io(err) => write!(f, "{err}"),
         }
     }
 }

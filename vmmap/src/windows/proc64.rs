@@ -22,14 +22,12 @@ use windows_sys::Win32::{
     },
 };
 
-use super::{
-    Error, Pid, ProcessInfo, ProcessInfoExt, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery, VirtualQueryExt,
-};
+use super::{Error, Pid, ProcessInfo, ProcessInfoExt, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
 
 pub struct Process {
-    pid: Pid,
-    handle: HandleInner,
-    pathname: PathBuf,
+    pub pid: Pid,
+    pub handle: HandleInner,
+    pub pathname: PathBuf,
 }
 
 struct HandleInner(HANDLE);
@@ -43,9 +41,7 @@ impl Drop for HandleInner {
 }
 
 impl VirtualMemoryRead for Process {
-    type Error = Error;
-
-    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Self::Error> {
+    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Error> {
         unsafe {
             let code = ReadProcessMemory(self.handle.0, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
             if code == 0 {
@@ -58,9 +54,7 @@ impl VirtualMemoryRead for Process {
 }
 
 impl VirtualMemoryWrite for Process {
-    type Error = Error;
-
-    fn write_at(&self, buf: &[u8], offset: usize) -> Result<(), Self::Error> {
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<(), Error> {
         unsafe {
             let code = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
             if code == 0 {
@@ -114,12 +108,13 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> Box<dyn Iterator<Item = Page> + '_> {
+    fn get_maps(&self) -> impl Iterator<Item = Page> {
+        #[inline]
         fn skip_last<T>(mut iter: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
             let last = iter.next();
             iter.scan(last, |state, item| mem::replace(state, Some(item)))
         }
-        Box::new(skip_last(PageIter::new(self.handle.0).skip(1)))
+        skip_last(PageIter::new(self.handle.0).skip(1))
     }
 }
 
@@ -131,10 +126,10 @@ impl ProcessInfoExt for Process {
 
 #[derive(Debug, Clone)]
 pub struct Page {
-    start: usize,
-    size: usize,
-    flags: u32,
-    pathname: Option<PathBuf>,
+    pub start: usize,
+    pub size: usize,
+    pub flags: u32,
+    pub pathname: Option<String>,
 }
 
 impl VirtualQuery for Page {
@@ -168,10 +163,8 @@ impl VirtualQuery for Page {
     fn is_exec(&self) -> bool {
         self.flags & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY) != 0
     }
-}
 
-impl VirtualQueryExt for Page {
-    fn path(&self) -> Option<&Path> {
+    fn name(&self) -> Option<&str> {
         self.pathname.as_deref()
     }
 }
@@ -221,11 +214,11 @@ impl Iterator for PageIter {
 }
 
 #[inline(always)]
-unsafe fn get_path_name(handle: HANDLE, base: usize) -> Result<PathBuf, WIN32_ERROR> {
+unsafe fn get_path_name(handle: HANDLE, base: usize) -> Result<String, WIN32_ERROR> {
     let mut buf = [0; MAX_PATH as _];
     let result = GetMappedFileNameW(handle, base as _, buf.as_mut_ptr(), buf.len() as _);
     if result == 0 {
         return Err(GetLastError());
     }
-    Ok(PathBuf::from(OsString::from_wide(&buf[..result as _])))
+    Ok(OsString::from_wide(&buf[..result as _]).to_string_lossy().to_string())
 }
