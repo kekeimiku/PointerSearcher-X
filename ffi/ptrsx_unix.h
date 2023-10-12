@@ -1,4 +1,5 @@
 #include <stddef.h>
+#include <stdbool.h>
 
 typedef struct PointerSearcherX PointerSearcherX;
 
@@ -30,9 +31,12 @@ struct PointerSearcherX *ptrsx_init(void);
 
 void ptrsx_free(struct PointerSearcherX *ptr);
 
-int create_pointer_map_file(struct PointerSearcherX *ptr, Pid pid, const char *file_name);
+int create_pointer_map_file(struct PointerSearcherX *ptr,
+                            Pid pid,
+                            bool align,
+                            const char *file_name);
 
-int create_pointer_map(struct PointerSearcherX *ptr, Pid pid);
+int create_pointer_map(struct PointerSearcherX *ptr, Pid pid, bool align);
 
 int load_pointer_map_file(struct PointerSearcherX *ptr, char *file_name);
 

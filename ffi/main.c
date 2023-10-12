@@ -1,4 +1,5 @@
 #include "ptrsx_unix.h"
+#include <stdbool.h>
 #include <stdio.h>
 
 int main() {
@@ -8,16 +9,16 @@ int main() {
   PointerSearcherX *ptr = ptrsx_init();
   int ret = 0;
 
-  // create a pointer map in file
-  // ret = create_pointer_map_file(ptr, pid, "./1.map");
+  // // create a pointer map in file
+  // ret = create_pointer_map_file(ptr, pid, true, "./1.map");
   // if (ret != 0) {
   //   const char *error = get_last_error(ptr);
   //   printf("%s\n", error);
   //   return 0;
   // }
 
-  // create a pointer map in memory
-  // ret = create_pointer_map(ptr, pid);
+  // // create a pointer map in memory
+  // ret = create_pointer_map(ptr, pid, true);
   // if (ret != 0) {
   //   const char *error = get_last_error(ptr);
   //   printf("%s\n", error);

@@ -74,6 +74,7 @@ pub unsafe extern "C" fn ptrsx_free(ptr: *mut PointerSearcherX) {
 pub unsafe extern "C" fn create_pointer_map_file(
     ptr: *mut PointerSearcherX,
     pid: Pid,
+    align: bool,
     file_name: *const c_char,
 ) -> c_int {
     let file_name = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
@@ -89,17 +90,17 @@ pub unsafe extern "C" fn create_pointer_map_file(
             .open(file_name)
     ));
 
-    try_result!(ptrsx, scanner.create_pointer_map_file(&mut writer, pid, true));
+    try_result!(ptrsx, scanner.create_pointer_map_file(&mut writer, pid, align));
 
     0
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn create_pointer_map(ptr: *mut PointerSearcherX, pid: Pid) -> c_int {
+pub unsafe extern "C" fn create_pointer_map(ptr: *mut PointerSearcherX, pid: Pid, align: bool) -> c_int {
     let ptrsx = &mut (*ptr);
     let scanner = &mut ptrsx.inner;
     let proc = try_result!(ptrsx, Process::open(pid));
-    try_result!(ptrsx, scanner.create_pointer_map(&proc, true));
+    try_result!(ptrsx, scanner.create_pointer_map(&proc, align));
     ptrsx.modules = Some(
         scanner
             .modules

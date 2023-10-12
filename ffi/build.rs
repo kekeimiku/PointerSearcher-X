@@ -10,6 +10,7 @@ fn main() {
         .with_language(cbindgen::Language::C)
         .with_no_includes()
         .with_sys_include("stddef.h")
+        .with_sys_include("stdbool.h")
         .generate()
         .expect("Unable to generate bindings")
         .write_to_file("ptrsx_unix.h");
