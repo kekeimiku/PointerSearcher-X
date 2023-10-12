@@ -1,5 +1,4 @@
 #include "ptrsx_unix.h"
-#include <stdbool.h>
 #include <stdio.h>
 
 int main() {
