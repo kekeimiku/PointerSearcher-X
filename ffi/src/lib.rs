@@ -42,6 +42,8 @@ pub struct PointerSearcherX {
     last_error: Option<CString>,
 }
 
+const PARAMS_ERROR: &str = "params error";
+
 impl PointerSearcherX {
     fn set_last_error(&mut self, err: impl ToString) {
         self.last_error = Some(unsafe { CString::from_vec_unchecked(err.to_string().into()) })
@@ -152,6 +154,10 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
     let ptrsx = &mut (*ptr);
     let scanner = &ptrsx.inner;
     let Params { target, depth, node, rangel, ranger, file_name } = params;
+    if node >= depth || depth > 32 {
+        ptrsx.set_last_error(PARAMS_ERROR);
+        return -1;
+    }
     let file_name = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
     let mut writer = BufWriter::new(try_result!(
         ptrsx,
@@ -185,6 +191,10 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_address(
     let ptrsx = &mut (*ptr);
     let scanner = &ptrsx.inner;
     let Params { target, depth, node, rangel, ranger, file_name } = params;
+    if node >= depth || depth > 32 {
+        ptrsx.set_last_error(PARAMS_ERROR);
+        return -1;
+    }
     let file_name = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
     let mut writer = BufWriter::new(try_result!(
         ptrsx,
