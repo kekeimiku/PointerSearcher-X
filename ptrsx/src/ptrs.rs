@@ -19,9 +19,6 @@ where
     F: FnMut(&'a T) -> Ordering,
 {
     let mut size = slice.len();
-    if size == 0 {
-        return Err(0);
-    }
     let mut base = 0usize;
     while size > 1 {
         let half = size / 2;
