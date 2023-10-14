@@ -19,6 +19,12 @@ impl From<&'static str> for Error {
     }
 }
 
+impl From<String> for Error {
+    fn from(value: String) -> Self {
+        Self(value)
+    }
+}
+
 impl From<std::num::ParseIntError> for Error {
     fn from(value: std::num::ParseIntError) -> Self {
         Self(value.to_string())
