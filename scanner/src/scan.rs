@@ -67,7 +67,10 @@ impl SubCommandScan2 {
             dir,
         } = self;
         if depth <= node {
-            println!("Error: depth must be greater than node. current depth({depth}), node({node}).")
+            return Err(format!("Error: depth must be greater than node. current depth({depth}), node({node}).").into());
+        }
+        if depth > 32 {
+            return Err(format!("Error: MAX_DEPTH 32, current({depth})").into());
         }
 
         let mut spinner = Spinner::start("Start loading cache...");

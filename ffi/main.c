@@ -39,19 +39,29 @@ int main() {
            modules.data[i].name);
   }
 
-  // select a base address module
-  struct Module module = {modules.data[0].start, modules.data[0].end,
-                          modules.data[0].name};
+  // select some base address modules of interest
+  struct Module module1 = {modules.data[0].start, modules.data[0].end,
+                           modules.data[0].name};
 
   struct Params params = {0x600002990020, 4, 3, 200, 200, "./hello.scandata"};
 
   // start scanner
-  ret = scanner_pointer_chain_with_module(ptr, module, params);
+  ret = scanner_pointer_chain_with_module(ptr, module1, params);
   if (ret != 0) {
     const char *error = get_last_error(ptr);
     printf("%s\n", error);
     return 0;
   }
+
+  // struct Module module2 = {modules.data[1].start, modules.data[1].end,
+  //                          modules.data[1].name};
+  // // start scanner
+  // ret = scanner_pointer_chain_with_module(ptr, module1, params);
+  // if (ret != 0) {
+  //   const char *error = get_last_error(ptr);
+  //   printf("%s\n", error);
+  //   return 0;
+  // }
 
   ptrsx_free(ptr);
   return 0;
