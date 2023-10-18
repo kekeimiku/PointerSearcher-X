@@ -1,8 +1,11 @@
-use std::{io, io::Write, mem};
+use super::Module;
 
-use super::*;
+#[cfg(feature = "dumper")]
+pub fn encode_modules<W: std::io::Write>(pages: &[Module], writer: &mut W) -> std::io::Result<()> {
+    use std::io::Write;
 
-pub fn encode_modules<W: io::Write>(pages: &[Module], writer: &mut W) -> io::Result<()> {
+    use super::PTRHEADER64;
+
     let mut data = Vec::new();
     let len = pages.len().to_le_bytes();
     data.write_all(&len)?;
@@ -20,7 +23,10 @@ pub fn encode_modules<W: io::Write>(pages: &[Module], writer: &mut W) -> io::Res
     writer.write_all(&data)
 }
 
+#[cfg(feature = "scanner")]
 pub fn decode_modules(bytes: &[u8]) -> Vec<Module> {
+    use std::mem;
+
     const SIZE: usize = mem::size_of::<usize>();
     unsafe {
         let mut seek = 0;

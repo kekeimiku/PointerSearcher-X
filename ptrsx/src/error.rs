@@ -1,7 +1,7 @@
 use std::{fmt::Display, io};
 
-#[derive(Debug)]
 pub enum Error {
+    #[cfg(feature = "dumper")]
     Vmmap(vmmap::Error),
     Io(io::Error),
     Other(String),
@@ -13,12 +13,7 @@ impl From<&'static str> for Error {
     }
 }
 
-impl From<String> for Error {
-    fn from(value: String) -> Self {
-        Self::Other(value)
-    }
-}
-
+#[cfg(feature = "dumper")]
 impl From<vmmap::Error> for Error {
     fn from(value: vmmap::Error) -> Self {
         Self::Vmmap(value)
@@ -34,11 +29,10 @@ impl From<io::Error> for Error {
 impl Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            #[cfg(feature = "dumper")]
             Error::Vmmap(err) => write!(f, "{err}"),
             Error::Other(err) => write!(f, "{err}"),
             Error::Io(err) => write!(f, "{err}"),
         }
     }
 }
-
-impl std::error::Error for Error {}

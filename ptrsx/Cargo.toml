@@ -6,11 +6,19 @@ edition = "2021"
 [dependencies.vmmap]
 path = "../vmmap"
 default-features = false
+optional = true
 
 [dependencies.itoa]
 version = "1.0.9"
 default-features = false
+optional = true
 
 [dependencies.arrayvec]
 version = "0.7.4"
 default-features = false
+optional = true
+
+[features]
+default = ["dumper", "scanner"]
+dumper = ["vmmap"]
+scanner = ["itoa", "arrayvec"]

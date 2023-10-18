@@ -1,5 +1,3 @@
-#![feature(return_position_impl_trait_in_trait)]
-
 #[cfg(all(target_os = "macos", target_pointer_width = "32"))]
 panic!("32-bit macos is not supported.");
 
