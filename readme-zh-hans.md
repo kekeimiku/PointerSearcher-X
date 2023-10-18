@@ -14,11 +14,9 @@ ASLR导致程序内存地址在启动程序时始终不同。所谓的“静态�
 
 这个项目是一个工具集，主要有三个工具：
 
-- `ptrsx-scan` 用于扫描指针文件.
+- `scanner` 用于扫描指针文件.
 
-- `ptrsx-dumper` 用于dump进程内存.
-
-- `ptrsx-inject` 用于动态库注入（对于指针扫描用不到）.
+- `dumper` 用于dump进程内存.
 
 各个工具间相互独立，dumper运行过程中占用内存不超过3MB，所以你可以在性能垃圾的设备，例如 nintendo-switch 上dump内存，然后上传到性能更强的pc或服务器上执行扫描。
 
@@ -44,11 +42,13 @@ https://www.bilibili.com/video/BV1Hh411E7oW/
 
 ## 关于
 
-它只是为了解决下面两个问题所编写，不过现在已经扩展到其它平台。
+它只是为了解决下面两个问题所创建的，不过现在已经扩展到其它平台。
 
 https://github.com/scanmem/scanmem/issues/431
 
 https://github.com/korcankaraokcu/PINCE/issues/15
+
+如果您想将 PointerSearcher-X 合并到您的应用程序中，这非常容易，其宽松的MIT许可证不会给您带来负担。 有关详细信息，请参阅 [API 参考](https://github.com/kekeimiku/PointerSearcher-X/blob/main/ffi/ptrsx_unix.h)。
 
 ## FAQ
 

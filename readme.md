@@ -14,11 +14,9 @@ Pointer search is usually used to automatically find more complex pointer chains
 
 It contains three tools: 
 
-- `ptrsx-scan` for scanning pointer files.
+- `scanner` for scanning pointer files.
 
-- `ptrsx-dumper` for dump process memory. 
-
-- `ptrsx-inject` for dynamic library injection.
+- `dumper` for dump process memory. 
 
 This program does not require the running status of the target process. It only needs a dump file to perform pointer scanning. You can use the pointer scanning function on any supported platform.
 For example, generate a dump file on macOS and then perform scanning on a Linux server.
@@ -52,6 +50,8 @@ It was only intended to solve the following two problems, but has now been exten
 https://github.com/scanmem/scanmem/issues/431
 
 https://github.com/korcankaraokcu/PINCE/issues/15
+
+If you want to incorporate PointerSearcher-X into your application, it's very easy. Its permissive MIT-style license won't burden you. See the [API reference](https://github.com/kekeimiku/PointerSearcher-X/blob/main/ffi/ptrsx_unix.h) for details.
 
 ## Disclaimer
 
