@@ -1,5 +1,4 @@
 #[cfg(target_os = "macos")]
-#[derive(Debug)]
 pub enum Error {
     OpenProcess(machx::kern_return::kern_return_t),
     ReadMemory(machx::kern_return::kern_return_t),
@@ -7,7 +6,6 @@ pub enum Error {
 }
 
 #[cfg(target_os = "linux")]
-#[derive(Debug)]
 pub enum Error {
     OpenProcess(std::io::Error),
     ReadMemory(std::io::Error),
@@ -15,7 +13,6 @@ pub enum Error {
 }
 
 #[cfg(target_os = "windows")]
-#[derive(Debug)]
 pub enum Error {
     OpenProcess(windows_sys::Win32::Foundation::WIN32_ERROR),
     ReadMemory(windows_sys::Win32::Foundation::WIN32_ERROR),
@@ -53,5 +50,3 @@ impl std::fmt::Display for Error {
         }
     }
 }
-
-impl std::error::Error for Error {}

@@ -10,6 +10,7 @@ default-features = false
 [dependencies.ptrsx]
 path = "../ptrsx"
 default-features = false
+features = ["dumper"]
 
 [dependencies.argh]
 version = "0.1.12"

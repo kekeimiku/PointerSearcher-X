@@ -2,18 +2,26 @@
 panic!("32-bit is not supported.");
 
 mod bin;
-mod check;
-mod error;
-pub mod file;
-mod ptrd;
-mod ptrs;
-mod ptrsx;
-
 pub use bin::*;
-pub use check::*;
+mod error;
 pub use error::Error;
-pub use ptrd::*;
+mod ptrsx;
 pub use ptrsx::*;
+
+#[cfg(feature = "dumper")]
+mod check;
+#[cfg(feature = "dumper")]
+pub use check::*;
+
+#[cfg(feature = "dumper")]
+pub mod ptrsx_d;
+#[cfg(feature = "dumper")]
+pub use ptrsx_d::*;
+
+#[cfg(feature = "scanner")]
+pub mod ptrsx_s;
+#[cfg(feature = "scanner")]
+pub use ptrsx_s::*;
 
 pub const PTRSIZE: usize = core::mem::size_of::<usize>();
 

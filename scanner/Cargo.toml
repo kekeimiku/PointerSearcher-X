@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies.ptrsx]
 path = "../ptrsx"
 default-features = false
+features = ["scanner"]
 
 [dependencies.argh]
 version = "0.1.12"

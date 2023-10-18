@@ -1,6 +1,6 @@
 use std::{fs::OpenOptions, io::BufWriter, path::Path};
 
-use ptrsx::{Params, PtrsxScanner};
+use ptrsx::{ptrsx_s::Params, PtrsxScanner};
 
 use super::{select_base_module, Address, Error, Offset, Spinner, SubCommandScan1, SubCommandScan2};
 
