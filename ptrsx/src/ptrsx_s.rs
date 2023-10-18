@@ -1,10 +1,11 @@
-use std::{
-    cmp::Ordering, collections::BTreeMap, fs::File, io, mem, ops::Bound::Included, os::unix::prelude::FileExt,
-    path::Path,
-};
+#[cfg(target_family = "unix")]
+use std::os::unix::prelude::FileExt;
+use std::{cmp::Ordering, collections::BTreeMap, fs::File, io, mem, ops::Bound::Included, path::Path};
 
 use arrayvec::ArrayVec;
 
+#[cfg(target_os = "windows")]
+use super::WindowsFileExt;
 use super::{decode_modules, Error, Module, PtrsxScanner, PTRSIZE};
 
 struct WalkParams<'a, W> {

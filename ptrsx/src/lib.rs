@@ -14,14 +14,19 @@ mod check;
 pub use check::*;
 
 #[cfg(feature = "dumper")]
-pub mod ptrsx_d;
+mod ptrsx_d;
 #[cfg(feature = "dumper")]
 pub use ptrsx_d::*;
 
 #[cfg(feature = "scanner")]
-pub mod ptrsx_s;
+mod ptrsx_s;
 #[cfg(feature = "scanner")]
 pub use ptrsx_s::*;
+
+#[cfg(target_os = "windows")]
+mod file;
+#[cfg(target_os = "windows")]
+pub use file::*;
 
 pub const PTRSIZE: usize = core::mem::size_of::<usize>();
 

@@ -2,3 +2,5 @@
 /build
 Cargo.lock
 **/.DS_Store
+.cargo/
+build.sh

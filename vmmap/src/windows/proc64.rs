@@ -30,7 +30,7 @@ pub struct Process {
     pub pathname: PathBuf,
 }
 
-struct HandleInner(HANDLE);
+pub struct HandleInner(HANDLE);
 
 impl Drop for HandleInner {
     fn drop(&mut self) {
