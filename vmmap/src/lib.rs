@@ -1,25 +1,22 @@
-#[cfg(all(target_os = "macos", target_pointer_width = "32"))]
-panic!("32-bit macos is not supported.");
-
 mod error;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 pub mod linux;
 #[cfg(target_os = "macos")]
 pub mod macos;
 #[cfg(target_os = "windows")]
 pub mod windows;
 
-use std::path::Path;
+pub mod snapshot;
 
 pub use self::error::Error;
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "android"))]
 pub use self::linux::{Page, Process};
 #[cfg(target_os = "macos")]
 pub use self::macos::{Page, Process};
 #[cfg(target_os = "windows")]
 pub use self::windows::{Page, Process};
 
-#[cfg(any(target_os = "macos", target_os = "linux"))]
+#[cfg(target_family = "unix")]
 pub type Pid = i32;
 
 #[cfg(target_os = "windows")]
@@ -27,10 +24,12 @@ pub type Pid = u32;
 
 pub trait VirtualMemoryRead {
     fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Error>;
+    fn read_exact_at(&self, buf: &mut [u8], offset: usize) -> Result<(), Error>;
 }
 
 pub trait VirtualMemoryWrite {
-    fn write_at(&self, buf: &[u8], offset: usize) -> Result<(), Error>;
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<usize, Error>;
+    fn write_all_at(&self, buf: &[u8], offset: usize) -> Result<(), Error>;
 }
 
 pub trait VirtualQuery {
@@ -45,6 +44,6 @@ pub trait VirtualQuery {
 
 pub trait ProcessInfo {
     fn pid(&self) -> Pid;
-    fn app_path(&self) -> &Path;
+    fn app_path(&self) -> &std::path::Path;
     fn get_maps(&self) -> impl Iterator<Item = Page>;
 }

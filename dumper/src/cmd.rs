@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use argh::FromArgs;
+use argh::{FromArgValue, FromArgs};
 use vmmap::Pid;
 
 #[derive(FromArgs)]
@@ -14,7 +14,7 @@ pub struct Commands {
 #[argh(subcommand)]
 pub enum CommandEnum {
     DumpProcess(DumpCommand),
-    PointerChain(ChainCommand),
+    TestChain(TestChainCommand),
 }
 
 #[derive(FromArgs)]
@@ -23,8 +23,11 @@ pub struct DumpCommand {
     #[argh(option, short = 'p', description = "process id")]
     pub pid: Pid,
 
-    #[argh(option, short = 'f', description = "out filename")]
-    pub file: Option<PathBuf>,
+    #[argh(option, description = "modules info out filename")]
+    pub info: Option<PathBuf>,
+
+    #[argh(option, description = "binary data out filename")]
+    pub bin: Option<PathBuf>,
 
     #[argh(option, default = "true", description = "pointer align, default true")]
     pub align: bool,
@@ -32,13 +35,29 @@ pub struct DumpCommand {
 
 #[derive(FromArgs)]
 #[argh(subcommand, name = "test", description = "test pointer chain")]
-pub struct ChainCommand {
+pub struct TestChainCommand {
     #[argh(option, short = 'p', description = "process id")]
     pub pid: Pid,
 
     #[argh(option, description = "pointer chain")]
     pub chain: String,
 
-    #[argh(option, short = 'n', description = "show bytes")]
-    pub num: Option<usize>,
+    #[argh(option, short = 'w', description = "write bytes")]
+    pub write: Option<WVecU8>,
+
+    #[argh(option, short = 'r', description = "read bytes")]
+    pub read: Option<usize>,
+}
+
+pub struct WVecU8(pub Vec<u8>);
+
+impl FromArgValue for WVecU8 {
+    fn from_arg_value(value: &str) -> Result<Self, String> {
+        let parts = value.split(['[', ']', ',', ' ']).filter(|s| !s.is_empty());
+        let bytes = parts
+            .map(|s| u8::from_str_radix(s.trim().trim_start_matches("0x"), 16))
+            .collect::<Result<Vec<u8>, _>>()
+            .map_err(|_| "parse bytes failed")?;
+        Ok(Self(bytes))
+    }
 }

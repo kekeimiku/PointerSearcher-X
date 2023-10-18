@@ -1,16 +1,22 @@
 [package]
 name = "vmmap"
-version = "0.4.0"
+version = "0.6.2"
 edition = "2021"
 authors = ["kk <kekelanact@gmail.com>"]
 description = "Easy access to memory maps"
-keywords = ["proc_maps", "virtualquery", "process_memory"]
+keywords = [
+    "proc_maps",
+    "virtualquery",
+    "process_memory",
+    "read_memory",
+    "write_memory",
+]
 license = "MIT"
-repository = "https://github.com/kekeimiku/PointerSearcher-X/tree/main/vmmap"
+repository = "https://github.com/kekeimiku/PointerSearcher-X/"
 readme = "README.md"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
-version = "0.48.0"
+version = "0.52.0"
 default-features = false
 features = [
     "Win32_Foundation",
@@ -22,5 +28,9 @@ features = [
 ]
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies.machx]
-version = "0.4.5"
+version = "0.4.6"
+default-features = false
+
+[dependencies.memmap2]
+version = "0.9.3"
 default-features = false

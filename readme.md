@@ -18,30 +18,27 @@ It contains three tools:
 
 - `dumper` for dump process memory. 
 
-This program does not require the running status of the target process. It only needs a dump file to perform pointer scanning. You can use the pointer scanning function on any supported platform.
-For example, generate a dump file on macOS and then perform scanning on a Linux server.
-
 ## Support:
 
 - [x] aarch64-darwin
 
-- [ ] aarch64-android
+- [x] aarch64-linux-android (beta)
+
+- [x] aarch64-linux-gnu
+
+- [x] x86_64-linux-gnu
+
+- [x] x86_64-windows (alpha)
+
+- [ ] aarch64-apple-ios
 
 - [ ] nintendo-switch
 
-- [x] x86_64-linux
-
-- [x] x86_64-windows (Version >= Windows 7)
-
 - [ ] x86_64-darwin
 
-Currently, it is only tested on 64-bit systems and 64-bit targets. Although it can be compiled to other architectures, it cannot run normally. Support for 32-bit targets and other operating systems is in progress.
+## How to use?
 
-## Tutorial
-
-https://www.bilibili.com/video/BV1Hh411E7oW/
-
-[tutorial.md](tutorial.md)
+https://github.com/kekeimiku/PointerSearcher-X/blob/main/wiki/en.md
 
 ## About
 
@@ -51,7 +48,7 @@ https://github.com/scanmem/scanmem/issues/431
 
 https://github.com/korcankaraokcu/PINCE/issues/15
 
-If you want to incorporate PointerSearcher-X into your application, it's very easy. Its permissive MIT-style license won't burden you. See the [API reference](https://github.com/kekeimiku/PointerSearcher-X/blob/main/ffi/ptrsx.h) for details.
+If you want to incorporate PointerSearcher-X into your application, it's very easy. Its permissive MIT-style license won't burden you. See the [C API](https://github.com/kekeimiku/PointerSearcher-X/blob/main/ffi/ptrsx.h) for details.
 
 ## Disclaimer
 

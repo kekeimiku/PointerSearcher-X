@@ -1,8 +1,7 @@
 use std::{
     borrow::Cow,
     fmt::Display,
-    io::{stdin, stdout, Write},
-    path::Path,
+    io::{stdout, Write},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -10,58 +9,6 @@ use std::{
     thread,
     time::{Duration, Instant},
 };
-
-use ptrsx::Module;
-use terminal_size::terminal_size;
-
-pub fn select_base_module(items: &[Module]) -> Result<Vec<Module>, super::error::Error> {
-    let words = items
-        .iter()
-        .filter_map(|m| Path::new(&m.name).file_name())
-        .enumerate()
-        .map(|(k, v)| format!("[\x1B[32m{k}\x1B[0m: {}] ", v.to_string_lossy()));
-
-    let (width, _) = terminal_size().ok_or("get terminal_size")?;
-    let width = width.0 as usize;
-
-    let mut s = String::with_capacity(0x2000);
-    let mut current_line_len = 0;
-    for word in words {
-        let word_len = word.len() + 1;
-        if current_line_len + word_len > width {
-            s.push('\n');
-            current_line_len = word_len;
-        } else {
-            s.push(' ');
-            current_line_len += word_len;
-        }
-        s.push_str(&word);
-    }
-
-    eprintln!("{s}\n\x1B[33mSelect base modules, multiple separated by spaces.\x1B[0m");
-
-    let mut selected_items = vec![];
-    let mut input = String::new();
-    stdin().read_line(&mut input)?;
-
-    let input = input
-        .split_whitespace()
-        .map(|n| n.parse())
-        .collect::<Result<Vec<usize>, _>>()?;
-
-    for k in input {
-        if k > items.len() {
-            break;
-        }
-        selected_items.push(items[k].to_owned())
-    }
-
-    if selected_items.is_empty() {
-        return Err("Select at least one.".into());
-    }
-
-    Ok(selected_items)
-}
 
 pub struct Spinner {
     thread_handle: Option<thread::JoinHandle<()>>,
@@ -83,8 +30,8 @@ impl Spinner {
                 .take_while(|_| ssp.load(Ordering::Relaxed))
                 .for_each(|c| {
                     write!(stdout, "\r\x1B[34m[{c}]\x1B[0m {msg}  Time: {:.1}s", time.elapsed().as_secs_f32())
-                        .expect("error: failed to write to stdout");
-                    stdout.flush().expect("error: failed to flush stdout");
+                        .expect("failed to write to stdout");
+                    stdout.flush().expect("failed to flush stdout");
                     thread::sleep(Duration::from_millis(100));
                 })
         });
@@ -95,6 +42,6 @@ impl Spinner {
     pub fn stop(&mut self, msg: impl Display) {
         self.still_spinning.store(false, Ordering::Relaxed);
         self.thread_handle.take().unwrap().join().unwrap();
-        println!("\x1B[34m[*]\x1B[0m {msg}")
+        println!("\n\x1B[34m[*]\x1B[0m {msg}")
     }
 }

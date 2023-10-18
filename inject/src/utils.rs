@@ -146,7 +146,7 @@ pub unsafe fn find_symbol_addr(
             let mut name = [0; 512];
             let mut size = mem::size_of_val(&name) as u64;
 
-            let segname_offset = memoffset::offset_of!(segment_command_64, segname);
+            let segname_offset = mem::offset_of!(segment_command_64, segname);
 
             mach_vm_read_overwrite(
                 task,

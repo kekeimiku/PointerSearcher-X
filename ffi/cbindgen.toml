@@ -1,0 +1,5 @@
+language = "C"
+
+no_includes = true
+sys_includes = ["stddef.h", "stdbool.h"]
+usize_is_size_t = true

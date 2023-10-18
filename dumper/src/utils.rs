@@ -30,8 +30,8 @@ impl Spinner {
                 .take_while(|_| ssp.load(Ordering::Relaxed))
                 .for_each(|c| {
                     write!(stdout, "\r\x1B[34m[{c}]\x1B[0m {msg}  Time: {:.1}s", time.elapsed().as_secs_f32())
-                        .expect("error: failed to write to stdout");
-                    stdout.flush().expect("error: failed to flush stdout");
+                        .expect("failed to write to stdout");
+                    stdout.flush().expect("failed to flush stdout");
                     thread::sleep(Duration::from_millis(100));
                 })
         });
@@ -42,6 +42,6 @@ impl Spinner {
     pub fn stop(&mut self, msg: impl Display) {
         self.still_spinning.store(false, Ordering::Relaxed);
         self.thread_handle.take().unwrap().join().unwrap();
-        println!("\x1B[34m[*]\x1B[0m {msg}")
+        println!("\n\x1B[34m[*]\x1B[0m {msg}")
     }
 }

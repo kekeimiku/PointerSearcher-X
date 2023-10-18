@@ -17,10 +17,18 @@ impl VirtualMemoryRead for Process {
     fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Error> {
         self.handle.read_at(buf, offset as u64).map_err(Error::ReadMemory)
     }
+
+    fn read_exact_at(&self, buf: &mut [u8], offset: usize) -> Result<(), Error> {
+        self.handle.read_exact_at(buf, offset as u64).map_err(Error::ReadMemory)
+    }
 }
 
 impl VirtualMemoryWrite for Process {
-    fn write_at(&self, buf: &[u8], offset: usize) -> Result<(), Error> {
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<usize, Error> {
+        self.handle.write_at(buf, offset as u64).map_err(Error::WriteMemory)
+    }
+
+    fn write_all_at(&self, buf: &[u8], offset: usize) -> Result<(), Error> {
         self.handle.write_all_at(buf, offset as u64).map_err(Error::WriteMemory)
     }
 }
@@ -35,7 +43,7 @@ impl ProcessInfo for Process {
     }
 
     fn get_maps(&self) -> impl Iterator<Item = Page> {
-        PageIter::new(&self.maps)
+        Iter::new(&self.maps)
     }
 }
 
@@ -44,7 +52,10 @@ impl Process {
         || -> _ {
             let maps = fs::read_to_string(format!("/proc/{pid}/maps"))?;
             let pathname = fs::read_link(format!("/proc/{pid}/exe"))?;
-            let handle = fs::File::open(format!("/proc/{pid}/mem"))?;
+            let handle = fs::OpenOptions::new()
+                .read(true)
+                .write(true)
+                .open(format!("/proc/{pid}/mem"))?;
             Ok(Self { pid, pathname, maps, handle })
         }()
         .map_err(Error::OpenProcess)
@@ -92,15 +103,15 @@ impl VirtualQuery for Page<'_> {
     }
 }
 
-struct PageIter<'a>(core::str::Lines<'a>);
+struct Iter<'a>(core::str::Lines<'a>);
 
-impl<'a> PageIter<'a> {
+impl<'a> Iter<'a> {
     fn new(contents: &'a str) -> Self {
         Self(contents.lines())
     }
 }
 
-impl<'a> Iterator for PageIter<'a> {
+impl<'a> Iterator for Iter<'a> {
     type Item = Page<'a>;
 
     #[inline]
@@ -115,7 +126,7 @@ impl<'a> Iterator for PageIter<'a> {
         let dev = split.next()?;
         let inode = split.next()?.parse().ok()?;
         let name = split.next()?.trim_start();
-        let name = if name.is_empty() { None } else { Some(name) };
+        let name = (!name.is_empty()).then_some(name);
 
         Some(Page { start, end, flags, offset, dev, inode, name })
     }

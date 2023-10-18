@@ -16,7 +16,7 @@ impl SubCommandDiff {
         let h2 = h2.lines().collect::<HashSet<_>>();
 
         let out: Box<dyn Write> = match out {
-            Some(file) => Box::new(OpenOptions::new().write(true).append(true).create(true).open(file)?) as _,
+            Some(file) => Box::new(OpenOptions::new().append(true).create(true).open(file)?) as _,
             None => Box::new(io::stdout()) as _,
         };
         let mut out = BufWriter::new(out);

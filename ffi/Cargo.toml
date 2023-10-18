@@ -10,7 +10,6 @@ crate-type = ["cdylib"]
 [dependencies.ptrsx]
 path = "../ptrsx"
 default-features = false
-features = ["dumper", "scanner"]
 
 [dependencies.vmmap]
 path = "../vmmap"

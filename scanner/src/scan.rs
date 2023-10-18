@@ -1,101 +1,65 @@
-use std::{fs::OpenOptions, io::BufWriter, path::Path};
+use std::{
+    fs::{File, OpenOptions},
+    thread,
+};
 
-use ptrsx::{Params, PtrsxScanner};
+use ptrsx::{Param, PtrsxScanner};
+use rayon::{
+    iter::{IntoParallelIterator, ParallelIterator},
+    ThreadPool, ThreadPoolBuilder,
+};
 
-use super::{select_base_module, Address, AddressList, Error, Offset, Spinner, SubCommandScan1, SubCommandScan2};
+use super::{AddressList, Error, Range, Spinner, SubCommandScan};
 
-impl SubCommandScan1 {
+impl SubCommandScan {
     pub fn init(self) -> Result<(), Error> {
         let Self {
-            ref file,
-            target: Address(target),
+            bin,
+            info,
+            list: AddressList(list),
             depth,
-            offset: Offset(offset),
+            range: Range(range),
             node,
             dir,
         } = self;
 
         if depth <= node {
-            println!("Error: depth must be greater than node. current depth({depth}), node({node}).")
+            return Err(format!("depth must be greater than node. current depth({depth}), node({node}).").into());
         }
 
-        let mut spinner = Spinner::start("Start loading cache...");
+        let mut spinner = Spinner::start("start loading cache...");
         let mut ptrsx = PtrsxScanner::default();
-        ptrsx.load_pointer_map_file(file)?;
-        spinner.stop("cache loaded.");
+        let info = File::open(info)?;
+        ptrsx.load_modules_info(info)?;
+        let bin = File::open(bin)?;
+        ptrsx.load_pointer_map(bin)?;
+        spinner.stop("cache load is finished.");
 
-        let pages = select_base_module(&ptrsx.modules)?;
-        let mut spinner = Spinner::start("Start creating pointer maps...");
-        spinner.stop("Pointer map is created.");
+        let mut spinner = Spinner::start("start scanning pointer chain...");
 
         let dir = dir.unwrap_or_default();
 
-        let mut spinner = Spinner::start("Start scanning pointer chain...");
-        pages.iter().try_for_each(|module| {
-            let name = Path::new(&module.name)
-                .file_name()
-                .and_then(|f| f.to_str())
-                .expect("get region name error");
-            let file = dir.join(format!("{name}.scandata"));
-            let file = OpenOptions::new()
-                .write(true)
-                .append(true)
-                .create_new(true)
-                .open(file)?;
-            #[rustfmt::skip]
-                let params = Params {
-                    depth, target, node, offset,
-                    writer: &mut BufWriter::new(file),
-                };
-            ptrsx.scanner_with_range(module.start..module.end, params)
+        rayon_create_pool(list.len())?.install(|| {
+            list.into_par_iter().try_for_each(|addr| {
+                let path = dir.join(format!("{addr:x}")).with_extension("scandata");
+                let file = OpenOptions::new().append(true).create_new(true).open(path)?;
+                let param = Param { depth, addr, node, range };
+                ptrsx.pointer_chain_scanner(param, file)
+            })
         })?;
-        spinner.stop("Pointer chain is scanned.");
+
+        spinner.stop("pointer chain scan is finished.");
 
         Ok(())
     }
 }
 
-impl SubCommandScan2 {
-    pub fn init(self) -> Result<(), Error> {
-        let Self {
-            ref file,
-            list: AddressList(ref list),
-            target: Address(target),
-            depth,
-            offset: Offset(offset),
-            node,
-            dir,
-        } = self;
-        if depth <= node {
-            return Err(format!("Error: depth must be greater than node. current depth({depth}), node({node}).").into());
-        }
-        if depth > 32 {
-            return Err(format!("Error: MAX_DEPTH 32, current({depth})").into());
-        }
-
-        let mut spinner = Spinner::start("Start loading cache...");
-        let mut ptrsx = PtrsxScanner::default();
-        ptrsx.load_pointer_map_file(file)?;
-        spinner.stop("cache loaded.");
-        let dir = dir.unwrap_or_default();
-
-        let mut spinner = Spinner::start("Start scanning pointer chain...");
-        let file = dir.join(format!("{target:#x}.scandata"));
-        let file = OpenOptions::new()
-            .write(true)
-            .append(true)
-            .create_new(true)
-            .open(file)?;
-        #[rustfmt::skip]
-        let params = Params {
-            depth, target, node, offset,
-            writer: &mut BufWriter::new(file),
-        };
-
-        ptrsx.scanner_with_address(list, params)?;
-
-        spinner.stop("Pointer chain is scanned.");
-
-        Ok(())
-    }
+pub fn rayon_create_pool(num_threads: usize) -> Result<ThreadPool, Error> {
+    let num_cpus = thread::available_parallelism()?.get();
+    let num = num_threads.min(num_cpus);
+    let pool = ThreadPoolBuilder::new()
+        .num_threads(num)
+        .build()
+        .map_err(|e| e.to_string())?;
+    Ok(pool)
 }

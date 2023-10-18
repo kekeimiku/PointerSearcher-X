@@ -31,23 +31,46 @@ pub struct Process {
 }
 
 impl VirtualMemoryRead for Process {
-    fn read_at(&self, buf: &mut [u8], address: usize) -> Result<usize, Error> {
+    #[inline]
+    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Error> {
         unsafe {
             let mut out = 0;
             let result =
-                mach_vm_read_overwrite(self.task, address as u64, buf.len() as _, buf.as_mut_ptr() as _, &mut out);
+                mach_vm_read_overwrite(self.task, offset as u64, buf.len() as _, buf.as_mut_ptr() as _, &mut out);
             if result != KERN_SUCCESS {
                 return Err(Error::ReadMemory(result));
             }
             Ok(out as _)
         }
     }
+
+    fn read_exact_at(&self, buf: &mut [u8], offset: usize) -> Result<(), Error> {
+        unsafe {
+            let mut out = 0;
+            let result =
+                mach_vm_read_overwrite(self.task, offset as u64, buf.len() as _, buf.as_mut_ptr() as _, &mut out);
+            if result != KERN_SUCCESS {
+                return Err(Error::ReadMemory(result));
+            }
+            Ok(())
+        }
+    }
 }
 
 impl VirtualMemoryWrite for Process {
-    fn write_at(&self, buf: &[u8], address: usize) -> Result<(), Error> {
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<usize, Error> {
         unsafe {
-            let result = mach_vm_write(self.task, address as u64, buf.as_ptr() as _, buf.len() as _);
+            let result = mach_vm_write(self.task, offset as u64, buf.as_ptr() as _, buf.len() as _);
+            if result != KERN_SUCCESS {
+                return Err(Error::WriteMemory(result));
+            }
+            Ok(buf.len())
+        }
+    }
+
+    fn write_all_at(&self, buf: &[u8], offset: usize) -> Result<(), Error> {
+        unsafe {
+            let result = mach_vm_write(self.task, offset as u64, buf.as_ptr() as _, buf.len() as _);
             if result != KERN_SUCCESS {
                 return Err(Error::WriteMemory(result));
             }
@@ -115,7 +138,7 @@ impl ProcessInfo for Process {
     }
 
     fn get_maps(&self) -> impl Iterator<Item = Page> {
-        PageIter::new(self.task).map(|m| Page {
+        Iter::new(self.task).map(|m| Page {
             addr: m.addr,
             size: m.size,
             count: m.count,
@@ -185,20 +208,21 @@ struct PageRange {
     info: vm_region_extended_info,
 }
 
-struct PageIter {
+struct Iter {
     task: vm_task_entry_t,
     addr: mach_vm_address_t,
 }
 
-impl PageIter {
+impl Iter {
     const fn new(task: mach_port_name_t) -> Self {
         Self { task, addr: 1 }
     }
 }
 
-impl Iterator for PageIter {
+impl Iterator for Iter {
     type Item = PageRange;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         unsafe {
             let mut count = mem::size_of::<vm_region_extended_info_data_t>() as mach_msg_type_number_t;

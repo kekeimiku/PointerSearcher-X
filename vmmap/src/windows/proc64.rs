@@ -51,10 +51,32 @@ impl VirtualMemoryRead for Process {
             Ok(buf.len())
         }
     }
+
+    fn read_exact_at(&self, buf: &mut [u8], offset: usize) -> Result<(), Error> {
+        unsafe {
+            let code = ReadProcessMemory(self.handle.0, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
+            if code == 0 {
+                let error = GetLastError();
+                return Err(Error::ReadMemory(error));
+            }
+            Ok(())
+        }
+    }
 }
 
 impl VirtualMemoryWrite for Process {
-    fn write_at(&self, buf: &[u8], offset: usize) -> Result<(), Error> {
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<usize, Error> {
+        unsafe {
+            let code = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
+            if code == 0 {
+                let error = GetLastError();
+                return Err(Error::WriteMemory(error));
+            }
+            Ok(buf.len())
+        }
+    }
+
+    fn write_all_at(&self, buf: &[u8], offset: usize) -> Result<(), Error> {
         unsafe {
             let code = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
             if code == 0 {
@@ -114,7 +136,7 @@ impl ProcessInfo for Process {
             let last = iter.next();
             iter.scan(last, |state, item| mem::replace(state, Some(item)))
         }
-        skip_last(PageIter::new(self.handle.0).skip(1))
+        skip_last(Iter::new(self.handle.0).skip(1))
     }
 }
 
@@ -169,18 +191,18 @@ impl VirtualQuery for Page {
     }
 }
 
-struct PageIter {
+struct Iter {
     handle: HANDLE,
     base: usize,
 }
 
-impl PageIter {
+impl Iter {
     const fn new(handle: HANDLE) -> Self {
         Self { handle, base: 0 }
     }
 }
 
-impl Iterator for PageIter {
+impl Iterator for Iter {
     type Item = Page;
 
     #[inline]
@@ -198,7 +220,7 @@ impl Iterator for PageIter {
                 return None;
             }
 
-            let pathname = get_path_name(self.handle, self.base).ok();
+            let pathname = get_mapped_file_name_w(self.handle, self.base).ok();
 
             let info = basic.assume_init();
             self.base = info.BaseAddress as usize + info.RegionSize;
@@ -214,11 +236,11 @@ impl Iterator for PageIter {
 }
 
 #[inline(always)]
-unsafe fn get_path_name(handle: HANDLE, base: usize) -> Result<String, WIN32_ERROR> {
+unsafe fn get_mapped_file_name_w(handle: HANDLE, base: usize) -> Result<String, WIN32_ERROR> {
     let mut buf = [0; MAX_PATH as _];
     let result = GetMappedFileNameW(handle, base as _, buf.as_mut_ptr(), buf.len() as _);
     if result == 0 {
         return Err(GetLastError());
     }
-    Ok(OsString::from_wide(&buf[..result as _]).to_string_lossy().to_string())
+    Ok(OsString::from_wide(&buf[..result as _]).into_string().unwrap())
 }
