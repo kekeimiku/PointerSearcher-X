@@ -15,5 +15,7 @@ default-features = false
 path = "../vmmap"
 default-features = false
 
-[build-dependencies]
-cbindgen = "0.26.0"
+[build-dependencies.cbindgen]
+version = "0.26.0"
+default-features = false
+
