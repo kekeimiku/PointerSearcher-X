@@ -17,6 +17,8 @@ Commands:
 
 Change pointer chain depth judgment. In the past, the base address was incorrectly treated as a first-level pointer.
 
+Export ptrsx library file.
+
 ### dumper
 
 Optionally use the `--align` parameter to force the pointer into unaligned mode, which may be useful for dumping certain emulator processes
