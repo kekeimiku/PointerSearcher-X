@@ -1,9 +1,15 @@
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 typedef struct PointerSearcherX PointerSearcherX;
 
+#if defined(__linux__)
 typedef int Pid;
+#elif defined(__WIN32__)
+typedef unsigned int Pid;
+#elif defined(__APPLE__)
+typedef int Pid;
+#endif
 
 typedef struct Module {
   size_t start;
@@ -31,9 +37,7 @@ struct PointerSearcherX *ptrsx_init(void);
 
 void ptrsx_free(struct PointerSearcherX *ptr);
 
-int create_pointer_map_file(struct PointerSearcherX *ptr,
-                            Pid pid,
-                            bool align,
+int create_pointer_map_file(struct PointerSearcherX *ptr, Pid pid, bool align,
                             const char *file_name);
 
 int create_pointer_map(struct PointerSearcherX *ptr, Pid pid, bool align);
@@ -47,5 +51,4 @@ int scanner_pointer_chain_with_module(struct PointerSearcherX *ptr,
                                       struct Params params);
 
 int scanner_pointer_chain_with_address(struct PointerSearcherX *ptr,
-                                       size_t address,
-                                       struct Params params);
+                                       size_t address, struct Params params);

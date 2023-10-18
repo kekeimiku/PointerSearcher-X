@@ -66,12 +66,13 @@ pub fn check_region<Q: VirtualQuery>(page: &Q) -> bool {
     if name.contains("\\Windows\\System32\\") {
         return false;
     }
-    let path = Path::new(name);
+    let name = name.replacen(r#"\Device"#, r#"\\?"#, 1);
+    let path = Path::new(&name);
     if !path.has_root() {
         return false;
     }
     let mut buf = [0; 8];
     File::open(path)
-        .and_then(|mut f| f.read_exact(&mut buf))
-        .is_ok_and(|_| [0x7f, 0x45, 0x4c, 0x46].eq(&buf[0..4]))
+        .and_then(|mut f| f.read(&mut buf))
+        .is_ok_and(|_| [0x4d, 0x5a].eq(&buf[0..2]))
 }

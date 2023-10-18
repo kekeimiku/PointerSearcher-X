@@ -48,7 +48,7 @@ https://github.com/scanmem/scanmem/issues/431
 
 https://github.com/korcankaraokcu/PINCE/issues/15
 
-如果您想将 PointerSearcher-X 合并到您的应用程序中，这非常容易，其宽松的MIT许可证不会给您带来负担。 有关详细信息，请参阅 [API 参考](https://github.com/kekeimiku/PointerSearcher-X/blob/main/ffi/ptrsx_unix.h)。
+如果您想将 PointerSearcher-X 合并到您的应用程序中，这非常容易，其宽松的MIT许可证不会给您带来负担。 有关详细信息，请参阅 [API 参考](https://github.com/kekeimiku/PointerSearcher-X/blob/main/ffi/ptrsx.h)。
 
 ## FAQ
 
