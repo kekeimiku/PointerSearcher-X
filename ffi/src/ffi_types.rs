@@ -1,7 +1,4 @@
-use core::ffi::{c_char, c_int};
-
-// vmmap Pid
-pub type Pid = c_int;
+use core::ffi::c_char;
 
 #[repr(C)]
 pub struct Module {

@@ -15,7 +15,3 @@ features = ["dumper", "scanner"]
 [dependencies.vmmap]
 path = "../vmmap"
 default-features = false
-
-[build-dependencies.cbindgen]
-version = "0.26.0"
-default-features = false

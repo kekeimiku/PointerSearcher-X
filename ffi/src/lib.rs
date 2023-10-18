@@ -1,27 +1,22 @@
 #![allow(clippy::missing_safety_doc)]
 
-#[cfg(not(any(
-    all(target_os = "linux", any(target_arch = "x86_64", target_arch = "aarch64")),
-    all(target_os = "macos", target_arch = "aarch64"),
-    target_endian = "little"
-)))]
+#[cfg(not(any(target_endian = "little", target_os = "android", target_arch = "x86")))]
 panic!("not supported.");
 
 mod ffi_types;
 
 use std::{
-    ffi::{c_char, c_int, CStr, CString, OsStr},
+    ffi::{c_char, c_int, CStr, CString},
     fs::OpenOptions,
     io::BufWriter,
     ops::Deref,
-    os::unix::prelude::OsStrExt,
     path::Path,
-    ptr,
+    ptr, str,
 };
 
 pub use ffi_types::*;
 use ptrsx::PtrsxScanner;
-use vmmap::Process;
+use vmmap::{Pid, Process};
 
 macro_rules! try_result {
     ($p:expr, $m:expr) => {
@@ -79,8 +74,9 @@ pub unsafe extern "C" fn create_pointer_map_file(
     align: bool,
     file_name: *const c_char,
 ) -> c_int {
-    let file_name = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
     let ptrsx = &mut (*ptr);
+    let string = try_result!(ptrsx, str::from_utf8(CStr::from_ptr(file_name).to_bytes()));
+    let file_name = Path::new(string);
     let scanner = &ptrsx.inner;
     let mut writer = BufWriter::new(try_result!(
         ptrsx,
@@ -120,8 +116,9 @@ pub unsafe extern "C" fn create_pointer_map(ptr: *mut PointerSearcherX, pid: Pid
 #[no_mangle]
 pub unsafe extern "C" fn load_pointer_map_file(ptr: *mut PointerSearcherX, file_name: *mut c_char) -> c_int {
     let ptrsx = &mut (*ptr);
+    let string = try_result!(ptrsx, str::from_utf8(CStr::from_ptr(file_name).to_bytes()));
+    let path = Path::new(string);
     let scanner = &mut ptrsx.inner;
-    let path = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
     try_result!(ptrsx, scanner.load_pointer_map_file(path));
     ptrsx.modules = Some(
         scanner
@@ -158,7 +155,8 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
         ptrsx.set_last_error(PARAMS_ERROR);
         return -1;
     }
-    let file_name = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
+    let string = try_result!(ptrsx, str::from_utf8(CStr::from_ptr(file_name).to_bytes()));
+    let file_name = Path::new(string);
     let mut writer = BufWriter::new(try_result!(
         ptrsx,
         OpenOptions::new()
@@ -195,7 +193,8 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_address(
         ptrsx.set_last_error(PARAMS_ERROR);
         return -1;
     }
-    let file_name = Path::new(OsStr::from_bytes(CStr::from_ptr(file_name).to_bytes()));
+    let string = try_result!(ptrsx, str::from_utf8(CStr::from_ptr(file_name).to_bytes()));
+    let file_name = Path::new(string);
     let mut writer = BufWriter::new(try_result!(
         ptrsx,
         OpenOptions::new()
