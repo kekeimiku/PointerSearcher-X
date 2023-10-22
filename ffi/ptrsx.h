@@ -17,10 +17,15 @@ typedef struct Module {
   char *name;
 } Module;
 
-typedef struct Modules {
+typedef struct ModuleList {
   size_t len;
   const struct Module *data;
-} Modules;
+} ModuleList;
+
+typedef struct AddressList {
+  size_t len;
+  const size_t *data;  
+} AddressList;
 
 typedef struct Params {
   size_t target;
@@ -44,11 +49,11 @@ int create_pointer_map(struct PointerSearcherX *ptr, Pid pid, bool align);
 
 int load_pointer_map_file(struct PointerSearcherX *ptr, char *file_name);
 
-struct Modules get_modules(struct PointerSearcherX *ptr);
+struct ModuleList get_modules(struct PointerSearcherX *ptr);
 
 int scanner_pointer_chain_with_module(struct PointerSearcherX *ptr,
                                       struct Module module,
                                       struct Params params);
 
 int scanner_pointer_chain_with_address(struct PointerSearcherX *ptr,
-                                       size_t address, struct Params params);
+                                       AddressList list, struct Params params);

@@ -135,11 +135,11 @@ pub unsafe extern "C" fn load_pointer_map_file(ptr: *mut PointerSearcherX, file_
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn get_modules(ptr: *mut PointerSearcherX) -> Modules {
+pub unsafe extern "C" fn get_modules(ptr: *mut PointerSearcherX) -> ModuleList {
     let modules = (*ptr).modules.as_ref().unwrap();
     let len = modules.len();
     let data = modules.as_ptr();
-    Modules { len, data }
+    ModuleList { len, data }
 }
 
 #[no_mangle]
@@ -167,7 +167,6 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
             .open(file_name)
     ));
 
-    let module = ptrsx::Module { start: module.start, end: module.end, ..Default::default() };
     #[rustfmt::skip]
     let params = ptrsx::Params {
         depth, target, node,
@@ -175,7 +174,7 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
         writer: &mut writer,
     };
 
-    try_result!(ptrsx, scanner.scanner_with_module(&module, params));
+    try_result!(ptrsx, scanner.scanner_with_range(module.start..module.end, params));
 
     0
 }
@@ -183,7 +182,7 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_module(
 #[no_mangle]
 pub unsafe extern "C" fn scanner_pointer_chain_with_address(
     ptr: *mut PointerSearcherX,
-    address: usize,
+    list: AddressList,
     params: Params,
 ) -> c_int {
     let ptrsx = &mut (*ptr);
@@ -210,6 +209,7 @@ pub unsafe extern "C" fn scanner_pointer_chain_with_address(
         offset: (rangel, ranger),
         writer: &mut writer,
     };
+    let address = core::slice::from_raw_parts(list.data, list.len);
     try_result!(ptrsx, scanner.scanner_with_address(address, params));
 
     0

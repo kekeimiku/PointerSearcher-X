@@ -1,12 +1,19 @@
 #[cfg(target_family = "unix")]
 use std::os::unix::prelude::FileExt;
-use std::{cmp::Ordering, collections::BTreeMap, fs::File, io, mem, ops::Bound::Included, path::Path};
+use std::{
+    cmp::Ordering,
+    collections::BTreeMap,
+    fs::File,
+    io, mem,
+    ops::{Bound::Included, Range},
+    path::Path,
+};
 
 use arrayvec::ArrayVec;
 
 #[cfg(target_os = "windows")]
 use super::WindowsFileExt;
-use super::{decode_modules, Error, Module, PtrsxScanner, PTRSIZE};
+use super::{decode_modules, Error, PtrsxScanner, PTRSIZE};
 
 struct WalkParams<'a, W> {
     base: usize,
@@ -147,23 +154,63 @@ impl PtrsxScanner {
         Ok(())
     }
 
-    pub fn scanner_with_module<W: io::Write>(&self, module: &Module, params: Params<W>) -> io::Result<()> {
+    pub fn scanner_with_range<W: io::Write>(&self, range: Range<usize>, params: Params<W>) -> io::Result<()> {
         let points = &self
             .forward
-            .range((Included(module.start), Included(module.end)))
+            .range((Included(range.start), Included(range.end)))
             .map(|(&k, _)| k)
             .collect::<Vec<_>>();
 
         let Params { depth, target, node, offset, writer } = params;
-        let params = WalkParams { base: module.start, depth, target, node, offset, points, writer };
+        let params = WalkParams { base: range.start, depth, target, node, offset, points, writer };
         pointer_chain_scanner(&self.reverse, params)
     }
 
-    pub fn scanner_with_address<W: io::Write>(&self, address: usize, params: Params<W>) -> io::Result<()> {
+    pub fn scanner_with_address<W: io::Write>(&self, points: &[usize], params: Params<W>) -> io::Result<()> {
         let Params { depth, target, node, offset, writer } = params;
-        let params = WalkParams { base: 0, depth, target, node, offset, points: &[address], writer };
+        let params = WalkParams { base: 0, depth, target, node, offset, points, writer };
         pointer_chain_scanner(&self.reverse, params)
     }
+}
+
+#[cfg(target_pointer_width = "64")]
+#[test]
+fn test_pointer_chain_scanner_s1() {
+    let ptrs = BTreeMap::from([
+        (0x104B28008, 0x125F040A0),
+        (0x104B28028, 0x125F04090),
+        (0x104B281B0, 0x125F040E0),
+        (0x125F04090, 0x125F04080),
+    ]);
+
+    let points = ptrs
+        .range((Included(0x104B18000), Included(0x104B38000)))
+        .map(|(k, _)| k)
+        .copied()
+        .collect::<Vec<_>>();
+
+    let mut map: BTreeMap<usize, Vec<usize>> = BTreeMap::new();
+    for (k, v) in ptrs {
+        map.entry(v).or_default().push(k);
+    }
+
+    let mut out = Vec::with_capacity(128);
+
+    pointer_chain_scanner(
+        &map,
+        WalkParams {
+            base: 0x104B18000,
+            depth: 4,
+            target: 0x125F04080,
+            node: 3,
+            offset: (0, 16),
+            points: &points,
+            writer: &mut out,
+        },
+    )
+    .unwrap();
+
+    assert_eq!(out, b"65576@0@16@16@0\n65576@0@16@0\n");
 }
 
 #[cfg(target_pointer_width = "64")]
@@ -181,7 +228,7 @@ fn test_pointer_chain_scanner_s2() {
         map.entry(v).or_default().push(k);
     }
 
-    let mut out = Vec::with_capacity(10);
+    let mut out = Vec::with_capacity(128);
 
     pointer_chain_scanner(
         &map,
@@ -197,5 +244,5 @@ fn test_pointer_chain_scanner_s2() {
     )
     .unwrap();
 
-    assert_eq!(String::from_utf8(out).unwrap(), "4931469456@16@16@0\n4931469456@16@16@16@0\n");
+    assert_eq!(out, b"4931469456@16@16@0\n4931469456@16@16@16@0\n");
 }

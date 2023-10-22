@@ -2,7 +2,7 @@ use std::{fs::OpenOptions, io::BufWriter, path::Path};
 
 use ptrsx::{Params, PtrsxScanner};
 
-use super::{select_base_module, Address, Error, Offset, Spinner, SubCommandScan1, SubCommandScan2};
+use super::{select_base_module, Address, AddressList, Error, Offset, Spinner, SubCommandScan1, SubCommandScan2};
 
 impl SubCommandScan1 {
     pub fn init(self) -> Result<(), Error> {
@@ -47,7 +47,7 @@ impl SubCommandScan1 {
                     depth, target, node, offset,
                     writer: &mut BufWriter::new(file),
                 };
-            ptrsx.scanner_with_module(module, params)
+            ptrsx.scanner_with_range(module.start..module.end, params)
         })?;
         spinner.stop("Pointer chain is scanned.");
 
@@ -59,7 +59,7 @@ impl SubCommandScan2 {
     pub fn init(self) -> Result<(), Error> {
         let Self {
             ref file,
-            start: Address(start),
+            list: AddressList(ref list),
             target: Address(target),
             depth,
             offset: Offset(offset),
@@ -80,7 +80,7 @@ impl SubCommandScan2 {
         let dir = dir.unwrap_or_default();
 
         let mut spinner = Spinner::start("Start scanning pointer chain...");
-        let file = dir.join(format!("{:#x}.scandata", start));
+        let file = dir.join(format!("{target:#x}.scandata"));
         let file = OpenOptions::new()
             .write(true)
             .append(true)
@@ -92,7 +92,7 @@ impl SubCommandScan2 {
             writer: &mut BufWriter::new(file),
         };
 
-        ptrsx.scanner_with_address(start, params)?;
+        ptrsx.scanner_with_address(list, params)?;
 
         spinner.stop("Pointer chain is scanned.");
 

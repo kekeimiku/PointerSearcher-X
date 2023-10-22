@@ -12,6 +12,20 @@ impl FromArgValue for Address {
     }
 }
 
+pub struct AddressList(pub Vec<usize>);
+
+impl FromArgValue for AddressList {
+    fn from_arg_value(value: &str) -> Result<Self, String> {
+        Ok(Self(
+            value
+                .split('-')
+                .map(|s| usize::from_str_radix(s.trim_start_matches("0x"), 16))
+                .collect::<Result<Vec<_>, _>>()
+                .map_err(|e| e.to_string())?,
+        ))
+    }
+}
+
 pub struct Offset(pub (usize, usize));
 
 impl FromArgValue for Offset {
@@ -60,12 +74,12 @@ pub struct SubCommandScan1 {
 }
 
 #[derive(FromArgs)]
-#[argh(subcommand, name = "s2", description = "Scan mode 2, set address as the base address.")]
+#[argh(subcommand, name = "s2", description = "Scan mode 2, set base address list.")]
 pub struct SubCommandScan2 {
     #[argh(option, short = 'f', description = "ptrs file path")]
     pub file: PathBuf,
-    #[argh(option, short = 's', description = "start address")]
-    pub start: Address,
+    #[argh(option, short = 'l', description = "address list")]
+    pub list: AddressList,
     #[argh(option, short = 't', description = "target address")]
     pub target: Address,
     #[argh(option, default = "7", short = 'd', description = "depth")]

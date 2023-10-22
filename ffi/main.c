@@ -1,4 +1,4 @@
-#include "ptrsx_unix.h"
+#include "ptrsx.h"
 #include <stdio.h>
 
 int main() {
@@ -33,7 +33,7 @@ int main() {
   }
 
   // get available base address modules
-  Modules modules = get_modules(ptr);
+  ModuleList modules = get_modules(ptr);
   for (int i = 0; i < modules.len; i++) {
     printf("[%zx %zx %s]\n", modules.data[i].start, modules.data[i].end,
            modules.data[i].name);

@@ -8,7 +8,7 @@ pub struct Module {
 }
 
 #[repr(C)]
-pub struct Modules {
+pub struct ModuleList {
     pub len: usize,
     pub data: *const Module,
 }
@@ -21,4 +21,10 @@ pub struct Params {
     pub rangel: usize,
     pub ranger: usize,
     pub file_name: *const c_char,
+}
+
+#[repr(C)]
+pub struct AddressList {
+    pub len: usize,
+    pub data: *const usize,
 }
