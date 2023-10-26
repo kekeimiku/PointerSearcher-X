@@ -59,15 +59,15 @@ pub enum CommandEnum {
     description = "Scan mode 1, select some modules to set as base addresses."
 )]
 pub struct SubCommandScan1 {
-    #[argh(option, short = 'f', description = "ptrs file path")]
+    #[argh(option, short = 'f', description = "dump file path")]
     pub file: PathBuf,
     #[argh(option, short = 't', description = "target address")]
     pub target: Address,
-    #[argh(option, default = "7", short = 'd', description = "depth")]
+    #[argh(option, default = "7", short = 'd', description = "depth default 7")]
     pub depth: usize,
-    #[argh(option, default = "Offset((0, 600))", short = 'o', description = "offset")]
+    #[argh(option, default = "Offset((0, 600))", short = 'o', description = "offset default 0:600")]
     pub offset: Offset,
-    #[argh(option, default = "3", short = 'n', description = "node")]
+    #[argh(option, default = "3", short = 'n', description = "node default 3")]
     pub node: usize,
     #[argh(option, description = "out dir")]
     pub dir: Option<PathBuf>,
@@ -76,17 +76,17 @@ pub struct SubCommandScan1 {
 #[derive(FromArgs)]
 #[argh(subcommand, name = "s2", description = "Scan mode 2, set base address list.")]
 pub struct SubCommandScan2 {
-    #[argh(option, short = 'f', description = "ptrs file path")]
+    #[argh(option, short = 'f', description = "dump file path")]
     pub file: PathBuf,
     #[argh(option, short = 'l', description = "address list")]
     pub list: AddressList,
     #[argh(option, short = 't', description = "target address")]
     pub target: Address,
-    #[argh(option, default = "7", short = 'd', description = "depth")]
+    #[argh(option, default = "7", short = 'd', description = "depth depth 7")]
     pub depth: usize,
-    #[argh(option, default = "Offset((0, 600))", short = 'o', description = "offset")]
+    #[argh(option, default = "Offset((0, 600))", short = 'o', description = "offset default 0:600")]
     pub offset: Offset,
-    #[argh(option, default = "3", short = 'n', description = "node")]
+    #[argh(option, default = "3", short = 'n', description = "node default 3")]
     pub node: usize,
     #[argh(option, description = "out dir")]
     pub dir: Option<PathBuf>,

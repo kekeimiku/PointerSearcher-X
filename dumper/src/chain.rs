@@ -2,7 +2,7 @@ use std::{fmt::Write, mem, path::Path};
 
 use vmmap::{Process, ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
-use super::{Error, SubCommandTest};
+use super::{ChainCommand, Error};
 
 fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'static str> {
     proc.get_maps()
@@ -15,11 +15,11 @@ fn find_base_address<P: ProcessInfo>(proc: &P, name: &str) -> Result<usize, &'st
         .ok_or("find modules error")
 }
 
-impl SubCommandTest {
+impl ChainCommand {
     pub fn init(self) -> Result<(), Error> {
-        let SubCommandTest { pid, path, num } = self;
+        let ChainCommand { pid, chain: path, num } = self;
         let proc = Process::open(pid)?;
-        let (name, offv, last) = parse_path(&path).ok_or("parse path error")?;
+        let (name, offv, last) = parse_path(&path).ok_or("parse pointer chain error")?;
         let mut address = find_base_address(&proc, name)?;
 
         let mut buf = [0; mem::size_of::<usize>()];

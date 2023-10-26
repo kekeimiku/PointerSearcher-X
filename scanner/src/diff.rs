@@ -11,9 +11,8 @@ impl SubCommandDiff {
         let SubCommandDiff { f1, f2, out } = self;
 
         let h1 = fs::read_to_string(f1)?;
-        let h1 = h1.lines().collect::<HashSet<_>>();
-
         let h2 = fs::read_to_string(f2)?;
+        let h1 = h1.lines().collect::<HashSet<_>>();
         let h2 = h2.lines().collect::<HashSet<_>>();
 
         let out: Box<dyn Write> = match out {

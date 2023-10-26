@@ -6,6 +6,6 @@ fn main() {
         CommandEnum::Diff(this) => this.init(),
         CommandEnum::Scan2(this) => this.init(),
     } {
-        eprintln!("{err}")
+        eprintln!("\n\x1b[31m error: {err} \x1b[0m")
     }
 }

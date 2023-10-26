@@ -1,12 +1,14 @@
 use std::{
-    io::{self, Write},
-    ops::Add,
+    borrow::Cow,
+    fmt::Display,
+    io::{stdin, stdout, Write},
     path::Path,
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
     },
-    thread, time,
+    thread,
+    time::{Duration, Instant},
 };
 
 use ptrsx::Module;
@@ -36,11 +38,11 @@ pub fn select_base_module(items: &[Module]) -> Result<Vec<Module>, super::error:
         s.push_str(&word);
     }
 
-    println!("{s}\n\x1B[33mSelect base modules, multiple separated by spaces.\x1B[0m");
+    eprintln!("{s}\n\x1B[33mSelect base modules, multiple separated by spaces.\x1B[0m");
 
     let mut selected_items = vec![];
     let mut input = String::new();
-    io::stdin().read_line(&mut input)?;
+    stdin().read_line(&mut input)?;
 
     let input = input
         .split_whitespace()
@@ -67,32 +69,32 @@ pub struct Spinner {
 }
 
 impl Spinner {
-    pub fn start(msg: &'static str) -> Self {
-        let ins = time::Instant::now();
+    pub fn start(msg: impl Into<Cow<'static, str>>) -> Self {
         let still_spinning = Arc::new(AtomicBool::new(true));
-        let mut stdout = io::stdout();
         let spinner_chars = ['-', '\\', '|', '/'];
-
+        let msg = msg.into();
+        let mut stdout = stdout();
+        let time = Instant::now();
         let ssp = still_spinning.clone();
         let handle = thread::spawn(move || {
-            while ssp.load(Ordering::Relaxed) {
-                spinner_chars.iter().for_each(|char| {
-                    write!(stdout, "\r\x1B[34m[{}]\x1B[0m {msg}  Time: {}s", char, ins.elapsed().as_secs().add(1))
-                        .unwrap();
-                    stdout.flush().unwrap();
-                    thread::sleep(time::Duration::from_millis(100));
+            spinner_chars
+                .iter()
+                .cycle()
+                .take_while(|_| ssp.load(Ordering::Relaxed))
+                .for_each(|c| {
+                    write!(stdout, "\r\x1B[34m[{c}]\x1B[0m {msg}  Time: {:.1}s", time.elapsed().as_secs_f32())
+                        .expect("error: failed to write to stdout");
+                    stdout.flush().expect("error: failed to flush stdout");
+                    thread::sleep(Duration::from_millis(100));
                 })
-            }
         });
 
         Self { thread_handle: Some(handle), still_spinning }
     }
 
-    pub fn stop(&mut self, msg: &'static str) {
-        if let Some(handle) = self.thread_handle.take() {
-            self.still_spinning.store(false, Ordering::Relaxed);
-            handle.join().unwrap();
-        }
-        println!("\n\x1B[34m[*]\x1B[0m {msg}")
+    pub fn stop(&mut self, msg: impl Display) {
+        self.still_spinning.store(false, Ordering::Relaxed);
+        self.thread_handle.take().unwrap().join().unwrap();
+        println!("\x1B[34m[*]\x1B[0m {msg}")
     }
 }

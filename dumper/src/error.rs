@@ -14,8 +14,8 @@ impl From<std::io::Error> for Error {
     }
 }
 
-impl From<&'static str> for Error {
-    fn from(value: &'static str) -> Self {
+impl From<&str> for Error {
+    fn from(value: &str) -> Self {
         Self(value.to_string())
     }
 }

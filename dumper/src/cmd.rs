@@ -1,4 +1,4 @@
-use std::{net::SocketAddr, path::PathBuf};
+use std::path::PathBuf;
 
 use argh::FromArgs;
 use vmmap::Pid;
@@ -13,41 +13,31 @@ pub struct Commands {
 #[derive(FromArgs)]
 #[argh(subcommand)]
 pub enum CommandEnum {
-    WithDisk(SubCommandDisk),
-    TestPtrs(SubCommandTest),
+    DumpProcess(DumpCommand),
+    PointerChain(ChainCommand),
 }
 
 #[derive(FromArgs)]
-#[argh(subcommand, name = "disk", description = "use disk")]
-pub struct SubCommandDisk {
+#[argh(subcommand, name = "disk", description = "dump process pointer to disk")]
+pub struct DumpCommand {
     #[argh(option, short = 'p', description = "process id")]
     pub pid: Pid,
 
-    #[argh(option, description = "out dir path")]
-    pub out: Option<PathBuf>,
+    #[argh(option, short = 'f', description = "out filename")]
+    pub file: Option<PathBuf>,
 
     #[argh(option, default = "true", description = "pointer align, default true")]
     pub align: bool,
 }
 
 #[derive(FromArgs)]
-#[argh(subcommand, name = "net", description = "use net")]
-pub struct SubCommandNet {
+#[argh(subcommand, name = "test", description = "test pointer chain")]
+pub struct ChainCommand {
     #[argh(option, short = 'p', description = "process id")]
     pub pid: Pid,
 
-    #[argh(option, description = "out url address")]
-    pub url: SocketAddr,
-}
-
-#[derive(FromArgs)]
-#[argh(subcommand, name = "test", description = "test ptr path")]
-pub struct SubCommandTest {
-    #[argh(option, short = 'p', description = "process id")]
-    pub pid: Pid,
-
-    #[argh(option, description = "ptrs")]
-    pub path: String,
+    #[argh(option, description = "pointer chain")]
+    pub chain: String,
 
     #[argh(option, short = 'n', description = "show bytes")]
     pub num: Option<usize>,
