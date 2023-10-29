@@ -4,8 +4,6 @@ mod dump;
 mod error;
 mod utils;
 
-pub use chain::*;
 pub use cmd::*;
-pub use dump::*;
 pub use error::*;
 pub use utils::*;
