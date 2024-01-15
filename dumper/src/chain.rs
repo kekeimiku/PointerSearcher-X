@@ -13,7 +13,7 @@ impl TestChainCommand {
 
         if let Some(size) = read {
             let mut buf = vec![0; size];
-            proc.read_at(&mut buf, address)?;
+            proc.read_exact_at(&mut buf, address)?;
             println!("{}", hex_encode(&buf));
         }
 
@@ -53,7 +53,8 @@ where
     let mut buf = [0; mem::size_of::<usize>()];
     for element in elements {
         let element = element.ok()?;
-        proc.read_at(&mut buf, address.checked_add_signed(element)?).ok()?;
+        proc.read_exact_at(&mut buf, address.checked_add_signed(element)?)
+            .ok()?;
         address = usize::from_le_bytes(buf);
     }
     address.checked_add_signed(offset)

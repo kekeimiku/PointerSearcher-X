@@ -249,34 +249,56 @@ impl<'a> Iterator for InfoIter<'a> {
     }
 }
 
-fn create_pointer_map<P, W>(proc: &P, region: &[(usize, usize)], is_align: bool, w: &mut W) -> Result<(), Error>
+struct ChunkIterator {
+    max: usize,
+    size: usize,
+    pos: usize,
+}
+
+impl ChunkIterator {
+    #[inline]
+    fn new(max: usize, size: usize) -> Self {
+        Self { max, size, pos: 0 }
+    }
+}
+
+impl Iterator for ChunkIterator {
+    type Item = (usize, usize);
+
+    #[inline]
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.pos >= self.max {
+            None
+        } else {
+            let curr = self.pos;
+            self.pos = (self.pos + self.size).min(self.max);
+            Some((curr, self.pos - curr))
+        }
+    }
+}
+
+fn create_pointer_map<P, V, W>(proc: &P, vqs: &[V], is_align: bool, w: &mut W) -> Result<(), Error>
 where
     P: VirtualMemoryRead,
+    V: VirtualQuery,
     W: Write,
 {
-    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    const BUF_SIZE: usize = 0x4000;
-
-    #[cfg(any(target_os = "linux", target_os = "android"))]
     const BUF_SIZE: usize = 0x40000;
-
-    #[cfg(any(target_os = "windows", all(target_os = "macos", target_arch = "x86_64"),))]
-    const BUF_SIZE: usize = 0x1000;
-
     let mut buf = [0; BUF_SIZE];
-
     if is_align {
-        for &(start, size) in region {
-            for off in (0..size).step_by(BUF_SIZE) {
-                let size = proc.read_at(buf.as_mut_slice(), start + off)?;
+        for vq in vqs {
+            let (start, size) = (vq.start(), vq.size());
+            for (off, size) in ChunkIterator::new(size, BUF_SIZE) {
+                proc.read_exact_at(&mut buf[..size], start + off)?;
                 for (k, value) in buf[..size]
                     .windows(PTRSIZE)
                     .enumerate()
                     .step_by(PTRSIZE)
                     .map(|(k, v)| (k, usize::from_le_bytes(v.try_into().unwrap())))
                 {
-                    if region
-                        .binary_search_by(|&(start, size)| {
+                    if vqs
+                        .binary_search_by(|vq| {
+                            let (start, size) = (vq.start(), vq.size());
                             if (start..start + size).contains(&value) {
                                 Ordering::Equal
                             } else {
@@ -293,16 +315,18 @@ where
             }
         }
     } else {
-        for &(start, size) in region {
-            for off in (0..size).step_by(BUF_SIZE) {
-                let size = proc.read_at(buf.as_mut_slice(), start + off)?;
+        for vq in vqs {
+            let (start, size) = (vq.start(), vq.size());
+            for (off, size) in ChunkIterator::new(size, BUF_SIZE) {
+                proc.read_exact_at(&mut buf[..size], start + off)?;
                 for (k, value) in buf[..size]
                     .windows(PTRSIZE)
                     .enumerate()
                     .map(|(k, v)| (k, usize::from_le_bytes(v.try_into().unwrap())))
                 {
-                    if region
-                        .binary_search_by(|&(start, size)| {
+                    if vqs
+                        .binary_search_by(|vq| {
+                            let (start, size) = (vq.start(), vq.size());
                             if (start..start + size).contains(&value) {
                                 Ordering::Equal
                             } else {
@@ -340,12 +364,10 @@ pub struct Param {
 impl PtrsxScanner {
     pub fn create_pointer_map<W: Write>(&self, pid: Pid, align: bool, info_w: W, bin_w: W) -> Result<()> {
         let proc = Process::open(pid)?;
-        let pages = proc.get_maps().filter(check_region).collect::<Vec<_>>();
-        let region = pages.iter().map(|m| (m.start(), m.size())).collect::<Vec<_>>();
+        let vqs = proc.get_maps().filter(check_region).collect::<Vec<_>>();
         let mut counts = HashMap::new();
         let mut info_w = BufWriter::new(info_w);
-        pages
-            .iter()
+        vqs.iter()
             .flat_map(|m| {
                 let name = Path::new(m.name()?).file_name().and_then(|s| s.to_str())?;
                 let count = counts.entry(name).or_insert(0);
@@ -354,7 +376,7 @@ impl PtrsxScanner {
                 Some((m.start(), m.end(), name))
             })
             .try_for_each(|(start, end, name)| writeln!(info_w, "{start:x}-{end:x} {name}"))?;
-        create_pointer_map(&proc, &region, align, &mut BufWriter::new(bin_w))
+        create_pointer_map(&proc, &vqs, align, &mut BufWriter::new(bin_w))
     }
 
     pub fn load_pointer_map<R: Read>(&mut self, reader: R) -> Result<()> {
