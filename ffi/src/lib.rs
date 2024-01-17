@@ -89,8 +89,8 @@ pub unsafe extern "C" fn create_pointer_map_file(
 #[no_mangle]
 pub unsafe extern "C" fn load_pointer_map_file(
     ptr: *mut PointerSearcherX,
-    bin_path: *const c_char,
     info_path: *const c_char,
+    bin_path: *const c_char,
 ) -> c_int {
     let ptrsx = &mut (*ptr);
     let scanner = &mut ptrsx.inner;
@@ -108,6 +108,14 @@ pub unsafe extern "C" fn load_pointer_map_file(
     let file = try_result!(ptrsx, File::open(bin_path));
     try_result!(ptrsx, scanner.load_pointer_map(file));
     0
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn get_modules_info(ptr: *mut PointerSearcherX) -> ModuleList {
+    let modules = (*ptr).modules.as_ref().unwrap();
+    let len = modules.len();
+    let data = modules.as_ptr();
+    ModuleList { len, data }
 }
 
 #[no_mangle]
@@ -140,12 +148,4 @@ pub unsafe extern "C" fn scanner_pointer_chain(
     try_result!(ptrsx, scanner.pointer_chain_scanner(param, file));
 
     0
-}
-
-#[no_mangle]
-pub unsafe extern "C" fn get_modules_info(ptr: *mut PointerSearcherX) -> ModuleList {
-    let modules = (*ptr).modules.as_ref().unwrap();
-    let len = modules.len();
-    let data = modules.as_ptr();
-    ModuleList { len, data }
 }
