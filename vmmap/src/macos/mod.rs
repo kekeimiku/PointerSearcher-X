@@ -1,14 +1,15 @@
-pub mod proc64;
+mod proc64;
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+pub use self::proc64::{ShareMode, UserTag};
+use super::{Error, Pid, ProcessInfo, Result, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
 
 pub trait VirtualQueryExt {
-    fn tag(&self) -> u32;
-    fn is_reserve(&self) -> bool;
+    fn user_tag(&self) -> u32;
+    fn share_mode(&self) -> u8;
 }
 
 pub trait ProcessInfoExt {
     fn task(&self) -> u32;
 }
 
-pub use proc64::{Page, Process};
+pub use proc64::{Mapping, Process};

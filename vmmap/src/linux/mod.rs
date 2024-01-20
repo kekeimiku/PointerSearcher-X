@@ -1,5 +1,11 @@
 mod proc;
 
-pub use proc::{Page, Process};
+pub use proc::{Mapping, Process};
 
-use super::{Error, Pid, ProcessInfo, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+use super::{Error, Pid, ProcessInfo, Result, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+
+pub trait VirtualQueryExt {
+    fn offset(&self) -> usize;
+    fn dev(&self) -> &str;
+    fn inode(&self) -> usize;
+}

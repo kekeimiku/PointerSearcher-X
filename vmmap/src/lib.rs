@@ -7,14 +7,15 @@ pub mod macos;
 pub mod windows;
 
 pub mod snapshot;
+pub mod utils;
 
 pub use self::error::Error;
 #[cfg(any(target_os = "linux", target_os = "android"))]
-pub use self::linux::{Page, Process};
+pub use self::linux::{Mapping, Process};
 #[cfg(target_os = "macos")]
-pub use self::macos::{Page, Process};
+pub use self::macos::{Mapping, Process};
 #[cfg(target_os = "windows")]
-pub use self::windows::{Page, Process};
+pub use self::windows::{Mapping, Process};
 
 #[cfg(target_family = "unix")]
 pub type Pid = i32;
@@ -22,14 +23,16 @@ pub type Pid = i32;
 #[cfg(target_os = "windows")]
 pub type Pid = u32;
 
+pub type Result<T, E = Error> = core::result::Result<T, E>;
+
 pub trait VirtualMemoryRead {
-    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Error>;
-    fn read_exact_at(&self, buf: &mut [u8], offset: usize) -> Result<(), Error>;
+    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize>;
+    fn read_exact_at(&self, buf: &mut [u8], offset: usize) -> Result<()>;
 }
 
 pub trait VirtualMemoryWrite {
-    fn write_at(&self, buf: &[u8], offset: usize) -> Result<usize, Error>;
-    fn write_all_at(&self, buf: &[u8], offset: usize) -> Result<(), Error>;
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<usize>;
+    fn write_all_at(&self, buf: &[u8], offset: usize) -> Result<()>;
 }
 
 pub trait VirtualQuery {
@@ -45,5 +48,5 @@ pub trait VirtualQuery {
 pub trait ProcessInfo {
     fn pid(&self) -> Pid;
     fn app_path(&self) -> &std::path::Path;
-    fn get_maps(&self) -> impl Iterator<Item = Page>;
+    fn get_maps(&self) -> impl Iterator<Item = Result<Mapping>>;
 }

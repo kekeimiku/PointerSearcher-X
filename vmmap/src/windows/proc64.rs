@@ -1,6 +1,6 @@
 use std::{
     ffi::OsString,
-    mem,
+    mem::{self, MaybeUninit},
     os::windows::prelude::OsStringExt,
     path::{Path, PathBuf},
     ptr,
@@ -11,10 +11,11 @@ use windows_sys::Win32::{
     System::{
         Diagnostics::Debug::{ReadProcessMemory, WriteProcessMemory},
         Memory::{
-            VirtualQueryEx, MEMORY_BASIC_INFORMATION, PAGE_EXECUTE, PAGE_EXECUTE_READ, PAGE_EXECUTE_READWRITE,
-            PAGE_EXECUTE_WRITECOPY, PAGE_READONLY, PAGE_READWRITE, PAGE_WRITECOPY,
+            VirtualQueryEx, MEMORY_BASIC_INFORMATION, MEM_FREE, MEM_IMAGE, MEM_MAPPED, PAGE_EXECUTE, PAGE_EXECUTE_READ,
+            PAGE_EXECUTE_READWRITE, PAGE_EXECUTE_WRITECOPY, PAGE_GUARD, PAGE_READONLY, PAGE_READWRITE, PAGE_WRITECOPY,
         },
         ProcessStatus::GetMappedFileNameW,
+        SystemInformation::GetSystemInfo,
         Threading::{
             OpenProcess, QueryFullProcessImageNameW, PROCESS_NAME_NATIVE, PROCESS_QUERY_INFORMATION,
             PROCESS_VM_OPERATION, PROCESS_VM_READ, PROCESS_VM_WRITE,
@@ -22,17 +23,20 @@ use windows_sys::Win32::{
     },
 };
 
-use super::{Error, Pid, ProcessInfo, ProcessInfoExt, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};
+use super::{
+    Error, Pid, ProcessInfo, ProcessInfoExt, Result, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery,
+    VirtualQueryExt,
+};
 
 pub struct Process {
     pub pid: Pid,
-    pub handle: HandleInner,
+    pub handle: HandleWrapper,
     pub pathname: PathBuf,
 }
 
-pub struct HandleInner(HANDLE);
+pub struct HandleWrapper(HANDLE);
 
-impl Drop for HandleInner {
+impl Drop for HandleWrapper {
     fn drop(&mut self) {
         unsafe {
             CloseHandle(self.0);
@@ -41,23 +45,23 @@ impl Drop for HandleInner {
 }
 
 impl VirtualMemoryRead for Process {
-    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize, Error> {
+    fn read_at(&self, buf: &mut [u8], offset: usize) -> Result<usize> {
         unsafe {
-            let code = ReadProcessMemory(self.handle.0, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
-            if code == 0 {
-                let error = GetLastError();
-                return Err(Error::ReadMemory(error));
+            let ret = ReadProcessMemory(self.handle.0, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
+            if ret == FALSE {
+                let err = GetLastError();
+                return Err(Error::ReadMemory(err));
             }
             Ok(buf.len())
         }
     }
 
-    fn read_exact_at(&self, buf: &mut [u8], offset: usize) -> Result<(), Error> {
+    fn read_exact_at(&self, buf: &mut [u8], offset: usize) -> Result<()> {
         unsafe {
-            let code = ReadProcessMemory(self.handle.0, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
-            if code == 0 {
-                let error = GetLastError();
-                return Err(Error::ReadMemory(error));
+            let ret = ReadProcessMemory(self.handle.0, offset as _, buf.as_mut_ptr() as _, buf.len(), ptr::null_mut());
+            if ret == FALSE {
+                let err = GetLastError();
+                return Err(Error::ReadMemory(err));
             }
             Ok(())
         }
@@ -65,23 +69,23 @@ impl VirtualMemoryRead for Process {
 }
 
 impl VirtualMemoryWrite for Process {
-    fn write_at(&self, buf: &[u8], offset: usize) -> Result<usize, Error> {
+    fn write_at(&self, buf: &[u8], offset: usize) -> Result<usize> {
         unsafe {
-            let code = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
-            if code == 0 {
-                let error = GetLastError();
-                return Err(Error::WriteMemory(error));
+            let ret = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
+            if ret == FALSE {
+                let err = GetLastError();
+                return Err(Error::WriteMemory(err));
             }
             Ok(buf.len())
         }
     }
 
-    fn write_all_at(&self, buf: &[u8], offset: usize) -> Result<(), Error> {
+    fn write_all_at(&self, buf: &[u8], offset: usize) -> Result<()> {
         unsafe {
-            let code = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
-            if code == 0 {
-                let error = GetLastError();
-                return Err(Error::WriteMemory(error));
+            let ret = WriteProcessMemory(self.handle.0, offset as _, buf.as_ptr() as _, buf.len(), ptr::null_mut());
+            if ret == FALSE {
+                let err = GetLastError();
+                return Err(Error::WriteMemory(err));
             }
             Ok(())
         }
@@ -89,35 +93,32 @@ impl VirtualMemoryWrite for Process {
 }
 
 impl Process {
-    pub fn open(pid: Pid) -> Result<Self, Error> {
-        unsafe {
-            || -> _ {
-                let handle = OpenProcess(
-                    PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION,
-                    FALSE,
-                    pid,
-                );
+    pub fn open(pid: Pid) -> Result<Self> {
+        unsafe { Self::_open(pid) }.map_err(Error::OpenProcess)
+    }
 
-                if handle == 0 {
-                    let error = GetLastError();
-                    return Err(error);
-                }
+    unsafe fn _open(pid: Pid) -> Result<Self, WIN32_ERROR> {
+        let handle = OpenProcess(
+            PROCESS_QUERY_INFORMATION | PROCESS_VM_READ | PROCESS_VM_WRITE | PROCESS_VM_OPERATION,
+            FALSE,
+            pid,
+        );
 
-                let mut buffer = [0; MAX_PATH as _];
-                let mut lpdwsize = MAX_PATH;
-
-                let result =
-                    QueryFullProcessImageNameW(handle, PROCESS_NAME_NATIVE, buffer.as_mut_ptr(), &mut lpdwsize);
-                if result == 0 {
-                    let error = GetLastError();
-                    return Err(error);
-                }
-
-                let pathname = PathBuf::from(OsString::from_wide(&buffer[..lpdwsize as _]));
-                Ok(Self { pid, handle: HandleInner(handle), pathname })
-            }()
-            .map_err(Error::OpenProcess)
+        if handle == 0 {
+            let err = GetLastError();
+            return Err(err);
         }
+
+        let mut buf = Vec::with_capacity(MAX_PATH as usize);
+        let mut size = MAX_PATH;
+        let ret = QueryFullProcessImageNameW(handle, PROCESS_NAME_NATIVE, buf.as_mut_ptr(), &mut size);
+        if ret == 0 {
+            let err = GetLastError();
+            return Err(err);
+        }
+        buf.set_len(size as usize);
+        let pathname = PathBuf::from(OsString::from_wide(&buf));
+        Ok(Self { pid, handle: HandleWrapper(handle), pathname })
     }
 }
 
@@ -130,13 +131,15 @@ impl ProcessInfo for Process {
         &self.pathname
     }
 
-    fn get_maps(&self) -> impl Iterator<Item = Page> {
-        #[inline]
-        fn skip_last<T>(mut iter: impl Iterator<Item = T>) -> impl Iterator<Item = T> {
-            let last = iter.next();
-            iter.scan(last, |state, item| mem::replace(state, Some(item)))
-        }
-        skip_last(Iter::new(self.handle.0).skip(1))
+    fn get_maps(&self) -> impl Iterator<Item = Result<Mapping>> {
+        let sys_info = unsafe {
+            let mut sys_info = MaybeUninit::uninit();
+            GetSystemInfo(sys_info.as_mut_ptr());
+            sys_info.assume_init()
+        };
+        let min_addr = sys_info.lpMinimumApplicationAddress as usize;
+        let max_addr = sys_info.lpMaximumApplicationAddress as usize;
+        Iter::new(self.handle.0, min_addr, max_addr).map(|x| x.map_err(|e| Error::QueryMapping(e)))
     }
 }
 
@@ -146,21 +149,22 @@ impl ProcessInfoExt for Process {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Page {
-    pub start: usize,
+pub struct Mapping {
+    pub addr: usize,
     pub size: usize,
-    pub flags: u32,
-    pub pathname: Option<String>,
+    pub protect: u32,
+    pub state: u32,
+    pub ty: u32,
+    pub name: Option<String>,
 }
 
-impl VirtualQuery for Page {
+impl VirtualQuery for Mapping {
     fn start(&self) -> usize {
-        self.start
+        self.addr
     }
 
     fn end(&self) -> usize {
-        self.start + self.size
+        self.addr + self.size
     }
 
     fn size(&self) -> usize {
@@ -168,7 +172,7 @@ impl VirtualQuery for Page {
     }
 
     fn is_read(&self) -> bool {
-        self.flags
+        self.protect
             & (PAGE_EXECUTE_READ
                 | PAGE_EXECUTE_READWRITE
                 | PAGE_EXECUTE_WRITECOPY
@@ -179,68 +183,98 @@ impl VirtualQuery for Page {
     }
 
     fn is_write(&self) -> bool {
-        self.flags & (PAGE_EXECUTE_READWRITE | PAGE_READWRITE) != 0
+        self.protect & (PAGE_EXECUTE_READWRITE | PAGE_READWRITE) != 0
     }
 
     fn is_exec(&self) -> bool {
-        self.flags & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY) != 0
+        self.protect & (PAGE_EXECUTE | PAGE_EXECUTE_READ | PAGE_EXECUTE_READWRITE | PAGE_EXECUTE_WRITECOPY) != 0
     }
 
     fn name(&self) -> Option<&str> {
-        self.pathname.as_deref()
+        self.name.as_deref()
+    }
+}
+
+impl VirtualQueryExt for Mapping {
+    fn is_free(&self) -> bool {
+        self.state == MEM_FREE
+    }
+
+    fn is_guard(&self) -> bool {
+        self.protect & PAGE_GUARD != 0
+    }
+
+    fn m_type(&self) -> u32 {
+        self.ty
+    }
+
+    fn m_state(&self) -> u32 {
+        self.state
+    }
+
+    fn m_protect(&self) -> u32 {
+        self.protect
     }
 }
 
 struct Iter {
     handle: HANDLE,
-    base: usize,
+    min_addr: usize,
+    max_addr: usize,
 }
 
 impl Iter {
-    const fn new(handle: HANDLE) -> Self {
-        Self { handle, base: 0 }
+    const fn new(handle: HANDLE, min_addr: usize, max_addr: usize) -> Self {
+        Self { handle, min_addr, max_addr }
     }
 }
 
 impl Iterator for Iter {
-    type Item = Page;
+    type Item = Result<Mapping, WIN32_ERROR>;
 
-    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         unsafe {
-            let mut basic = mem::MaybeUninit::uninit();
-
-            if VirtualQueryEx(
-                self.handle,
-                self.base as _,
-                basic.as_mut_ptr(),
-                mem::size_of::<MEMORY_BASIC_INFORMATION>(),
-            ) == 0
-            {
+            if self.min_addr >= self.max_addr {
                 return None;
             }
+            let mut info_uninit = mem::MaybeUninit::uninit();
+            let ret = VirtualQueryEx(
+                self.handle,
+                self.min_addr as _,
+                info_uninit.as_mut_ptr(),
+                mem::size_of::<MEMORY_BASIC_INFORMATION>(),
+            );
+            if ret == 0 {
+                let err = GetLastError();
+                return Some(Err(err));
+            }
+            let info = info_uninit.assume_init();
+            let name = match info.Type {
+                MEM_IMAGE | MEM_MAPPED => get_mapped_file_name_w(self.handle, self.min_addr).ok(),
+                _ => None,
+            };
 
-            let pathname = get_mapped_file_name_w(self.handle, self.base).ok();
-
-            let info = basic.assume_init();
-            self.base = info.BaseAddress as usize + info.RegionSize;
-
-            Some(Page {
-                start: info.BaseAddress as _,
-                size: info.RegionSize as _,
-                flags: info.Protect,
-                pathname,
-            })
+            let addr = self.min_addr;
+            self.min_addr += info.RegionSize;
+            Some(Ok(Mapping {
+                addr,
+                size: info.RegionSize,
+                protect: info.Protect,
+                state: info.State,
+                ty: info.Type,
+                name,
+            }))
         }
     }
 }
 
-#[inline(always)]
 unsafe fn get_mapped_file_name_w(handle: HANDLE, base: usize) -> Result<String, WIN32_ERROR> {
-    let mut buf = [0; MAX_PATH as _];
-    let result = GetMappedFileNameW(handle, base as _, buf.as_mut_ptr(), buf.len() as _);
-    if result == 0 {
-        return Err(GetLastError());
+    let mut buf = Vec::with_capacity(MAX_PATH as usize);
+    let ret = GetMappedFileNameW(handle, base as _, buf.as_mut_ptr(), MAX_PATH);
+    if ret == 0 {
+        let err = GetLastError();
+        return Err(err);
     }
-    Ok(OsString::from_wide(&buf[..result as _]).into_string().unwrap())
+    buf.set_len(ret as usize);
+    Ok(OsString::from_wide(&buf).into_string().unwrap())
 }

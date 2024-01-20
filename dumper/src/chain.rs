@@ -63,6 +63,7 @@ where
 #[inline]
 fn find_base_address<P: ProcessInfo>(proc: &P, name: &str, index: usize) -> Option<usize> {
     proc.get_maps()
+        .flatten()
         .filter(|m| m.is_read())
         .filter(|m| {
             m.name()
