@@ -6,8 +6,6 @@ pub mod macos;
 #[cfg(target_os = "windows")]
 pub mod windows;
 
-pub mod snapshot;
-
 pub use self::error::Error;
 #[cfg(any(target_os = "linux", target_os = "android"))]
 pub use self::linux::{Mapping, Process};
