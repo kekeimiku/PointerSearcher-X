@@ -1,4 +1,5 @@
 mod proc;
+pub mod utils;
 
 pub use proc::{Mapping, Process};
 

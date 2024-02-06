@@ -1,4 +1,5 @@
 mod proc64;
+pub mod utils;
 
 pub use self::proc64::{ShareMode, UserTag};
 use super::{Error, Pid, ProcessInfo, Result, VirtualMemoryRead, VirtualMemoryWrite, VirtualQuery};

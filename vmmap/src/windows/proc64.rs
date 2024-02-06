@@ -139,7 +139,7 @@ impl ProcessInfo for Process {
         };
         let min_addr = sys_info.lpMinimumApplicationAddress as usize;
         let max_addr = sys_info.lpMaximumApplicationAddress as usize;
-        Iter::new(self.handle.0, min_addr, max_addr).map(|x| x.map_err(|e| Error::QueryMapping(e)))
+        Iter::new(self.handle.0, min_addr, max_addr).map(|x| x.map_err(Error::QueryMapping))
     }
 }
 

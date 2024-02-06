@@ -7,7 +7,6 @@ pub mod macos;
 pub mod windows;
 
 pub mod snapshot;
-pub mod utils;
 
 pub use self::error::Error;
 #[cfg(any(target_os = "linux", target_os = "android"))]

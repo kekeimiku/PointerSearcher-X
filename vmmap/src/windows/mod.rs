@@ -1,4 +1,5 @@
 mod proc64;
+pub mod utils;
 
 pub use proc64::{Mapping, Process};
 
