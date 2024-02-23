@@ -1,1 +1,7 @@
 build/
+test.py
+*.bin
+*.txt
+*.so
+*.dll
+*.dylib

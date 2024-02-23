@@ -28,9 +28,6 @@ pub struct DumpCommand {
 
     #[argh(option, description = "binary data out filename")]
     pub bin: Option<PathBuf>,
-
-    #[argh(option, default = "true", description = "pointer align, default true")]
-    pub align: bool,
 }
 
 #[derive(FromArgs)]

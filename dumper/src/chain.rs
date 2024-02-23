@@ -9,7 +9,7 @@ impl TestChainCommand {
         let TestChainCommand { pid, chain, write, read } = self;
         let proc = Process::open(pid)?;
         let address = get_pointer_chain_address(&proc, chain).ok_or("Invalid pointer chain")?;
-        println!("{address:#x}");
+        println!("target = {address:x}");
 
         if let Some(size) = read {
             let mut buf = vec![0; size];
@@ -50,26 +50,50 @@ where
         process::exit(0);
     });
 
+    println!("{name}[{index}] + {offset} = {address:x}");
     let mut buf = [0; mem::size_of::<usize>()];
     for element in elements {
         let element = element.ok()?;
         proc.read_exact_at(&mut buf, address.checked_add_signed(element)?)
             .ok()?;
         address = usize::from_le_bytes(buf);
+        println!("+ {element} = {address:x}");
     }
-    address.checked_add_signed(offset)
+
+    let target = address.checked_add_signed(offset);
+
+    if let Some(addr) = target {
+        println!("+ {offset} = {addr}");
+    }
+
+    target
+}
+
+struct Module<'a> {
+    start: usize,
+    end: usize,
+    name: &'a str,
 }
 
 #[inline]
 fn find_base_address<P: ProcessInfo>(proc: &P, name: &str, index: usize) -> Option<usize> {
-    proc.get_maps()
-        .flatten()
-        .filter(|m| m.is_read())
-        .filter(|m| {
-            m.name()
-                .and_then(|s| Path::new(s).file_name())
-                .is_some_and(|n| n.eq(name))
+    let vqs = proc.get_maps().flatten().collect::<Vec<_>>();
+    vqs.iter()
+        .filter(|x| x.is_write() && x.is_read())
+        .flat_map(|x| Some(Module { start: x.start(), end: x.end(), name: x.name()? }))
+        .fold(Vec::<Module>::with_capacity(vqs.len()), |mut acc, cur| {
+            match acc.last_mut() {
+                Some(last) if last.name == cur.name => last.end = cur.end,
+                _ => acc.push(cur),
+            }
+            acc
         })
+        .into_iter()
+        .map(|Module { start, end, name }| {
+            let name = Path::new(name).file_name().and_then(|s| s.to_str()).unwrap_or(name);
+            Module { start, end, name }
+        })
+        .filter(|x| x.name.eq(name))
         .nth(index)
-        .map(|x| x.start())
+        .map(|x| x.start)
 }

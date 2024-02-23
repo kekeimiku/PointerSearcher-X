@@ -1,9 +1,6 @@
-use std::{
-    fs::{File, OpenOptions},
-    thread,
-};
+use std::{fs::File, thread};
 
-use ptrsx::{Param, PtrsxScanner};
+use ptrsx::{PtrsxScanner, UserParam};
 use rayon::{
     iter::{IntoParallelIterator, ParallelIterator},
     ThreadPool, ThreadPoolBuilder,
@@ -20,11 +17,15 @@ impl SubCommandScan {
             depth,
             range: Range(range),
             node,
+            use_module,
+            use_cycle,
+            max,
+            last,
             dir,
         } = self;
 
-        if depth <= node {
-            return Err(format!("depth must be greater than node. current depth({depth}), node({node}).").into());
+        if node.is_some_and(|n| depth <= n) {
+            return Err("depth must be greater than node.".into());
         }
 
         let mut spinner = Spinner::start("start loading cache...");
@@ -42,9 +43,8 @@ impl SubCommandScan {
         rayon_create_pool(list.len())?.install(|| {
             list.into_par_iter().try_for_each(|addr| {
                 let path = dir.join(format!("{addr:x}")).with_extension("scandata");
-                let file = OpenOptions::new().append(true).create_new(true).open(path)?;
-                let param = Param { depth, addr, node, range };
-                ptrsx.pointer_chain_scanner(param, file)
+                let param = UserParam { depth, addr, range, use_module, use_cycle, node, max, last };
+                ptrsx.pointer_chain_scanner(param, path)
             })
         })?;
 

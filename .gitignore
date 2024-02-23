@@ -4,5 +4,7 @@ Cargo.lock
 **/.DS_Store
 .cargo/
 build.sh
+check.sh
+test.rs.txt
 /bin
 /blacklist

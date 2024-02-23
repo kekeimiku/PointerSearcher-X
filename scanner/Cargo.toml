@@ -8,7 +8,7 @@ path = "../ptrsx"
 default-features = false
 
 [dependencies.rayon]
-version = "1.8.0"
+version = "1.9.0"
 default-features = false
 
 [dependencies.argh]

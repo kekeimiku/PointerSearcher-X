@@ -1,6 +1,6 @@
 use std::{
     ffi::OsString,
-    mem::{self, MaybeUninit},
+    mem,
     os::windows::prelude::OsStringExt,
     path::{Path, PathBuf},
     ptr,
@@ -133,7 +133,7 @@ impl ProcessInfo for Process {
 
     fn get_maps(&self) -> impl Iterator<Item = Result<Mapping>> {
         let sys_info = unsafe {
-            let mut sys_info = MaybeUninit::uninit();
+            let mut sys_info = mem::MaybeUninit::uninit();
             GetSystemInfo(sys_info.as_mut_ptr());
             sys_info.assume_init()
         };
@@ -154,7 +154,7 @@ pub struct Mapping {
     pub size: usize,
     pub protect: u32,
     pub state: u32,
-    pub ty: u32,
+    pub r#type: u32,
     pub name: Option<String>,
 }
 
@@ -205,7 +205,7 @@ impl VirtualQueryExt for Mapping {
     }
 
     fn m_type(&self) -> u32 {
-        self.ty
+        self.r#type
     }
 
     fn m_state(&self) -> u32 {
@@ -261,7 +261,7 @@ impl Iterator for Iter {
                 size: info.RegionSize,
                 protect: info.Protect,
                 state: info.State,
-                ty: info.Type,
+                r#type: info.Type,
                 name,
             }))
         }

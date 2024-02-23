@@ -54,8 +54,16 @@ pub struct SubCommandScan {
     pub depth: usize,
     #[argh(option, default = "Range((0, 4000))", short = 'r', description = "range default 0:4000")]
     pub range: Range,
-    #[argh(option, default = "1", short = 'n', description = "node default 1")]
-    pub node: usize,
+    #[argh(option, short = 'n', description = "node default 1")]
+    pub node: Option<usize>,
+    #[argh(option, default = "true", description = "use module name. default true")]
+    pub use_module: bool,
+    #[argh(option, default = "false", description = "use ref cycle. default false")]
+    pub use_cycle: bool,
+    #[argh(option, description = "max chain list num")]
+    pub max: Option<usize>,
+    #[argh(option, description = "last offset")]
+    pub last: Option<isize>,
     #[argh(option, description = "out dir")]
     pub dir: Option<PathBuf>,
 }

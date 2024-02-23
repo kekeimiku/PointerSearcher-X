@@ -62,8 +62,6 @@ https://github.com/korcankaraokcu/PINCE/issues/15
 
 如果您想将 PointerSearcher-X 集成到您的应用程序中，由于它公开了`C ABI`，这非常容易，并且其宽松的MIT许可证不会给您带来负担。 有关详细信息，请参考 [ffi/ptrsx.h](https://github.com/kekeimiku/PointerSearcher-X/blob/main/ffi/ptrsx.h)。
 
-对于 `macos m1` 它还附带一个小工具 `inject`，不过对于扫描指针来说，它完全没有用，只是作为一个小工具存在。
-
 ## 免责声明
 
 编写它只是为了学习rust，没有恶意目的。
