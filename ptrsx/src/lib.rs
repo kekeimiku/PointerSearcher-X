@@ -1,9 +1,11 @@
+use core::{
+    mem,
+    ops::{Bound, ControlFlow, Range},
+};
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
     fs,
     io::{BufReader, BufWriter, Cursor, Read, Write},
-    mem,
-    ops::{Bound, ControlFlow, Range},
     path::Path,
 };
 
@@ -22,10 +24,10 @@ use rangemap::RangeMap;
 use vmmap::{ProcessInfo, VirtualMemoryRead, VirtualQuery};
 
 // 基址模块信息
-struct Module<'a> {
-    start: usize,
-    end: usize,
-    name: &'a str,
+pub struct Module<'a> {
+    pub start: usize,
+    pub end: usize,
+    pub name: &'a str,
 }
 
 struct ModuleIter<'a>(core::str::Lines<'a>);
@@ -177,7 +179,7 @@ impl PtrsxScanner {
                 (None, None, None) => {
                     let mut f = |chain: Chain| {
                         let addr = chain.addr();
-                        let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                        let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                             return ControlFlow::Continue(());
                         };
 
@@ -199,7 +201,7 @@ impl PtrsxScanner {
                             },
                         }
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -208,7 +210,7 @@ impl PtrsxScanner {
                     let mut f = |chain: Chain| {
                         if chain.last().is_some_and(|o| last.eq(o)) {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
 
@@ -232,7 +234,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -243,7 +245,7 @@ impl PtrsxScanner {
                         if n >= max {
                             return ControlFlow::Break(Ok(()));
                         }
-                        let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                        let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                             return ControlFlow::Continue(());
                         };
 
@@ -270,7 +272,7 @@ impl PtrsxScanner {
                             },
                         }
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -283,7 +285,7 @@ impl PtrsxScanner {
                         }
                         if chain.last().is_some_and(|o| last.eq(o)) {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
 
@@ -314,7 +316,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -323,7 +325,7 @@ impl PtrsxScanner {
                     let mut f = |chain: Chain| {
                         if chain.len() >= node {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
 
@@ -346,7 +348,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -355,7 +357,7 @@ impl PtrsxScanner {
                     let mut f = |chain: Chain| {
                         if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
 
@@ -378,7 +380,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -392,7 +394,7 @@ impl PtrsxScanner {
 
                         if chain.len() >= node {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
 
@@ -421,7 +423,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -434,7 +436,7 @@ impl PtrsxScanner {
                         }
                         if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
 
@@ -463,7 +465,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -473,7 +475,7 @@ impl PtrsxScanner {
                 (None, None, None) => {
                     let mut f = |chain: Chain| {
                         let addr = chain.addr();
-                        let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                        let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                             return ControlFlow::Continue(());
                         };
                         match write!(writer, "{name}+{}", addr - start)
@@ -484,7 +486,7 @@ impl PtrsxScanner {
                             Err(err) => ControlFlow::Break(Err(err)),
                         }
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -493,7 +495,7 @@ impl PtrsxScanner {
                     let mut f = |chain: Chain| {
                         if chain.last().is_some_and(|o| last.eq(o)) {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
                             return match write!(writer, "{name}+{}", addr - start)
@@ -506,7 +508,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -517,7 +519,7 @@ impl PtrsxScanner {
                         if n >= max {
                             return ControlFlow::Break(Ok(()));
                         }
-                        let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                        let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                             return ControlFlow::Continue(());
                         };
                         match write!(writer, "{name}+{}", addr - start)
@@ -531,7 +533,7 @@ impl PtrsxScanner {
                             Err(err) => ControlFlow::Break(Err(err)),
                         }
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -544,7 +546,7 @@ impl PtrsxScanner {
                         }
                         if chain.last().is_some_and(|o| last.eq(o)) {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
                             return match write!(writer, "{name}+{}", addr - start)
@@ -560,7 +562,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -569,7 +571,7 @@ impl PtrsxScanner {
                     let mut f = |chain: Chain| {
                         if chain.len() >= node {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
                             return match write!(writer, "{name}+{}", addr - start)
@@ -582,7 +584,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -591,7 +593,7 @@ impl PtrsxScanner {
                     let mut f = |chain: Chain| {
                         if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
                             return match write!(writer, "{name}+{}", addr - start)
@@ -604,7 +606,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -618,7 +620,7 @@ impl PtrsxScanner {
 
                         if chain.len() >= node {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
                             return match write!(writer, "{name}+{}", addr - start)
@@ -634,7 +636,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -647,7 +649,7 @@ impl PtrsxScanner {
                         }
                         if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
                             let addr = chain.addr();
-                            let Some((Range { start, end: _ }, name)) = self.index.get_key_value(addr) else {
+                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                                 return ControlFlow::Continue(());
                             };
                             return match write!(writer, "{name}+{}", addr - start)
@@ -663,7 +665,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -690,7 +692,7 @@ impl PtrsxScanner {
                             },
                         }
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -718,7 +720,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -752,7 +754,7 @@ impl PtrsxScanner {
                             },
                         }
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -792,7 +794,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -820,7 +822,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -848,7 +850,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -887,7 +889,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -925,7 +927,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -943,7 +945,7 @@ impl PtrsxScanner {
                             Err(err) => ControlFlow::Break(Err(err)),
                         }
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -962,7 +964,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -985,7 +987,7 @@ impl PtrsxScanner {
                             Err(err) => ControlFlow::Break(Err(err)),
                         }
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -1011,7 +1013,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -1030,7 +1032,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -1049,7 +1051,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -1076,7 +1078,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }
@@ -1102,7 +1104,7 @@ impl PtrsxScanner {
                         }
                         ControlFlow::Continue(())
                     };
-                    match try_pointer_chain_scan(param, &mut f, points, &self.map) {
+                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
                         ControlFlow::Continue(_) => Ok(()),
                         ControlFlow::Break(b) => b,
                     }

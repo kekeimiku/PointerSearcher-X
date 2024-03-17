@@ -2,7 +2,7 @@ use core::{
     iter,
     ops::{Bound, ControlFlow},
 };
-use std::{collections::BTreeMap, isize};
+use std::collections::BTreeMap;
 
 use super::try_trait::{FromResidual, Try};
 
@@ -13,21 +13,21 @@ pub struct Param {
 }
 
 // large amounts data
-fn _try_chain_scan_1<F, R>(param: Param, f: &mut F, points: &[usize], map: &BTreeMap<usize, Vec<usize>>) -> R
+fn _try_chain_scan_1<F, R>(map: &BTreeMap<usize, Vec<usize>>, points: &[usize], param: Param, f: &mut F) -> R
 where
     F: FnMut(Chain) -> R,
     R: Try<Output = ()>,
 {
     let mut data = Vec::with_capacity(param.depth);
-    __try_chain_scan_1(param, f, &mut data, points, map, 0)
+    __try_chain_scan_1(map, points, param, f, &mut data, 0)
 }
 
 fn __try_chain_scan_1<F, R>(
+    map: &BTreeMap<usize, Vec<usize>>,
+    points: &[usize],
     param: Param,
     f: &mut F,
     data: &mut Vec<(usize, isize)>,
-    points: &[usize],
-    map: &BTreeMap<usize, Vec<usize>>,
     curr: usize,
 ) -> R
 where
@@ -58,7 +58,7 @@ where
         for (&k, v) in map.range((Bound::Included(min), Bound::Included(max))) {
             data.push((k, addr.wrapping_sub(k) as isize));
             for &addr in v {
-                let branch = __try_chain_scan_1(Param { depth, addr, range }, f, data, points, map, curr + 1);
+                let branch = __try_chain_scan_1(map, points, Param { depth, addr, range }, f, data, curr + 1);
                 match Try::branch(branch) {
                     ControlFlow::Continue(c) => c,
                     ControlFlow::Break(b) => return FromResidual::from_residual(b),
@@ -72,21 +72,21 @@ where
 }
 
 // small amount data
-fn _try_chain_scan_2<F, R>(param: Param, f: &mut F, points: &[usize], map: &BTreeMap<usize, Vec<usize>>) -> R
+fn _try_chain_scan_2<F, R>(map: &BTreeMap<usize, Vec<usize>>, points: &[usize], param: Param, f: &mut F) -> R
 where
     F: FnMut(Chain) -> R,
     R: Try<Output = ()>,
 {
     let mut data = Vec::with_capacity(param.depth);
-    __try_chain_scan_2(param, f, &mut data, points, map, 0)
+    __try_chain_scan_2(map, points, param, f, &mut data, 0)
 }
 
 fn __try_chain_scan_2<F, R>(
+    map: &BTreeMap<usize, Vec<usize>>,
+    points: &[usize],
     param: Param,
     f: &mut F,
     data: &mut Vec<(usize, isize)>,
-    points: &[usize],
-    map: &BTreeMap<usize, Vec<usize>>,
     curr: usize,
 ) -> R
 where
@@ -117,7 +117,7 @@ where
         for (&k, v) in map.range((Bound::Included(min), Bound::Included(max))) {
             data.push((k, addr.wrapping_sub(k) as isize));
             for &addr in v {
-                let branch = __try_chain_scan_2(Param { depth, addr, range }, f, data, points, map, curr + 1);
+                let branch = __try_chain_scan_2(map, points, Param { depth, addr, range }, f, data, curr + 1);
                 match Try::branch(branch) {
                     ControlFlow::Continue(c) => c,
                     ControlFlow::Break(b) => return FromResidual::from_residual(b),
@@ -129,15 +129,15 @@ where
     Try::from_output(())
 }
 
-pub fn try_pointer_chain_scan<F, R>(param: Param, f: &mut F, points: &[usize], map: &BTreeMap<usize, Vec<usize>>) -> R
+pub fn try_pointer_chain_scan<F, R>(map: &BTreeMap<usize, Vec<usize>>, points: &[usize], param: Param, f: &mut F) -> R
 where
     F: FnMut(Chain) -> R,
     R: Try<Output = ()>,
 {
     let count = map.values().filter(|v| v.len() < 64).count();
     match (map.len() - count).checked_mul(256) {
-        Some(n) if n < count => _try_chain_scan_2(param, f, points, map),
-        _ => _try_chain_scan_1(param, f, points, map),
+        Some(n) if n < count => _try_chain_scan_2(map, points, param, f),
+        _ => _try_chain_scan_1(map, points, param, f),
     }
 }
 
