@@ -28,7 +28,7 @@ pub fn mapping_filter<Q: vmmap::VirtualQuery + vmmap::macos::VirtualQueryExt>(pa
 #[cfg(target_os = "linux")]
 #[inline]
 pub fn mapping_filter<Q: vmmap::VirtualQuery>(page: &Q) -> bool {
-    use std::{fs::File, io::Read, path::Path};
+    use std::{io::Read, path::Path, File};
 
     let Some(name) = page.name() else {
         return true;
@@ -52,7 +52,7 @@ pub fn mapping_filter<Q: vmmap::VirtualQuery>(page: &Q) -> bool {
 #[cfg(target_os = "android")]
 #[inline]
 pub fn mapping_filter<Q: vmmap::VirtualQuery>(page: &Q) -> bool {
-    use std::{fs::File, io::Read, path::Path};
+    use std::{io::Read, path::Path, File};
 
     // anonmyous return true
     let Some(name) = page.name() else {
@@ -90,7 +90,7 @@ pub fn mapping_filter<Q: vmmap::VirtualQuery>(page: &Q) -> bool {
 #[cfg(target_os = "windows")]
 #[inline]
 pub fn mapping_filter<Q: vmmap::VirtualQuery + vmmap::windows::VirtualQueryExt>(page: &Q) -> bool {
-    use std::{fs::File, io::Read, path::Path};
+    use std::{io::Read, path::Path, File};
 
     if page.is_guard() || page.is_free() {
         return false;

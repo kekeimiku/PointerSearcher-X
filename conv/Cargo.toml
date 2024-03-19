@@ -1,8 +1,0 @@
-[package]
-name = "conv"
-version = "0.7.0"
-edition = "2021"
-
-[dependencies.argh]
-version = "0.1.12"
-default-features = false

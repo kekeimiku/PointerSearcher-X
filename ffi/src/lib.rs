@@ -8,7 +8,7 @@ use core::{
 use std::{
     collections::{HashMap, HashSet},
     ffi::CString,
-    fs,
+    fs::File,
     io::{BufRead, BufReader, BufWriter, Write},
     path::Path,
 };
@@ -155,13 +155,13 @@ pub unsafe extern "C" fn ptrs_load_pointer_map(
     let scan = &mut null_ptr!(ptr.as_mut()).scan;
     let info_path = error!(CStr::from_ptr(null_ptr!(info_path.as_ref())).to_str());
     dbg!(info_path);
-    let file = error!(fs::File::open(info_path));
+    let file = error!(File::open(info_path));
     error!(scan.load_modules_info(file));
 
     let bin_path = error!(CStr::from_ptr(null_ptr!(bin_path.as_ref())).to_str());
     dbg!(bin_path);
 
-    let file = error!(fs::File::open(bin_path));
+    let file = error!(File::open(bin_path));
     error!(scan.load_pointer_map(file));
     0
 }
@@ -193,6 +193,8 @@ pub unsafe extern "C" fn ptrs_scan_pointer_chain(
 
 #[no_mangle]
 pub unsafe extern "C" fn compare_two_file(file1: *const c_char, file2: *const c_char, outfile: *const c_char) -> c_int {
+    use std::fs;
+
     let file1 = error!(CStr::from_ptr(null_ptr!(file1.as_ref())).to_str());
     let file2 = error!(CStr::from_ptr(null_ptr!(file2.as_ref())).to_str());
     let outfile = error!(CStr::from_ptr(null_ptr!(outfile.as_ref())).to_str());
@@ -204,7 +206,7 @@ pub unsafe extern "C" fn compare_two_file(file1: *const c_char, file2: *const c_
     let s1 = b1.lines().collect::<HashSet<_>>();
     let s2 = b2.lines().collect::<HashSet<_>>();
 
-    let f = error!(fs::OpenOptions::new().append(true).create(true).open(outfile));
+    let f = error!(File::options().append(true).create(true).open(outfile));
     let mut w = BufWriter::new(f);
     error!(s1.intersection(&s2).try_for_each(|s| writeln!(w, "{s}")));
 
@@ -272,11 +274,11 @@ pub unsafe extern "C" fn ptrs_filter_invalid(
 
     dbg!(infile, outfile);
 
-    let infile = error!(fs::File::open(infile));
+    let infile = error!(File::open(infile));
     let mut reader = BufReader::with_capacity(0x80000, infile);
     let line_buf = &mut String::with_capacity(0x2000);
 
-    let outfile = error!(fs::OpenOptions::new().append(true).create_new(true).open(outfile));
+    let outfile = error!(File::options().append(true).create_new(true).open(outfile));
     let mut writer = BufWriter::with_capacity(0x80000, outfile);
 
     loop {
@@ -311,11 +313,11 @@ pub unsafe extern "C" fn ptrs_filter_value(
 
     dbg!(infile, outfile, value);
 
-    let infile = error!(fs::File::open(infile));
+    let infile = error!(File::open(infile));
     let mut reader = BufReader::with_capacity(0x80000, infile);
     let line_buf = &mut String::with_capacity(0x2000);
 
-    let outfile = error!(fs::OpenOptions::new().append(true).create_new(true).open(outfile));
+    let outfile = error!(File::options().append(true).create_new(true).open(outfile));
     let mut writer = BufWriter::with_capacity(0x80000, outfile);
 
     let mut value_buf = vec![0_u8; value.len()];
@@ -386,11 +388,11 @@ pub unsafe extern "C" fn ptrs_filter_addr(
 
     dbg!(infile, outfile, addr);
 
-    let infile = error!(fs::File::open(infile));
+    let infile = error!(File::open(infile));
     let mut reader = BufReader::with_capacity(0x80000, infile);
     let line_buf = &mut String::with_capacity(0x2000);
 
-    let outfile = error!(fs::OpenOptions::new().append(true).create_new(true).open(outfile));
+    let outfile = error!(File::options().append(true).create_new(true).open(outfile));
     let mut writer = BufWriter::with_capacity(0x80000, outfile);
 
     loop {

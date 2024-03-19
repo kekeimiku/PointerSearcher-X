@@ -10,8 +10,8 @@ use super::{Error, Pid, ProcessInfo, Result, VirtualMemoryRead, VirtualMemoryWri
 pub struct Process {
     pub pid: Pid,
     pub pathname: PathBuf,
-    pub mapping: fs::File,
-    pub memory: fs::File,
+    pub mapping: File,
+    pub memory: File,
 }
 
 impl VirtualMemoryRead for Process {
@@ -54,9 +54,9 @@ impl Process {
     }
 
     fn _open(pid: Pid) -> Result<Self, io::Error> {
-        let mapping = fs::File::open(format!("/proc/{pid}/maps"))?;
+        let mapping = File::open(format!("/proc/{pid}/maps"))?;
         let pathname = fs::read_link(format!("/proc/{pid}/exe"))?;
-        let handle = fs::OpenOptions::new()
+        let handle = File::options()
             .read(true)
             .write(true)
             .open(format!("/proc/{pid}/mem"))?;

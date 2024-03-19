@@ -4,7 +4,7 @@ use core::{
 };
 use std::{
     collections::{BTreeMap, BTreeSet, HashMap},
-    fs,
+    fs::File,
     io::{BufReader, BufWriter, Cursor, Read, Write},
     path::Path,
 };
@@ -90,7 +90,7 @@ impl PtrsxScanner {
             .filter(mapping_filter)
             .collect::<Vec<_>>();
 
-        let file = fs::OpenOptions::new().append(true).create_new(true).open(path1)?;
+        let file = File::options().append(true).create_new(true).open(path1)?;
         let mut writer = BufWriter::new(file);
 
         // 处理所有可用于基址的模块，合并处于同一模块的区域，截断模块路径只保留模块名，
@@ -115,7 +115,7 @@ impl PtrsxScanner {
                 writeln!(writer, "{start:x}-{end:x} {name}")
             })?;
 
-        let file = fs::OpenOptions::new().append(true).create_new(true).open(path2)?;
+        let file = File::options().append(true).create_new(true).open(path2)?;
         let mut writer = BufWriter::new(file);
 
         // 将 [k=地址:v=k中所储存的指针] 数据写入文件
@@ -161,7 +161,7 @@ impl PtrsxScanner {
     }
 
     pub fn pointer_chain_scanner(&self, param: UserParam, path: impl AsRef<Path>) -> Result<()> {
-        let file = fs::OpenOptions::new().append(true).create_new(true).open(path)?;
+        let file = File::options().append(true).create_new(true).open(path)?;
         let mut writer = BufWriter::new(file);
 
         let points = &self
