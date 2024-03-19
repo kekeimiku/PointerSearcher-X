@@ -92,6 +92,7 @@ class PointerScanTool:
         ),
         "ptrs_load_pointer_map": (c_int, POINTER(c_void_p), c_char_p, c_char_p),
         "ptrs_scan_pointer_chain": (c_int, POINTER(c_void_p), Param, c_char_p),
+        "refresh_modules_cache": (c_int, POINTER(c_void_p)),
         # verify pointer chain
         "ptrs_filter_invalid": (c_int, POINTER(c_void_p), c_char_p, c_char_p),
         "ptrs_filter_value": (
@@ -164,6 +165,11 @@ class PointerScanTool:
         ret = self._lib.ptrs_scan_pointer_chain(
             self._ptr, param, c_char_p(outfile.encode())
         )
+        self._check_ret(ret)
+
+    # Update memory mapping
+    def refresh_modules_cache(self):
+        ret = self._lib.refresh_modules_cache(self._ptr)
         self._check_ret(ret)
 
     # Filter all invalid pointer chains in `infile` and write the results to `outfile`

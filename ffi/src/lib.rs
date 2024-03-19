@@ -1,17 +1,16 @@
 #![allow(clippy::missing_safety_doc)]
 
+use core::{
+    cell::RefCell,
+    ffi::{c_char, c_int, CStr},
+    mem, ptr,
+};
 use std::{
     collections::{HashMap, HashSet},
     ffi::CString,
     fs,
     io::{BufRead, BufReader, BufWriter, Write},
     path::Path,
-};
-
-use core::{
-    cell::RefCell,
-    ffi::{c_char, c_int, CStr},
-    mem, ptr,
 };
 
 use ptrsx::{Module, PtrsxScanner, UserParam};
