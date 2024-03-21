@@ -28,7 +28,7 @@ pub fn mapping_filter<Q: vmmap::VirtualQuery + vmmap::macos::VirtualQueryExt>(pa
 #[cfg(target_os = "linux")]
 #[inline]
 pub fn mapping_filter<Q: vmmap::VirtualQuery>(page: &Q) -> bool {
-    use std::{io::Read, path::Path, File};
+    use std::{fs::File, io::Read, path::Path};
 
     let Some(name) = page.name() else {
         return true;
