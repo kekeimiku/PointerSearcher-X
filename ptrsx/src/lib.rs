@@ -175,81 +175,22 @@ impl PtrsxScanner {
         let param = Param { depth, addr, range };
 
         match (use_module, use_cycle) {
-            (true, true) => match (node, max, last) {
-                (None, None, None) => {
-                    let mut f = |chain: Chain| {
+            (true, true) => {
+                let mut n = 0;
+                let mut f = |chain: Chain| {
+                    if max.is_some_and(|max| n >= max) {
+                        return ControlFlow::Break(Ok(()));
+                    }
+                    if node.is_some_and(|node| chain.len() < node) {
+                        return ControlFlow::Continue(());
+                    }
+                    if last.is_none() || last == chain.last().copied() {
                         let addr = chain.addr();
                         let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                             return ControlFlow::Continue(());
                         };
 
-                        match chain.ref_cycle() {
-                            Some(mut iter) => match write!(writer, "{name}+{}", addr - start)
-                                .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            },
-
-                            None => match write!(writer, "{name}+{}", addr - start)
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            },
-                        }
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (None, None, Some(last)) => {
-                    let mut f = |chain: Chain| {
-                        if chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{name}+{}", addr - start)
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-
-                                None => match write!(writer, "{name}+{}", addr - start)
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (None, Some(max), None) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                            return ControlFlow::Continue(());
-                        };
-
-                        match chain.ref_cycle() {
+                        return match chain.ref_cycle() {
                             Some(mut iter) => match write!(writer, "{name}+{}", addr - start)
                                 .and(iter.try_for_each(|o| write!(writer, "@{o}")))
                                 .and(writeln!(writer))
@@ -270,259 +211,30 @@ impl PtrsxScanner {
                                 }
                                 Err(err) => ControlFlow::Break(Err(err)),
                             },
-                        }
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+                        };
                     }
+                    ControlFlow::Continue(())
+                };
+                match try_pointer_chain_scan(&self.map, points, param, &mut f) {
+                    ControlFlow::Continue(_) => Ok(()),
+                    ControlFlow::Break(b) => b,
                 }
-                (None, Some(max), Some(last)) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        if chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => {
-                                    match write!(writer, "{name}+{}", addr - start)
-                                        .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                        .and(writeln!(writer))
-                                    {
-                                        Ok(_) => {
-                                            n += 1;
-                                            ControlFlow::Continue(())
-                                        }
-                                        Err(err) => ControlFlow::Break(Err(err)),
-                                    }
-                                }
-                                None => match write!(writer, "{name}+{}", addr - start)
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+            }
+            (true, false) => {
+                let mut n = 0;
+                let mut f = |chain: Chain| {
+                    if max.is_some_and(|max| n >= max) {
+                        return ControlFlow::Break(Ok(()));
                     }
-                }
-                (Some(node), None, None) => {
-                    let mut f = |chain: Chain| {
-                        if chain.len() >= node {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{name}+{}", addr - start)
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{name}+{}", addr - start)
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+                    if node.is_some_and(|node| chain.len() < node) {
+                        return ControlFlow::Continue(());
                     }
-                }
-                (Some(node), None, Some(last)) => {
-                    let mut f = |chain: Chain| {
-                        if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{name}+{}", addr - start)
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{name}+{}", addr - start)
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), Some(max), None) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-
-                        if chain.len() >= node {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{name}+{}", addr - start)
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{name}+{}", addr - start)
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), Some(max), Some(last)) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{name}+{}", addr - start)
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{name}+{}", addr - start)
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-            },
-            (true, false) => match (node, max, last) {
-                (None, None, None) => {
-                    let mut f = |chain: Chain| {
+                    if last.is_none() || last == chain.last().copied() {
                         let addr = chain.addr();
                         let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
                             return ControlFlow::Continue(());
                         };
-                        match write!(writer, "{name}+{}", addr - start)
-                            .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                            .and(writeln!(writer))
-                        {
-                            Ok(_) => ControlFlow::Continue(()),
-                            Err(err) => ControlFlow::Break(Err(err)),
-                        }
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (None, None, Some(last)) => {
-                    let mut f = |chain: Chain| {
-                        if chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-                            return match write!(writer, "{name}+{}", addr - start)
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (None, Some(max), None) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                            return ControlFlow::Continue(());
-                        };
-                        match write!(writer, "{name}+{}", addr - start)
+                        return match write!(writer, "{name}+{}", addr - start)
                             .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
                             .and(writeln!(writer))
                         {
@@ -531,207 +243,27 @@ impl PtrsxScanner {
                                 ControlFlow::Continue(())
                             }
                             Err(err) => ControlFlow::Break(Err(err)),
-                        }
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+                        };
                     }
+                    ControlFlow::Continue(())
+                };
+                match try_pointer_chain_scan(&self.map, points, param, &mut f) {
+                    ControlFlow::Continue(_) => Ok(()),
+                    ControlFlow::Break(b) => b,
                 }
-                (None, Some(max), Some(last)) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        if chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-                            return match write!(writer, "{name}+{}", addr - start)
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => {
-                                    n += 1;
-                                    ControlFlow::Continue(())
-                                }
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+            }
+            (false, true) => {
+                let mut n = 0;
+                let mut f = |chain: Chain| {
+                    if max.is_some_and(|max| n >= max) {
+                        return ControlFlow::Break(Ok(()));
                     }
-                }
-                (Some(node), None, None) => {
-                    let mut f = |chain: Chain| {
-                        if chain.len() >= node {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-                            return match write!(writer, "{name}+{}", addr - start)
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+                    if node.is_some_and(|node| chain.len() < node) {
+                        return ControlFlow::Continue(());
                     }
-                }
-                (Some(node), None, Some(last)) => {
-                    let mut f = |chain: Chain| {
-                        if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-                            return match write!(writer, "{name}+{}", addr - start)
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), Some(max), None) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-
-                        if chain.len() >= node {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-                            return match write!(writer, "{name}+{}", addr - start)
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => {
-                                    n += 1;
-                                    ControlFlow::Continue(())
-                                }
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), Some(max), Some(last)) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            let Some((Range { start, .. }, name)) = self.index.get_key_value(addr) else {
-                                return ControlFlow::Continue(());
-                            };
-                            return match write!(writer, "{name}+{}", addr - start)
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => {
-                                    n += 1;
-                                    ControlFlow::Continue(())
-                                }
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-            },
-            (false, true) => match (node, max, last) {
-                (None, None, None) => {
-                    let mut f = |chain: Chain| {
+                    if last.is_none() || last == chain.last().copied() {
                         let addr = chain.addr();
-                        match chain.ref_cycle() {
-                            Some(mut iter) => match write!(writer, "{addr}")
-                                .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            },
-                            None => match write!(writer, "{addr}")
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            },
-                        }
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (None, None, Some(last)) => {
-                    let mut f = |chain: Chain| {
-                        if chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{addr}")
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{addr}")
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (None, Some(max), None) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        match chain.ref_cycle() {
+                        return match chain.ref_cycle() {
                             Some(mut iter) => match write!(writer, "{addr}")
                                 .and(iter.try_for_each(|o| write!(writer, "@{o}")))
                                 .and(writeln!(writer))
@@ -752,231 +284,27 @@ impl PtrsxScanner {
                                 }
                                 Err(err) => ControlFlow::Break(Err(err)),
                             },
-                        }
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+                        };
                     }
+                    ControlFlow::Continue(())
+                };
+                match try_pointer_chain_scan(&self.map, points, param, &mut f) {
+                    ControlFlow::Continue(_) => Ok(()),
+                    ControlFlow::Break(b) => b,
                 }
-                (None, Some(max), Some(last)) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        if chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => {
-                                    match write!(writer, "{addr}")
-                                        .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                        .and(writeln!(writer))
-                                    {
-                                        Ok(_) => {
-                                            n += 1;
-                                            ControlFlow::Continue(())
-                                        }
-                                        Err(err) => ControlFlow::Break(Err(err)),
-                                    }
-                                }
-                                None => match write!(writer, "{addr}")
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+            }
+            (false, false) => {
+                let mut n = 0;
+                let mut f = |chain: Chain| {
+                    if max.is_some_and(|max| n >= max) {
+                        return ControlFlow::Break(Ok(()));
                     }
-                }
-                (Some(node), None, None) => {
-                    let mut f = |chain: Chain| {
-                        if chain.len() >= node {
-                            let addr = chain.addr();
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{addr}")
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{addr}")
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+                    if node.is_some_and(|node| chain.len() < node) {
+                        return ControlFlow::Continue(());
                     }
-                }
-                (Some(node), None, Some(last)) => {
-                    let mut f = |chain: Chain| {
-                        if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{addr}")
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{addr}")
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), Some(max), None) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-
-                        if chain.len() >= node {
-                            let addr = chain.addr();
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{addr}")
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{addr}")
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), Some(max), Some(last)) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            return match chain.ref_cycle() {
-                                Some(mut iter) => match write!(writer, "{addr}")
-                                    .and(iter.try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                                None => match write!(writer, "{addr}")
-                                    .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                    .and(writeln!(writer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                },
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-            },
-            (false, false) => match (node, max, last) {
-                (None, None, None) => {
-                    let mut f = |chain: Chain| {
+                    if last.is_none() || last == chain.last().copied() {
                         let addr = chain.addr();
-                        match write!(writer, "{addr}")
-                            .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                            .and(writeln!(writer))
-                        {
-                            Ok(_) => ControlFlow::Continue(()),
-                            Err(err) => ControlFlow::Break(Err(err)),
-                        }
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (None, None, Some(last)) => {
-                    let mut f = |chain: Chain| {
-                        if chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            return match write!(writer, "{addr}")
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (None, Some(max), None) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        let addr = chain.addr();
-                        match write!(writer, "{addr}")
+                        return match write!(writer, "{addr}")
                             .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
                             .and(writeln!(writer))
                         {
@@ -985,131 +313,15 @@ impl PtrsxScanner {
                                 ControlFlow::Continue(())
                             }
                             Err(err) => ControlFlow::Break(Err(err)),
-                        }
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
+                        };
                     }
+                    ControlFlow::Continue(())
+                };
+                match try_pointer_chain_scan(&self.map, points, param, &mut f) {
+                    ControlFlow::Continue(_) => Ok(()),
+                    ControlFlow::Break(b) => b,
                 }
-                (None, Some(max), Some(last)) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        if chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            return match write!(writer, "{addr}")
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => {
-                                    n += 1;
-                                    ControlFlow::Continue(())
-                                }
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), None, None) => {
-                    let mut f = |chain: Chain| {
-                        if chain.len() >= node {
-                            let addr = chain.addr();
-                            return match write!(writer, "{addr}")
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), None, Some(last)) => {
-                    let mut f = |chain: Chain| {
-                        if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            return match write!(writer, "{addr}")
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), Some(max), None) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-
-                        if chain.len() >= node {
-                            let addr = chain.addr();
-                            return match write!(writer, "{addr}")
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => {
-                                    n += 1;
-                                    ControlFlow::Continue(())
-                                }
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-                (Some(node), Some(max), Some(last)) => {
-                    let mut n = 0;
-                    let mut f = |chain: Chain| {
-                        if n >= max {
-                            return ControlFlow::Break(Ok(()));
-                        }
-                        if chain.len() >= node && chain.last().is_some_and(|o| last.eq(o)) {
-                            let addr = chain.addr();
-                            return match write!(writer, "{addr}")
-                                .and(chain.data().try_for_each(|o| write!(writer, "@{o}")))
-                                .and(writeln!(writer))
-                            {
-                                Ok(_) => {
-                                    n += 1;
-                                    ControlFlow::Continue(())
-                                }
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            };
-                        }
-                        ControlFlow::Continue(())
-                    };
-                    match try_pointer_chain_scan(&self.map, points, param, &mut f) {
-                        ControlFlow::Continue(_) => Ok(()),
-                        ControlFlow::Break(b) => b,
-                    }
-                }
-            },
+            }
         }?;
 
         Ok(())
