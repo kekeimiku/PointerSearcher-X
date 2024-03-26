@@ -93,7 +93,7 @@ fn find_base_address<P: ProcessInfo>(proc: &P, name: &str, index: usize) -> Opti
             let name = Path::new(name).file_name().and_then(|s| s.to_str()).unwrap_or(name);
             Module { start, end, name }
         })
-        .filter(|x| x.name.eq(name))
+        .filter(|x| x.name.replace("[", "").replace("]", "").eq(name))
         .nth(index)
         .map(|x| x.start)
 }
