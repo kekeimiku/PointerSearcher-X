@@ -38,7 +38,7 @@ pub struct FFIParam {
     /// `P1->P5`, 略微影响指针链计算速度，默认 `false`，不计算循环引用
     pub cycle: bool,
 
-    /// 下面三个参数没有意义，可能用于控制输出原始指针链的格式，暂时没有实现
+    /// 下面这些参没有意义，用于控制输出原始指针链的格式，暂时没有实现
     pub raw1: bool,
     pub raw2: bool,
     pub raw3: bool,

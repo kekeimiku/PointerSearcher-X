@@ -36,7 +36,7 @@ pub struct FFIParam {
     pub raw3: bool,
 }
 
-#[link(name = "ptrscan")]
+#[link(name = "ptrscan", kind = "static")]
 extern "C" {
     pub fn get_last_error(code: ::core::ffi::c_int) -> *const ::core::ffi::c_char;
     pub fn ptrscan_init() -> *mut FFIPointerScan;

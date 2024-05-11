@@ -6,7 +6,7 @@ edition = "2021"
 [lib]
 name = "ptrscan"
 path = "src/lib.rs"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "staticlib"]
 
 [target.'cfg(any(target_os = "macos", target_os = "ios"))'.dependencies.machx]
 version = "0.4.9"

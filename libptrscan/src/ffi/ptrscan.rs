@@ -68,20 +68,6 @@ pub unsafe extern "C" fn ptrscan_attach_process(ptr: *mut FFIPointerScan, pid: i
     SUCCESS
 }
 
-/// 加载指针映射文件到内存中
-#[no_mangle]
-pub unsafe extern "C" fn ptrscan_load_pointer_map_file(
-    ptr: *mut FFIPointerScan,
-    path: *const c_char,
-) -> c_int {
-    let path = try_result!(CStr::from_ptr(path).to_str());
-    let ptrscan = try_null!(ptr.as_mut());
-    let pointer_map = try_result!(load_pointer_map_file(path));
-    ptrscan.pointer_map = Some(pointer_map);
-
-    SUCCESS
-}
-
 /// 获取可以作为静态基址的模块列表
 #[no_mangle]
 pub unsafe extern "C" fn ptrscan_list_modules(
@@ -122,6 +108,39 @@ pub unsafe extern "C" fn ptrscan_list_modules(
     SUCCESS
 }
 
+/// 在内存中创建指针数据
+/// 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
+/// `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个
+/// `module.pathname`, 为了方便库使用者自己解析静态地址，规则是使用者自己订的。
+/// 例如只传入文件名而不是整个路径，使用索引处理相同的模块名，
+/// 扫描指针链会程序根据 `module.name` 输出静态基址部分的内容。
+/// 如果你很懂内存，那也可以根据需要传入特定的地址范围，
+/// 例如合并相同模块名的连续区域
+#[no_mangle]
+pub unsafe extern "C" fn ptrscan_create_pointer_map(
+    ptr: *mut FFIPointerScan,
+    modules: *const FFIModule,
+    size: usize,
+) -> c_int {
+    let ptrscan = try_null!(ptr.as_mut());
+    let process = try_option!(ptrscan.process.as_ref());
+
+    let unknown_maps = try_result!(process.list_unknown_maps());
+    let module_maps = slice::from_raw_parts(modules, size)
+        .iter()
+        .map(|&FFIModule { start, end, pathname }| {
+            let pathname = CStr::from_ptr(pathname).to_str()?.to_string();
+            Ok((start..end, pathname))
+        })
+        .collect::<Result<_, Utf8Error>>();
+    let module_maps = try_result!(module_maps);
+
+    let pointer_map = try_result!(process.create_pointer_map(module_maps, &unknown_maps));
+    ptrscan.pointer_map = Some(pointer_map);
+
+    SUCCESS
+}
+
 /// 在文件中创建指针映射
 /// 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
 /// `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个
@@ -156,34 +175,15 @@ pub unsafe extern "C" fn ptrscan_create_pointer_map_file(
     SUCCESS
 }
 
-/// 在内存中创建指针数据
-/// 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
-/// `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个
-/// `module.pathname`, 为了方便库使用者自己解析静态地址，规则是使用者自己订的。
-/// 例如只传入文件名而不是整个路径，使用索引处理相同的模块名，
-/// 扫描指针链会程序根据 `module.name` 输出静态基址部分的内容。
-/// 如果你很懂内存，那也可以根据需要传入特定的地址范围，
-/// 例如合并相同模块名的连续区域
+/// 加载指针映射文件到内存中
 #[no_mangle]
-pub unsafe extern "C" fn ptrscan_create_pointer_map(
+pub unsafe extern "C" fn ptrscan_load_pointer_map_file(
     ptr: *mut FFIPointerScan,
-    modules: *const FFIModule,
-    size: usize,
+    path: *const c_char,
 ) -> c_int {
+    let path = try_result!(CStr::from_ptr(path).to_str());
     let ptrscan = try_null!(ptr.as_mut());
-    let process = try_option!(ptrscan.process.as_ref());
-
-    let unknown_maps = try_result!(process.list_unknown_maps());
-    let module_maps = slice::from_raw_parts(modules, size)
-        .iter()
-        .map(|&FFIModule { start, end, pathname }| {
-            let pathname = CStr::from_ptr(pathname).to_str()?.to_string();
-            Ok((start..end, pathname))
-        })
-        .collect::<Result<_, Utf8Error>>();
-    let module_maps = try_result!(module_maps);
-
-    let pointer_map = try_result!(process.create_pointer_map(module_maps, &unknown_maps));
+    let pointer_map = try_result!(load_pointer_map_file(path));
     ptrscan.pointer_map = Some(pointer_map);
 
     SUCCESS
