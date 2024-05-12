@@ -9,7 +9,7 @@ use std::{
     path::Path,
 };
 
-use super::{Header, ModuleMap, PointerMap, ARCH64, MAGIC};
+use super::{Header, PointerMap, RangeMap, ARCH64, MAGIC};
 
 pub fn load_pointer_map_file(pathname: impl AsRef<Path>) -> Result<PointerMap, Error> {
     let file = File::open(pathname)?;
@@ -24,7 +24,7 @@ pub fn load_pointer_map_file(pathname: impl AsRef<Path>) -> Result<PointerMap, E
         return Err(Error::new(ErrorKind::Other, "invalid pointer_map file"));
     }
 
-    let mut modules = ModuleMap::new();
+    let mut modules = RangeMap::new();
     for _ in 0..header.modules_size {
         let mut buf = [0_u8; mem::size_of::<usize>() * 3];
         cursor.get_mut().read_exact(&mut buf)?;

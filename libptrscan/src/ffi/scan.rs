@@ -40,7 +40,8 @@ pub fn pointer_chain_scan(
         (None, None, None) => {
             let mut f = |chain: Chain| {
                 let addr = chain.addr();
-                let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(addr) else {
+                let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
+                else {
                     return ControlFlow::Continue(());
                 };
                 match write!(buffer, "{name}+{}", addr - start)
@@ -60,7 +61,8 @@ pub fn pointer_chain_scan(
                     return ControlFlow::Break(Ok(()));
                 }
                 let addr = chain.addr();
-                let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(addr) else {
+                let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
+                else {
                     return ControlFlow::Continue(());
                 };
                 match write!(buffer, "{name}+{}", addr - start)
@@ -80,7 +82,7 @@ pub fn pointer_chain_scan(
             let mut f = |chain: Chain| {
                 if chain.last().is_some_and(|o| last.eq(o)) {
                     let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(addr)
+                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
                     else {
                         return ControlFlow::Continue(());
                     };
@@ -104,7 +106,7 @@ pub fn pointer_chain_scan(
                 }
                 if chain.last().is_some_and(|o| last.eq(o)) {
                     let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(addr)
+                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
                     else {
                         return ControlFlow::Continue(());
                     };
@@ -127,7 +129,7 @@ pub fn pointer_chain_scan(
             let mut f = |chain: Chain| {
                 if chain.len() >= node {
                     let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(addr)
+                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
                     else {
                         return ControlFlow::Continue(());
                     };
@@ -151,7 +153,7 @@ pub fn pointer_chain_scan(
                 }
                 if chain.len() >= node {
                     let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(addr)
+                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
                     else {
                         return ControlFlow::Continue(());
                     };
@@ -177,7 +179,7 @@ pub fn pointer_chain_scan(
                     .is_some_and(|o| chain.len() >= node && last.eq(o))
                 {
                     let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(addr)
+                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
                     else {
                         return ControlFlow::Continue(());
                     };
@@ -204,7 +206,7 @@ pub fn pointer_chain_scan(
                     .is_some_and(|o| chain.len() >= node && last.eq(o))
                 {
                     let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(addr)
+                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
                     else {
                         return ControlFlow::Continue(());
                     };

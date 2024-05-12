@@ -1,11 +1,10 @@
 use std::{
     fs::{self, File},
     io::Read,
-    ops::Range,
     path::Path,
 };
 
-use super::ModuleMap;
+use super::{RangeMap, RangeSet};
 
 struct Map<'a> {
     start: usize,
@@ -74,11 +73,11 @@ impl<'a> Iterator for MapIter<'a> {
     }
 }
 
-pub fn list_image_maps(pid: i32) -> Result<ModuleMap<usize, String>, std::io::Error> {
+pub fn list_image_maps(pid: i32) -> Result<RangeMap<usize, String>, std::io::Error> {
     let contents = fs::read_to_string(format!("/proc/{pid}/maps"))?;
     let maps = MapIter::new(&contents);
 
-    let mut image_module_maps = ModuleMap::new();
+    let mut image_module_maps = RangeMap::new();
     let mut buf = [0; 8];
 
     for map in maps.filter(|m| m.is_read() && m.is_write()) {
@@ -103,17 +102,17 @@ pub fn list_image_maps(pid: i32) -> Result<ModuleMap<usize, String>, std::io::Er
     Ok(image_module_maps)
 }
 
-pub fn list_unknown_maps(pid: i32) -> Result<Vec<Range<usize>>, std::io::Error> {
+pub fn list_unknown_maps(pid: i32) -> Result<RangeSet<usize>, std::io::Error> {
     let contents = fs::read_to_string(format!("/proc/{pid}/maps"))?;
     let maps = MapIter::new(&contents);
 
-    let mut unknown_maps = vec![];
+    let mut unknown_maps = RangeSet::new();
 
     const REGIONS: [&str; 4] = ["[anon:.bss]", "[anon:libc_malloc]", "[stack]", "[heap]"];
 
     for map in maps.filter(|m| m.is_read() && m.is_write()) {
         if map.name().is_some_and(|name| REGIONS.contains(&name)) || map.name().is_none() {
-            unknown_maps.push(map.start()..map.end())
+            unknown_maps.insert(map.start()..map.end())
         }
     }
 

@@ -1,10 +1,9 @@
-use core::ops::Range;
 use std::{fs::File, os::unix::fs::FileExt, path::Path};
 
 use super::{
     dump::{create_pointer_map, create_pointer_map_file},
     info::{list_image_maps, list_unknown_maps},
-    Error, ModuleMap, PointerMap,
+    Error, PointerMap, RangeMap, RangeSet,
 };
 
 pub struct Process {
@@ -19,18 +18,18 @@ impl Process {
         Ok(Self { pid, mem })
     }
 
-    pub fn list_image_maps(&self) -> Result<ModuleMap<usize, String>, Error> {
+    pub fn list_image_maps(&self) -> Result<RangeMap<usize, String>, Error> {
         list_image_maps(self.pid).map_err(|err| Error::QueryProcess(err))
     }
 
-    pub fn list_unknown_maps(&self) -> Result<Vec<Range<usize>>, Error> {
+    pub fn list_unknown_maps(&self) -> Result<RangeSet<usize>, Error> {
         list_unknown_maps(self.pid).map_err(|err| Error::QueryProcess(err))
     }
 
     pub fn create_pointer_map_file(
         &self,
-        module_maps: &ModuleMap<usize, String>,
-        unknown_maps: &[Range<usize>],
+        module_maps: RangeMap<usize, String>,
+        unknown_maps: RangeSet<usize>,
         path: impl AsRef<Path>,
     ) -> Result<(), Error> {
         create_pointer_map_file(&self.mem, module_maps, unknown_maps, path)
@@ -38,8 +37,8 @@ impl Process {
 
     pub fn create_pointer_map(
         &self,
-        module_maps: ModuleMap<usize, String>,
-        unknown_maps: &[Range<usize>],
+        module_maps: RangeMap<usize, String>,
+        unknown_maps: RangeSet<usize>,
     ) -> Result<PointerMap, Error> {
         create_pointer_map(&self.mem, module_maps, unknown_maps)
     }

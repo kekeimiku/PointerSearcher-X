@@ -1,6 +1,6 @@
 #![allow(clippy::missing_safety_doc)]
 
-use core::{ffi::CStr, fmt::Display, mem, ops::Range, str};
+use core::{ffi::CStr, fmt::Display, mem, str};
 use std::{
     io,
     io::{Error, ErrorKind},
@@ -21,7 +21,7 @@ use machx::{
     vm_types::{mach_vm_address_t, mach_vm_size_t},
 };
 
-use super::ModuleMap;
+use super::{RangeMap, RangeSet};
 
 #[derive(Debug)]
 pub enum QueryProcError {
@@ -60,8 +60,8 @@ impl Display for QueryProcError {
     }
 }
 
-pub unsafe fn list_unknown_maps(pid: i32) -> Result<Vec<Range<usize>>, QueryProcError> {
-    let mut unknown_maps = Vec::with_capacity(128);
+pub unsafe fn list_unknown_maps(pid: i32) -> Result<RangeSet<usize>, QueryProcError> {
+    let mut unknown_maps = RangeSet::new();
     let mut address = 0;
     let mut last_ino = 0;
     loop {
@@ -102,7 +102,7 @@ pub unsafe fn list_unknown_maps(pid: i32) -> Result<Vec<Range<usize>>, QueryProc
         {
             let range = rwpi.prp_prinfo.pri_address as usize
                 ..(rwpi.prp_prinfo.pri_size + rwpi.prp_prinfo.pri_address) as usize;
-            unknown_maps.push(range);
+            unknown_maps.insert(range);
             last_ino = ino
         }
     }
@@ -113,7 +113,7 @@ pub unsafe fn list_unknown_maps(pid: i32) -> Result<Vec<Range<usize>>, QueryProc
 pub unsafe fn list_image_maps(
     pid: i32,
     task: task_name_t,
-) -> Result<ModuleMap<usize, String>, QueryProcError> {
+) -> Result<RangeMap<usize, String>, QueryProcError> {
     let mut dyld_info = mem::zeroed::<task_dyld_info>();
     let mut count = task_dyld_info::count() as u32;
 
@@ -154,7 +154,7 @@ pub unsafe fn list_image_maps(
         return Err(QueryProcError::ReadMem(kr));
     }
 
-    let mut module_maps = ModuleMap::new();
+    let mut module_maps = RangeMap::new();
 
     for module in modules {
         // 也许有办法不必解析 mach-o ...

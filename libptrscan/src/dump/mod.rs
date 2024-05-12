@@ -15,19 +15,19 @@ pub use windows::Process;
 
 mod error;
 mod load;
-mod map;
+mod rangemap;
 
 use core::{mem, slice};
 use std::collections::BTreeMap;
 
 pub use error::Error;
 pub use load::load_pointer_map_file;
-pub use map::ModuleMap;
+pub use rangemap::{RangeMap, RangeSet};
 
 pub struct PointerMap {
     pub points: Vec<usize>,
     pub map: BTreeMap<usize, Vec<usize>>,
-    pub modules: ModuleMap<usize, String>,
+    pub modules: RangeMap<usize, String>,
 }
 
 pub(crate) const MAGIC: &[u8; 4] = b"@PTR";

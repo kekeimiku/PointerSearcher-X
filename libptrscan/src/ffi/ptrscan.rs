@@ -13,14 +13,14 @@ use super::{
     scan::{pointer_chain_scan, UserParam},
 };
 use crate::{
-    dump::{load_pointer_map_file, ModuleMap, PointerMap, Process},
+    dump::{load_pointer_map_file, PointerMap, Process, RangeMap},
     scan::Param,
 };
 
 pub struct FFIPointerScan {
     process: Option<Process>,
     pointer_map: Option<PointerMap>,
-    modules: Option<ModuleMap<usize, CString>>,
+    modules: Option<RangeMap<usize, CString>>,
     modules_ptr: Option<Vec<FFIModule>>,
 }
 
@@ -135,7 +135,7 @@ pub unsafe extern "C" fn ptrscan_create_pointer_map(
         .collect::<Result<_, Utf8Error>>();
     let module_maps = try_result!(module_maps);
 
-    let pointer_map = try_result!(process.create_pointer_map(module_maps, &unknown_maps));
+    let pointer_map = try_result!(process.create_pointer_map(module_maps, unknown_maps));
     ptrscan.pointer_map = Some(pointer_map);
 
     SUCCESS
@@ -170,7 +170,7 @@ pub unsafe extern "C" fn ptrscan_create_pointer_map_file(
         .collect::<Result<_, Utf8Error>>();
     let module_maps = try_result!(module_maps);
 
-    try_result!(process.create_pointer_map_file(&module_maps, &unknown_maps, path));
+    try_result!(process.create_pointer_map_file(module_maps, unknown_maps, path));
 
     SUCCESS
 }

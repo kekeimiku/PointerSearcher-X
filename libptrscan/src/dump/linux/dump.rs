@@ -1,5 +1,4 @@
 use std::{
-    cmp::Ordering,
     collections::BTreeMap,
     fs::File,
     io::{BufWriter, Write},
@@ -9,33 +8,22 @@ use std::{
     path::Path,
 };
 
-use super::{Error, Header, ModuleMap, PointerMap, ARCH64, MAGIC};
-
-#[inline]
-fn is_pointer(range_maps: &[Range<usize>], addr: &usize) -> bool {
-    range_maps
-        .binary_search_by(|Range { start, end }| match (start..end).contains(&addr) {
-            true => Ordering::Equal,
-            false => start.cmp(addr),
-        })
-        .is_ok()
-}
+use super::{Error, Header, PointerMap, RangeMap, RangeSet, ARCH64, MAGIC};
 
 pub fn create_pointer_map(
     mem: &File,
-    module_maps: ModuleMap<usize, String>,
-    unknown_maps: &[Range<usize>],
+    module_maps: RangeMap<usize, String>,
+    unknown_maps: RangeSet<usize>,
 ) -> Result<PointerMap, Error> {
-    let mut range_maps = Vec::with_capacity(128);
-    range_maps.extend(module_maps.iter().map(|(range, _)| range.clone()));
-    range_maps.extend_from_slice(unknown_maps);
-    range_maps.sort_unstable_by_key(|r| r.start);
-    range_maps.dedup();
+    let range_maps = unknown_maps
+        .into_iter()
+        .chain(module_maps.iter().map(|(k, _)| k).cloned())
+        .collect::<RangeSet<usize>>();
 
     let mut addr_map = BTreeMap::new();
 
     let mut buf = vec![0_u8; 0x100000];
-    for Range { start, end } in &range_maps {
+    for Range { start, end } in range_maps.iter() {
         let (start, size) = (start, end - start);
         for off in (0..size).step_by(0x100000) {
             let Ok(size) = mem.read_at(&mut buf, (start + off) as u64) else {
@@ -47,7 +35,7 @@ pub fn create_pointer_map(
                 .enumerate()
                 .step_by(mem::size_of::<usize>())
                 .map(|(k, v)| (k, usize::from_ne_bytes(v.try_into().unwrap())))
-                .filter(|(_, v)| is_pointer(&range_maps, v))
+                .filter(|(_, v)| range_maps.get_range_by_point(v).is_some())
             {
                 let k = start + off + k;
                 addr_map.insert(k, v);
@@ -83,16 +71,14 @@ fn header(size: u32) -> Header {
 
 pub fn create_pointer_map_file(
     mem: &File,
-    module_maps: &ModuleMap<usize, String>,
-    unknown_maps: &[Range<usize>],
+    module_maps: RangeMap<usize, String>,
+    unknown_maps: RangeSet<usize>,
     path: impl AsRef<Path>,
 ) -> Result<(), Error> {
-    let mut range_maps = Vec::with_capacity(128);
-    range_maps.extend(module_maps.iter().map(|(range, _)| range.clone()));
-    range_maps.extend_from_slice(unknown_maps);
-    // TODO: 正常情况下根本不需要排序以及删除重复元素
-    range_maps.sort_unstable_by_key(|r| r.start);
-    range_maps.dedup();
+    let range_maps = unknown_maps
+        .into_iter()
+        .chain(module_maps.iter().map(|(k, _)| k).cloned())
+        .collect::<RangeSet<usize>>();
 
     let file = File::options().append(true).create_new(true).open(path)?;
     let mut buffer = BufWriter::with_capacity(0x100000, file);
@@ -100,7 +86,7 @@ pub fn create_pointer_map_file(
     buffer.write_all(header(module_maps.len() as u32).as_bytes())?;
 
     module_maps
-        .iter()
+        .into_iter()
         .try_for_each(|(Range { start, end }, name)| {
             buffer
                 .write_all(&start.to_ne_bytes())
@@ -110,7 +96,7 @@ pub fn create_pointer_map_file(
         })?;
 
     let mut buf = vec![0_u8; 0x100000];
-    for Range { start, end } in &range_maps {
+    for Range { start, end } in range_maps.iter() {
         let (start, size) = (start, end - start);
         for off in (0..size).step_by(0x100000) {
             let Ok(size) = mem.read_at(&mut buf, (start + off) as u64) else {
@@ -122,7 +108,7 @@ pub fn create_pointer_map_file(
                 .enumerate()
                 .step_by(mem::size_of::<usize>())
                 .map(|(k, v)| (k, usize::from_ne_bytes(v.try_into().unwrap())))
-                .filter(|(_, v)| is_pointer(&range_maps, v))
+                .filter(|(_, v)| range_maps.get_range_by_point(v).is_some())
             {
                 let k = start + off + k;
                 buffer

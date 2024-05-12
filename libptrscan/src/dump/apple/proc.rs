@@ -1,4 +1,3 @@
-use core::ops::Range;
 use std::path::Path;
 
 use machx::{
@@ -11,7 +10,7 @@ use machx::{
 use super::{
     dump::{create_pointer_map, create_pointer_map_file},
     info::{list_image_maps, list_unknown_maps},
-    Error, ModuleMap, PointerMap,
+    Error, PointerMap, RangeMap, RangeSet,
 };
 
 pub struct Process {
@@ -29,18 +28,18 @@ impl Process {
         Ok(Self { pid, task })
     }
 
-    pub fn list_image_maps(&self) -> Result<ModuleMap<usize, String>, Error> {
+    pub fn list_image_maps(&self) -> Result<RangeMap<usize, String>, Error> {
         unsafe { list_image_maps(self.pid, self.task) }.map_err(Error::QueryProcess)
     }
 
-    pub fn list_unknown_maps(&self) -> Result<Vec<Range<usize>>, Error> {
+    pub fn list_unknown_maps(&self) -> Result<RangeSet<usize>, Error> {
         unsafe { list_unknown_maps(self.pid) }.map_err(Error::QueryProcess)
     }
 
     pub fn create_pointer_map_file(
         &self,
-        module_maps: &ModuleMap<usize, String>,
-        unknown_maps: &[Range<usize>],
+        module_maps: RangeMap<usize, String>,
+        unknown_maps: RangeSet<usize>,
         path: impl AsRef<Path>,
     ) -> Result<(), Error> {
         create_pointer_map_file(self.task, module_maps, unknown_maps, path)
@@ -48,8 +47,8 @@ impl Process {
 
     pub fn create_pointer_map(
         &self,
-        module_maps: ModuleMap<usize, String>,
-        unknown_maps: &[Range<usize>],
+        module_maps: RangeMap<usize, String>,
+        unknown_maps: RangeSet<usize>,
     ) -> Result<PointerMap, Error> {
         create_pointer_map(self.task, module_maps, unknown_maps)
     }
