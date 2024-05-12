@@ -10,6 +10,7 @@ use std::{
 
 use super::{Error, Header, PointerMap, RangeMap, RangeSet, ARCH64, MAGIC};
 
+// TODO: 可以轻松的转为并行，但不是现在
 pub fn create_pointer_map(
     mem: &File,
     module_maps: RangeMap<usize, String>,
@@ -43,7 +44,7 @@ pub fn create_pointer_map(
         }
     }
 
-    let points: Vec<_> = module_maps
+    let points = module_maps
         .iter()
         .flat_map(|(Range { start, end }, ..)| {
             addr_map.range((Bound::Included(start), Bound::Included(end)))

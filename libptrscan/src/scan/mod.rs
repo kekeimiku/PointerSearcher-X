@@ -1,3 +1,6 @@
+// 执行指针链扫描的核心算法
+// TODO: 针对不同 CPU 不同的数据量做单独优化，它目前仅适合缓存较大的情况
+
 #![allow(clippy::len_without_is_empty)]
 #![cfg_attr(feature = "nightly", feature(try_trait_v2))]
 
@@ -225,6 +228,8 @@ where
     let min = addr.saturating_sub(srange.1);
     let max = addr.saturating_add(srange.0);
 
+    // 将 points 作为 BTreeSet 会很好，因为它有一个 range
+    // 方法，不幸的是，测试中它的性能可能不如 Vec，除非使用苹果芯片。
     let idx = points.binary_search(&min).unwrap_or_else(|x| x);
 
     if points
@@ -286,6 +291,8 @@ where
         (addr.saturating_sub(lrange.1), addr.saturating_add(lrange.0))
     };
 
+    // 将 points 作为 BTreeSet 会很好，因为它有一个 range
+    // 方法，不幸的是，测试中它的性能可能不如 Vec，除非使用苹果芯片。
     let idx = points.binary_search(&min).unwrap_or_else(|x| x);
 
     if points
@@ -338,6 +345,8 @@ where
     let min = addr.saturating_sub(srange.1);
     let max = addr.saturating_add(srange.0);
 
+    // 将 points 作为 BTreeSet 会很好，因为它有一个 range
+    // 方法，不幸的是，测试中它的性能可能不如 Vec，除非使用苹果芯片。
     let idx = points
         .iter()
         .position(|x| min.le(x))
@@ -402,6 +411,8 @@ where
         (addr.saturating_sub(lrange.1), addr.saturating_add(lrange.0))
     };
 
+    // 将 points 作为 BTreeSet 会很好，因为它有一个 range
+    // 方法，不幸的是，测试中它的性能可能不如 Vec，除非使用苹果芯片。
     let idx = points
         .iter()
         .position(|x| min.le(x))
@@ -462,9 +473,8 @@ where
     let Param { depth, addr, srange, lrange } = param;
     let mut data = Vec::with_capacity(param.depth);
     match lrange {
-        Some(last_range) => {
-            let param =
-                CoreParamExt { core: CoreParam { depth, addr, srange }, lrange: last_range };
+        Some(lrange) => {
+            let param = CoreParamExt { core: CoreParam { depth, addr, srange }, lrange };
             if points.len() > MIN {
                 __try_chain_scan_ext_1(map, points, param, f, &mut data, CURR)
             } else {
