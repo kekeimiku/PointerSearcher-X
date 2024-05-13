@@ -159,13 +159,16 @@ class PointerScan:
             err = self._get_last_error(value)
             raise Exception(err)
 
+    # Get current version
     def version(self) -> str:
         return self._lib.ptrscan_version().decode()
 
+    # Attach to process
     def attach_process(self, pid: int):
         ret = self._lib.ptrscan_attach_process(self._ptr, c_int(pid))
         self._check_error(ret)
 
+    # Get a list of modules that can be used as static base addresses
     def list_modules(self) -> List[Tuple[int, int, str]]:
         modules_ptr = POINTER(FFIModule)()
         size = c_size_t()
@@ -178,6 +181,14 @@ class PointerScan:
         ]
         return module_list
 
+    # Create pointer data in memory
+    # It is created based on the passed in basic module address range `module.start` and `module.end`.
+    # `module.pathname` is a file path, for library users you should handle this as needed
+    # `module.pathname`, in order to facilitate library users to resolve static addresses by themselves, the rules are set by users themselves.
+    # For example, only pass in the file name instead of the entire path, use the index to process the same module name,
+    # Scanning the pointer chain will program output the contents of the static base address part according to `module.name`.
+    # If you know memory well, you can also pass in a specific address range as needed.
+    # For example, merge consecutive areas with the same module name
     def create_pointer_map(self, modules: List[Tuple[int, int, str]]):
         modules_ptr = (FFIModule * len(modules))()
         for i, module_tuple in enumerate(modules):
@@ -190,6 +201,14 @@ class PointerScan:
         )
         self._check_error(ret)
 
+    # Create pointer mapping in file
+    # It is created based on the passed in basic module address range `module.start` and `module.end`.
+    # `module.pathname` is a file path, for library users you should handle this as needed
+    # `module.pathname`, in order to facilitate library users to resolve static addresses by themselves, the rules are set by users themselves.
+    # For example, only pass in the file name instead of the entire path, use the index to process the same module name,
+    # scanning the pointer chain will program output the contents of the static base address part according to `module.name`.
+    # If you know memory well, you can also pass in a specific address range as needed.
+    # For example, merge consecutive areas with the same module name
     def create_pointer_map_file(
         self, modules: List[Tuple[int, int, str]], pathname: str
     ):
@@ -204,10 +223,16 @@ class PointerScan:
         )
         self._check_error(ret)
 
+    # Load pointer mapping file into memory
     def load_pointer_map_file(self, pathname: str):
         ret = self._lib.ptrscan_load_pointer_map_file(self._ptr, pathname.encode())
         self._check_error(ret)
 
+    # Scan pointer chain
+    # It is thread-safe. If you have multiple target address parameters, you can scan them in multiple threads at the same time.
+    # regarding pointer chain format analysis, each item starts with `$module.name+$offset`
+    # As a static base address, followed by the pointer chain offset, separated by `.`, the base address `offset` and subsequent 
+    # offsets are both decimal numbers
     def scan_pointer_chain(self, param: FFIParam, pathname: str):
         ret = self._lib.ptrscan_scan_pointer_chain(self._ptr, param, pathname.encode())
         self._check_error(ret)
