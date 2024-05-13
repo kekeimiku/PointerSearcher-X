@@ -47,9 +47,9 @@ pub fn pointer_chain_scan(
                 match write!(buffer, "{name}+{:X}", addr - start)
                     .and(chain.data().try_for_each(|&o| {
                         if o >= 0 {
-                            write!(buffer, ".{o}")
+                            write!(buffer, ".{o:X}")
                         } else {
-                            write!(buffer, ".-{}", o.abs())
+                            write!(buffer, ".-{:X}", o.abs())
                         }
                     }))
                     .and(writeln!(buffer))
@@ -74,9 +74,9 @@ pub fn pointer_chain_scan(
                 match write!(buffer, "{name}+{:X}", addr - start)
                     .and(chain.data().try_for_each(|&o| {
                         if o >= 0 {
-                            write!(buffer, ".{o}")
+                            write!(buffer, ".{o:X}")
                         } else {
-                            write!(buffer, ".-{}", o.abs())
+                            write!(buffer, ".-{:X}", o.abs())
                         }
                     }))
                     .and(writeln!(buffer))
@@ -101,9 +101,9 @@ pub fn pointer_chain_scan(
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o}")
+                                write!(buffer, ".{o:X}")
                             } else {
-                                write!(buffer, ".-{}", o.abs())
+                                write!(buffer, ".-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -131,9 +131,9 @@ pub fn pointer_chain_scan(
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o}")
+                                write!(buffer, ".{o:X}")
                             } else {
-                                write!(buffer, ".-{}", o.abs())
+                                write!(buffer, ".-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -160,9 +160,9 @@ pub fn pointer_chain_scan(
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o}")
+                                write!(buffer, ".{o:X}")
                             } else {
-                                write!(buffer, ".-{}", o.abs())
+                                write!(buffer, ".-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -190,9 +190,9 @@ pub fn pointer_chain_scan(
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o}")
+                                write!(buffer, ".{o:X}")
                             } else {
-                                write!(buffer, ".-{}", o.abs())
+                                write!(buffer, ".-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -222,9 +222,9 @@ pub fn pointer_chain_scan(
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o}")
+                                write!(buffer, ".{o:X}")
                             } else {
-                                write!(buffer, ".-{}", o.abs())
+                                write!(buffer, ".-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -255,9 +255,9 @@ pub fn pointer_chain_scan(
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o}")
+                                write!(buffer, ".{o:X}")
                             } else {
-                                write!(buffer, ".-{}", o.abs())
+                                write!(buffer, ".-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
