@@ -124,7 +124,16 @@ pub fn list_image_maps_pince(pid: i32) -> Result<RangeMap<usize, String>, std::i
 
     let contents = fs::read_to_string(format!("/proc/{pid}/maps"))?;
     let maps = MapIter::new(&contents)
-        .filter(|m| m.is_read())
+        .filter_map(|m| {
+            Some((
+                m.start(),
+                m.end(),
+                m.is_read(),
+                m.is_write(),
+                m.inode,
+                m.name()?.to_string(),
+            ))
+        })
         .collect::<Vec<_>>();
 
     let mut image_module_maps = RangeMap::new();
@@ -132,23 +141,21 @@ pub fn list_image_maps_pince(pid: i32) -> Result<RangeMap<usize, String>, std::i
 
     let mut counts: HashMap<&str, usize> = HashMap::new();
 
-    for map in maps.iter() {
-        if let Some(name) = map.name() {
-            if map.inode != 0 {
-                let path = Path::new(name);
-                if !name.get(0..7).is_some_and(|s| s.eq("/memfd:")) && !path.starts_with("/dev/") {
-                    if path.is_file() {
-                        // TODO 判断文件是否是 elf64 小端
-                        let is_elf = File::open(path)
-                            .and_then(|mut f| f.read_exact(&mut buf))
-                            .is_ok_and(|_| [0x7f, b'E', b'L', b'F', 2, 1].eq(&buf[0..6]));
-                        if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                            let count = counts.entry(filename).or_insert(0);
-                            let name = format!("{filename}[{count}]");
-                            *count += 1;
-                            if map.is_read() && map.is_write() && is_elf {
-                                image_module_maps.insert(map.start()..map.end(), name);
-                            }
+    for &(start, end, is_read, is_write, inode, ref name) in maps.iter() {
+        if inode != 0 {
+            let path = Path::new(name);
+            if !name.get(0..7).is_some_and(|s| s.eq("/memfd:")) && !path.starts_with("/dev/") {
+                if path.is_file() {
+                    // TODO 判断文件是否是 elf64 小端
+                    let is_elf = File::open(path)
+                        .and_then(|mut f| f.read_exact(&mut buf))
+                        .is_ok_and(|_| [0x7f, b'E', b'L', b'F', 2, 1].eq(&buf[0..6]));
+                    if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+                        let count = counts.entry(filename).or_insert(0);
+                        let name = format!("{filename}[{count}]");
+                        *count += 1;
+                        if is_read && is_write && is_elf {
+                            image_module_maps.insert(start..end, name);
                         }
                     }
                 }
