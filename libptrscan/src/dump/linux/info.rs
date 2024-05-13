@@ -132,7 +132,7 @@ pub fn list_image_maps_pince(pid: i32) -> Result<RangeMap<usize, String>, std::i
 
     let mut counts: HashMap<&str, usize> = HashMap::new();
 
-    for map in maps.iter().filter(|m| m.is_read()) {
+    for map in maps.iter() {
         if let Some(name) = map.name() {
             if map.inode != 0 {
                 let path = Path::new(name);
