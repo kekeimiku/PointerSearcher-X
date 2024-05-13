@@ -142,14 +142,12 @@ pub fn list_image_maps_pince(pid: i32) -> Result<RangeMap<usize, String>, std::i
                         let is_elf = File::open(path)
                             .and_then(|mut f| f.read_exact(&mut buf))
                             .is_ok_and(|_| [0x7f, b'E', b'L', b'F', 2, 1].eq(&buf[0..6]));
-                        if is_elf {
-                            if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
-                                let count = counts.entry(filename).or_insert(0);
-                                let name = format!("{filename}[{count}]");
-                                *count += 1;
-                                if map.is_read() && map.is_write() {
-                                    image_module_maps.insert(map.start()..map.end(), name);
-                                }
+                        if let Some(filename) = path.file_name().and_then(|s| s.to_str()) {
+                            let count = counts.entry(filename).or_insert(0);
+                            let name = format!("{filename}[{count}]");
+                            *count += 1;
+                            if map.is_read() && map.is_write() && is_elf {
+                                image_module_maps.insert(map.start()..map.end(), name);
                             }
                         }
                     }
