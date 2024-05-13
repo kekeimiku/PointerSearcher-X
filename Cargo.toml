@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["libptrscan", "command"]
+members = ["libptrscan"]
 
 [profile.release]
 opt-level = 3

@@ -108,6 +108,46 @@ pub unsafe extern "C" fn ptrscan_list_modules(
     SUCCESS
 }
 
+/// 获取可以作为静态基址的模块列表
+#[no_mangle]
+pub unsafe extern "C" fn ptrscan_list_modules_pince(
+    ptr: *mut FFIPointerScan,
+    modules: *mut *const FFIModule,
+    size: *mut usize,
+) -> c_int {
+    let ptrscan = try_null!(ptr.as_mut());
+    let process = try_option!(ptrscan.process.as_ref());
+
+    let ffi_modules = try_result!(process.list_image_maps_pince())
+        .into_iter()
+        .map(|(range, pathname)| {
+            let pathname = CString::new(pathname)?;
+            Ok((range, pathname))
+        })
+        .collect::<Result<_, NulError>>();
+    let ffi_modules = try_result!(ffi_modules);
+    ptrscan.modules = Some(ffi_modules);
+
+    let ffi_modules_ptr = ptrscan
+        .modules
+        .as_ref()
+        .unwrap_unchecked()
+        .iter()
+        .map(|(range, pathname)| FFIModule {
+            start: range.start,
+            end: range.end,
+            pathname: pathname.as_ptr(),
+        })
+        .collect();
+    ptrscan.modules_ptr = Some(ffi_modules_ptr);
+
+    let ffi_modules_ptr = ptrscan.modules_ptr.as_ref().unwrap_unchecked();
+    size.write(ffi_modules_ptr.len());
+    modules.write(ffi_modules_ptr.as_ptr());
+
+    SUCCESS
+}
+
 /// 在内存中创建指针数据
 /// 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
 /// `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个

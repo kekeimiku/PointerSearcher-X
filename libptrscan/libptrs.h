@@ -139,6 +139,14 @@ int ptrscan_list_modules(struct FFIPointerScan *ptr,
                          const struct FFIModule **modules, uintptr_t *size);
 
 /**
+ * 获取可以作为静态基址的模块列表，专门适配pince，唯一的区别只有
+ * FFIModule.pathname 后面加了一个数字以表示索引
+ */
+int ptrscan_list_modules_pince(struct FFIPointerScan *ptr,
+                               const struct FFIModule **modules,
+                               uintptr_t *size);
+
+/**
  * 在内存中创建指针数据
  * 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
  * `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个

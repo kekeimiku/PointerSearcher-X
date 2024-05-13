@@ -109,6 +109,12 @@ class PointerScan:
             POINTER(POINTER(FFIModule)),
             POINTER(c_size_t),
         ),
+        "ptrscan_list_modules_pince": (
+            c_int,
+            POINTER(c_void_p),
+            POINTER(POINTER(FFIModule)),
+            POINTER(c_size_t),
+        ),
         "ptrscan_create_pointer_map": (
             c_int,
             POINTER(c_void_p),
@@ -181,6 +187,22 @@ class PointerScan:
         ]
         return module_list
 
+        # Get a list of modules that can be used as static base addresses
+
+    def list_modules_pince(self) -> List[Tuple[int, int, str]]:
+        modules_ptr = POINTER(FFIModule)()
+        size = c_size_t()
+        ret = self._lib.ptrscan_list_modules_pince(
+            self._ptr, byref(modules_ptr), byref(size)
+        )
+        self._check_error(ret)
+        modules = cast(modules_ptr, POINTER(FFIModule * size.value)).contents
+        module_list = [
+            (module._start, module._end, module._pathname.decode())
+            for module in modules
+        ]
+        return module_list
+
     # Create pointer data in memory
     # It is created based on the passed in basic module address range `module.start` and `module.end`.
     # `module.pathname` is a file path, for library users you should handle this as needed
@@ -231,7 +253,7 @@ class PointerScan:
     # Scan pointer chain
     # It is thread-safe. If you have multiple target address parameters, you can scan them in multiple threads at the same time.
     # regarding pointer chain format analysis, each item starts with `$module.name+$offset`
-    # As a static base address, followed by the pointer chain offset, separated by `.`, the base address `offset` and subsequent 
+    # As a static base address, followed by the pointer chain offset, separated by `.`, the base address `offset` and subsequent
     # offsets are both decimal numbers
     def scan_pointer_chain(self, param: FFIParam, pathname: str):
         ret = self._lib.ptrscan_scan_pointer_chain(self._ptr, param, pathname.encode())

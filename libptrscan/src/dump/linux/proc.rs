@@ -2,7 +2,7 @@ use std::{fs::File, os::unix::fs::FileExt, path::Path};
 
 use super::{
     dump::{create_pointer_map, create_pointer_map_file},
-    info::{list_image_maps, list_unknown_maps},
+    info::{list_image_maps, list_image_maps_pince, list_unknown_maps},
     Error, PointerMap, RangeMap, RangeSet,
 };
 
@@ -20,6 +20,10 @@ impl Process {
 
     pub fn list_image_maps(&self) -> Result<RangeMap<usize, String>, Error> {
         list_image_maps(self.pid).map_err(|err| Error::QueryProcess(err))
+    }
+
+    pub fn list_image_maps_pince(&self) -> Result<RangeMap<usize, String>, Error> {
+        list_image_maps_pince(self.pid).map_err(|err| Error::QueryProcess(err))
     }
 
     pub fn list_unknown_maps(&self) -> Result<RangeSet<usize>, Error> {
