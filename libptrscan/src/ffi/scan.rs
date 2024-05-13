@@ -44,8 +44,14 @@ pub fn pointer_chain_scan(
                 else {
                     return ControlFlow::Continue(());
                 };
-                match write!(buffer, "{name}+{}", addr - start)
-                    .and(chain.data().try_for_each(|o| write!(buffer, ".{o}")))
+                match write!(buffer, "{name}+{:X}", addr - start)
+                    .and(chain.data().try_for_each(|&o| {
+                        if o >= 0 {
+                            write!(buffer, ".{o}")
+                        } else {
+                            write!(buffer, ".-{}", o.abs())
+                        }
+                    }))
                     .and(writeln!(buffer))
                 {
                     Ok(_) => ControlFlow::Continue(()),
@@ -65,8 +71,14 @@ pub fn pointer_chain_scan(
                 else {
                     return ControlFlow::Continue(());
                 };
-                match write!(buffer, "{name}+{}", addr - start)
-                    .and(chain.data().try_for_each(|o| write!(buffer, ".{o}")))
+                match write!(buffer, "{name}+{:X}", addr - start)
+                    .and(chain.data().try_for_each(|&o| {
+                        if o >= 0 {
+                            write!(buffer, ".{o}")
+                        } else {
+                            write!(buffer, ".-{}", o.abs())
+                        }
+                    }))
                     .and(writeln!(buffer))
                 {
                     Ok(_) => {
@@ -86,8 +98,14 @@ pub fn pointer_chain_scan(
                     else {
                         return ControlFlow::Continue(());
                     };
-                    return match write!(buffer, "{name}+{}", addr - start)
-                        .and(chain.data().try_for_each(|o| write!(buffer, ".{o}")))
+                    return match write!(buffer, "{name}+{:X}", addr - start)
+                        .and(chain.data().try_for_each(|&o| {
+                            if o >= 0 {
+                                write!(buffer, ".{o}")
+                            } else {
+                                write!(buffer, ".-{}", o.abs())
+                            }
+                        }))
                         .and(writeln!(buffer))
                     {
                         Ok(_) => ControlFlow::Continue(()),
@@ -110,8 +128,14 @@ pub fn pointer_chain_scan(
                     else {
                         return ControlFlow::Continue(());
                     };
-                    return match write!(buffer, "{name}+{}", addr - start)
-                        .and(chain.data().try_for_each(|o| write!(buffer, ".{o}")))
+                    return match write!(buffer, "{name}+{:X}", addr - start)
+                        .and(chain.data().try_for_each(|&o| {
+                            if o >= 0 {
+                                write!(buffer, ".{o}")
+                            } else {
+                                write!(buffer, ".-{}", o.abs())
+                            }
+                        }))
                         .and(writeln!(buffer))
                     {
                         Ok(_) => {
@@ -133,8 +157,14 @@ pub fn pointer_chain_scan(
                     else {
                         return ControlFlow::Continue(());
                     };
-                    return match write!(buffer, "{name}+{}", addr - start)
-                        .and(chain.data().try_for_each(|o| write!(buffer, ".{o}")))
+                    return match write!(buffer, "{name}+{:X}", addr - start)
+                        .and(chain.data().try_for_each(|&o| {
+                            if o >= 0 {
+                                write!(buffer, ".{o}")
+                            } else {
+                                write!(buffer, ".-{}", o.abs())
+                            }
+                        }))
                         .and(writeln!(buffer))
                     {
                         Ok(_) => ControlFlow::Continue(()),
@@ -157,8 +187,14 @@ pub fn pointer_chain_scan(
                     else {
                         return ControlFlow::Continue(());
                     };
-                    return match write!(buffer, "{name}+{}", addr - start)
-                        .and(chain.data().try_for_each(|o| write!(buffer, ".{o}")))
+                    return match write!(buffer, "{name}+{:X}", addr - start)
+                        .and(chain.data().try_for_each(|&o| {
+                            if o >= 0 {
+                                write!(buffer, ".{o}")
+                            } else {
+                                write!(buffer, ".-{}", o.abs())
+                            }
+                        }))
                         .and(writeln!(buffer))
                     {
                         Ok(_) => {
@@ -183,8 +219,14 @@ pub fn pointer_chain_scan(
                     else {
                         return ControlFlow::Continue(());
                     };
-                    return match write!(buffer, "{name}+{}", addr - start)
-                        .and(chain.data().try_for_each(|o| write!(buffer, ".{o}")))
+                    return match write!(buffer, "{name}+{:X}", addr - start)
+                        .and(chain.data().try_for_each(|&o| {
+                            if o >= 0 {
+                                write!(buffer, ".{o}")
+                            } else {
+                                write!(buffer, ".-{}", o.abs())
+                            }
+                        }))
                         .and(writeln!(buffer))
                     {
                         Ok(_) => ControlFlow::Continue(()),
@@ -210,8 +252,14 @@ pub fn pointer_chain_scan(
                     else {
                         return ControlFlow::Continue(());
                     };
-                    return match write!(buffer, "{name}+{}", addr - start)
-                        .and(chain.data().try_for_each(|o| write!(buffer, ".{o}")))
+                    return match write!(buffer, "{name}+{:X}", addr - start)
+                        .and(chain.data().try_for_each(|&o| {
+                            if o >= 0 {
+                                write!(buffer, ".{o}")
+                            } else {
+                                write!(buffer, ".-{}", o.abs())
+                            }
+                        }))
                         .and(writeln!(buffer))
                     {
                         Ok(_) => {
