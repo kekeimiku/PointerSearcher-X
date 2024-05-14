@@ -28,6 +28,8 @@ cargo +nightly build -Z build-std=std,panic_abort,core,alloc -Z build-std-featur
 
 RELEASE_DIR=RELEASE/$TARGET
 
+mkdir -p $RELEASE_DIR
+
 cp target/$TARGET/release/libptrscan.dylib $RELEASE_DIR
 cp target/$TARGET/release/ptrscan $RELEASE_DIR
 cp libptrscan/libptrs.h $RELEASE_DIR
@@ -44,6 +46,8 @@ cargo +nightly build -Z build-std=std,panic_abort,core,alloc -Z build-std-featur
 
 RELEASE_DIR=RELEASE/$TARGET
 
+mkdir -p $RELEASE_DIR
+
 cp target/$TARGET/release/libptrscan.so $RELEASE_DIR
 cp target/$TARGET/release/ptrscan $RELEASE_DIR
 cp libptrscan/libptrs.h $RELEASE_DIR
@@ -59,6 +63,8 @@ cargo +nightly build -Z build-std=std,panic_abort,core,alloc -Z build-std-featur
 cargo +nightly build -Z build-std=std,panic_abort,core,alloc -Z build-std-features=panic_immediate_abort --target $TARGET --release -p command
 
 RELEASE_DIR=RELEASE/$TARGET
+
+mkdir -p $RELEASE_DIR
 
 cp target/$TARGET/release/libptrscan.so $RELEASE_DIR
 cp target/$TARGET/release/ptrscan $RELEASE_DIR

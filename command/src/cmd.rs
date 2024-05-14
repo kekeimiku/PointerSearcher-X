@@ -536,9 +536,9 @@ pub fn parse_pointer_chain(value: &str) -> Option<(String, usize, Vec<isize>)> {
     let mut iter = b.split('.');
     let module_offset = iter
         .next()
-        .and_then(|s| usize::from_str_radix(s, 16).ok())?;
+        .and_then(|s| usize::from_str_radix(s.trim_start_matches("0x"), 16).ok())?;
     let pointer_chain = iter
-        .map(|s| isize::from_str_radix(s, 16))
+        .map(|s| isize::from_str_radix(s.trim_start_matches("0x"), 16))
         .collect::<Result<Vec<_>, _>>()
         .ok()?;
     Some((module_name.to_string(), module_offset, pointer_chain))
@@ -567,7 +567,7 @@ impl TestPointerChain {
             .and_then(|Module { start, .. }| start.checked_add(offset))
             .ok_or("invalid base address")?;
 
-        println!("{name} + {offset} = {address:x}");
+        println!("{name} + {offset:x} = {address:x}");
 
         let mut buf = [0_u8; mem::size_of::<usize>()];
         for offset in chain {
@@ -575,7 +575,7 @@ impl TestPointerChain {
             address = usize::from_ne_bytes(buf)
                 .checked_add_signed(offset)
                 .ok_or("invalid offset address")?;
-            println!("+ {offset} = {address:x}");
+            println!("+ {offset:x} = {address:x}");
         }
 
         Ok(())
