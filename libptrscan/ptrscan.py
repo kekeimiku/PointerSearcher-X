@@ -187,8 +187,6 @@ class PointerScan:
         ]
         return module_list
 
-        # Get a list of modules that can be used as static base addresses
-
     def list_modules_pince(self) -> List[Tuple[int, int, str]]:
         modules_ptr = POINTER(FFIModule)()
         size = c_size_t()
@@ -255,6 +253,12 @@ class PointerScan:
     # regarding pointer chain format analysis, each item starts with `$module.name+$offset`
     # As a static base address, followed by the pointer chain offset, separated by `.`, the base address `offset` and subsequent
     # offsets are both decimal numbers
-    def scan_pointer_chain(self, param: FFIParam, pathname: str):
-        ret = self._lib.ptrscan_scan_pointer_chain(self._ptr, param, pathname.encode())
-        self._check_error(ret)
+    def scan_pointer_chain(self, param: FFIParam, pathname: Optional[str]):
+        if pathname is None:
+            ret = self._lib.ptrscan_scan_pointer_chain(self._ptr, param, None)
+            self._check_error(ret)
+        else:
+            ret = self._lib.ptrscan_scan_pointer_chain(
+                self._ptr, param, pathname.encode()
+            )
+            self._check_error(ret)

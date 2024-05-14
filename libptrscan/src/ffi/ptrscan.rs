@@ -4,6 +4,8 @@ use core::{
 };
 use std::{
     ffi::{CStr, CString, NulError},
+    fs::File,
+    io,
     str::Utf8Error,
 };
 
@@ -210,7 +212,7 @@ pub unsafe extern "C" fn ptrscan_create_pointer_map_file(
         .collect::<Result<_, Utf8Error>>();
     let module_maps = try_result!(module_maps);
 
-    try_result!(process.create_pointer_map_file(module_maps, unknown_maps, path));
+    let _ = try_result!(process.create_pointer_map_file(module_maps, unknown_maps, path));
 
     SUCCESS
 }
@@ -247,10 +249,6 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
     let node = node.as_ref().copied();
     let last = last.as_ref().copied();
     let max = max.as_ref().copied();
-    let pathname = try_result!(CStr::from_ptr(try_null!(pathname.as_ref())).to_str());
-
-    let ptrscan = try_null!(ptr.as_ref());
-    let pointer_map = try_option!(ptrscan.pointer_map.as_ref());
 
     #[rustfmt::skip]
     let param = UserParam {
@@ -258,7 +256,17 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
         node, last, max,
     };
 
-    try_result!(pointer_chain_scan(pointer_map, pathname, param));
+    let ptrscan = try_null!(ptr.as_ref());
+    let pointer_map = try_option!(ptrscan.pointer_map.as_ref());
+
+    if pathname.is_null() {
+        let stdout = io::stdout();
+        let _ = try_result!(pointer_chain_scan(pointer_map, stdout, param));
+    } else {
+        let pathname = try_result!(CStr::from_ptr(try_null!(pathname.as_ref())).to_str());
+        let file = try_result!(File::options().append(true).create_new(true).open(pathname));
+        let _ = try_result!(pointer_chain_scan(pointer_map, file, param));
+    }
 
     SUCCESS
 }
@@ -276,7 +284,7 @@ pub unsafe extern "C" fn ptrscan_read_memory_exact(
     let ptrscan = try_null!(ptr.as_ref());
     let process = try_option!(ptrscan.process.as_ref());
     let data = slice::from_raw_parts_mut(data, size);
-    try_result!(process.read_memory_exact(addr, data));
+    let _ = try_result!(process.read_memory_exact(addr, data));
 
     SUCCESS
 }

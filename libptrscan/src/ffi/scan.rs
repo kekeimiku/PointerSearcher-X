@@ -1,9 +1,5 @@
 use core::ops::{ControlFlow, Range};
-use std::{
-    fs::File,
-    io::{BufWriter, Error, Write},
-    path::Path,
-};
+use std::io::{BufWriter, Error, Write};
 
 use crate::{
     dump::PointerMap,
@@ -26,13 +22,8 @@ macro_rules! try_scan {
     };
 }
 
-pub fn pointer_chain_scan(
-    map: &PointerMap,
-    path: impl AsRef<Path>,
-    param: UserParam,
-) -> Result<(), Error> {
-    let file = File::options().append(true).create_new(true).open(path)?;
-    let mut buffer = BufWriter::with_capacity(0x100000, file);
+pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> Result<(), Error> {
+    let mut buffer = BufWriter::with_capacity(0x100000, w);
     let PointerMap { points, map, modules } = map;
 
     let UserParam { param, node, last, max, .. } = param;
