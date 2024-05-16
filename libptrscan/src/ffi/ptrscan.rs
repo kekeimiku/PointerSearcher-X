@@ -68,7 +68,7 @@ pub const unsafe extern "C" fn ptrscan_version() -> *const c_char {
 
 /// 附加到进程
 #[no_mangle]
-pub unsafe extern "C" fn ptrscan_attach_process(ptr: *mut FFIPointerScan, pid: i32) -> c_int {
+pub unsafe extern "C" fn ptrscan_set_process(ptr: *mut FFIPointerScan, pid: i32) -> c_int {
     let ptrscan = try_null!(ptr.as_mut());
     let process = try_result!(Process::attach(pid));
     ptrscan.process = Some(process);
@@ -117,6 +117,7 @@ pub unsafe extern "C" fn ptrscan_list_modules(
 }
 
 /// 获取可以作为静态基址的模块列表
+#[cfg(target_os = "linux")]
 #[no_mangle]
 pub unsafe extern "C" fn ptrscan_list_modules_pince(
     ptr: *mut FFIPointerScan,
@@ -238,7 +239,7 @@ pub unsafe extern "C" fn ptrscan_create_pointer_map_file(
     let module_maps = try_option!(&ptrscan.set_modules).clone();
     let unknown_maps = try_result!(process.list_unknown_maps());
 
-    let _ = try_result!(process.create_pointer_map_file(module_maps, unknown_maps, path));
+    try_result!(process.create_pointer_map_file(module_maps, unknown_maps, path));
 
     SUCCESS
 }
@@ -247,9 +248,9 @@ pub unsafe extern "C" fn ptrscan_create_pointer_map_file(
 #[no_mangle]
 pub unsafe extern "C" fn ptrscan_load_pointer_map_file(
     ptr: *mut FFIPointerScan,
-    path: *const c_char,
+    pathname: *const c_char,
 ) -> c_int {
-    let path = try_result!(CStr::from_ptr(path).to_str());
+    let path = try_result!(CStr::from_ptr(pathname).to_str());
     let ptrscan = try_null!(ptr.as_mut());
     let pointer_map = try_result!(load_pointer_map_file(path));
     ptrscan.pointer_map = Some(pointer_map);
@@ -268,7 +269,7 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
     param: FFIParam,
     pathname: *const c_char,
 ) -> c_int {
-    let FFIParam { addr, depth, srange, lrange, node, last, max, .. } = param;
+    let FFIParam { addr, depth, srange, lrange, node, last, max, cycle, .. } = param;
 
     let range = (srange.left, srange.right);
     let lrange = lrange.as_ref().copied().map(|r| (r.left, r.right));
@@ -279,21 +280,34 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
     #[rustfmt::skip]
     let param = UserParam {
         param: Param { depth, addr, srange: range, lrange },
-        node, last, max,
+        node, last, max, cycle
     };
 
     let ptrscan = try_null!(ptr.as_ref());
     let pointer_map = try_option!(ptrscan.pointer_map.as_ref());
 
-    let symbol = ptrscan.set_offset_symbol.as_ref().unwrap_unchecked();
+    let base_symbol = ptrscan.set_base_symbol.as_ref().unwrap_unchecked();
+    let offset_symbol = ptrscan.set_offset_symbol.as_ref().unwrap_unchecked();
 
     if pathname.is_null() {
         let stdout = io::stdout();
-        let _ = try_result!(pointer_chain_scan(pointer_map, stdout, param, symbol));
+        try_result!(pointer_chain_scan(
+            pointer_map,
+            stdout,
+            param,
+            base_symbol,
+            offset_symbol
+        ));
     } else {
         let pathname = try_result!(CStr::from_ptr(try_null!(pathname.as_ref())).to_str());
         let file = try_result!(File::options().append(true).create_new(true).open(pathname));
-        let _ = try_result!(pointer_chain_scan(pointer_map, file, param, symbol));
+        try_result!(pointer_chain_scan(
+            pointer_map,
+            file,
+            param,
+            base_symbol,
+            offset_symbol
+        ));
     }
 
     SUCCESS
@@ -312,7 +326,7 @@ pub unsafe extern "C" fn ptrscan_read_memory_exact(
     let ptrscan = try_null!(ptr.as_ref());
     let process = try_option!(ptrscan.process.as_ref());
     let data = slice::from_raw_parts_mut(data, size);
-    let _ = try_result!(process.read_memory_exact(addr, data));
+    try_result!(process.read_memory_exact(addr, data));
 
     SUCCESS
 }

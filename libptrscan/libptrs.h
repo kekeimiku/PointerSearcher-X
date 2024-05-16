@@ -130,7 +130,7 @@ const char *ptrscan_version(void);
 /**
  * 附加到进程
  */
-int ptrscan_attach_process(struct FFIPointerScan *ptr, int32_t pid);
+int ptrscan_set_process(struct FFIPointerScan *ptr, int32_t pid);
 
 /**
  * 获取可以作为静态基址的模块列表

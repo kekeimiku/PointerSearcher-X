@@ -102,7 +102,15 @@ class PointerScan:
         "ptrscan_init": (POINTER(c_void_p),),
         "ptrscan_free": (None, POINTER(c_void_p)),
         "ptrscan_version": (c_char_p,),
-        "ptrscan_attach_process": (c_int, POINTER(c_void_p), c_int),
+        "ptrscan_set_process": (c_int, POINTER(c_void_p), c_int),
+        "ptrscan_set_modules": (
+            c_int,
+            POINTER(c_void_p),
+            POINTER(FFIModule),
+            c_size_t,
+        ),
+        "ptrscan_set_offset_symbol": (c_int, POINTER(c_void_p), c_char_p),
+        "ptrscan_set_base_symbol": (c_int, POINTER(c_void_p), c_char_p),
         "ptrscan_list_modules": (
             c_int,
             POINTER(c_void_p),
@@ -118,14 +126,10 @@ class PointerScan:
         "ptrscan_create_pointer_map": (
             c_int,
             POINTER(c_void_p),
-            POINTER(FFIModule),
-            c_size_t,
         ),
         "ptrscan_create_pointer_map_file": (
             c_int,
             POINTER(c_void_p),
-            POINTER(FFIModule),
-            c_size_t,
             c_char_p,
         ),
         "ptrscan_load_pointer_map_file": (c_int, POINTER(c_void_p), c_char_p),
@@ -170,8 +174,29 @@ class PointerScan:
         return self._lib.ptrscan_version().decode()
 
     # Attach to process
-    def attach_process(self, pid: int):
-        ret = self._lib.ptrscan_attach_process(self._ptr, c_int(pid))
+    def set_process(self, pid: int):
+        ret = self._lib.ptrscan_set_process(self._ptr, c_int(pid))
+        self._check_error(ret)
+
+    # set the modules to be scanned
+    def set_modules(self, modules: List[Tuple[int, int, str]]):
+        modules_ptr = (FFIModule * len(modules))()
+        for i, module_tuple in enumerate(modules):
+            start, end, pathname = module_tuple
+            modules_ptr[i]._start = start
+            modules_ptr[i]._end = end
+            modules_ptr[i]._pathname = pathname.encode()
+        ret = self._lib.ptrscan_set_modules(self._ptr, modules_ptr, len(modules_ptr))
+        self._check_error(ret)
+
+    # option default `.`
+    def set_offset_symbol(self, symbol: str):
+        ret = self._lib.ptrscan_set_offset_symbol(self._ptr, symbol.encode())
+        self._check_error(ret)
+
+    # option default `+`
+    def set_base_symbol(self, symbol: str):
+        ret = self._lib.ptrscan_set_base_symbol(self._ptr, symbol.encode())
         self._check_error(ret)
 
     # Get a list of modules that can be used as static base addresses
@@ -202,45 +227,13 @@ class PointerScan:
         return module_list
 
     # Create pointer data in memory
-    # It is created based on the passed in basic module address range `module.start` and `module.end`.
-    # `module.pathname` is a file path, for library users you should handle this as needed
-    # `module.pathname`, in order to facilitate library users to resolve static addresses by themselves, the rules are set by users themselves.
-    # For example, only pass in the file name instead of the entire path, use the index to process the same module name,
-    # Scanning the pointer chain will program output the contents of the static base address part according to `module.name`.
-    # If you know memory well, you can also pass in a specific address range as needed.
-    # For example, merge consecutive areas with the same module name
-    def create_pointer_map(self, modules: List[Tuple[int, int, str]]):
-        modules_ptr = (FFIModule * len(modules))()
-        for i, module_tuple in enumerate(modules):
-            start, end, pathname = module_tuple
-            modules_ptr[i]._start = start
-            modules_ptr[i]._end = end
-            modules_ptr[i]._pathname = pathname.encode()
-        ret = self._lib.ptrscan_create_pointer_map(
-            self._ptr, modules_ptr, len(modules_ptr)
-        )
+    def create_pointer_map(self):
+        ret = self._lib.ptrscan_create_pointer_map(self._ptr)
         self._check_error(ret)
 
     # Create pointer mapping in file
-    # It is created based on the passed in basic module address range `module.start` and `module.end`.
-    # `module.pathname` is a file path, for library users you should handle this as needed
-    # `module.pathname`, in order to facilitate library users to resolve static addresses by themselves, the rules are set by users themselves.
-    # For example, only pass in the file name instead of the entire path, use the index to process the same module name,
-    # scanning the pointer chain will program output the contents of the static base address part according to `module.name`.
-    # If you know memory well, you can also pass in a specific address range as needed.
-    # For example, merge consecutive areas with the same module name
-    def create_pointer_map_file(
-        self, modules: List[Tuple[int, int, str]], pathname: str
-    ):
-        modules_ptr = (FFIModule * len(modules))()
-        for i, module_tuple in enumerate(modules):
-            start, end, name = module_tuple
-            modules_ptr[i]._start = start
-            modules_ptr[i]._end = end
-            modules_ptr[i]._pathname = name.encode()
-        ret = self._lib.ptrscan_create_pointer_map_file(
-            self._ptr, modules_ptr, len(modules_ptr), pathname.encode()
-        )
+    def create_pointer_map_file(self, pathname: str):
+        ret = self._lib.ptrscan_create_pointer_map_file(self._ptr, pathname.encode())
         self._check_error(ret)
 
     # Load pointer mapping file into memory
@@ -249,10 +242,6 @@ class PointerScan:
         self._check_error(ret)
 
     # Scan pointer chain
-    # It is thread-safe. If you have multiple target address parameters, you can scan them in multiple threads at the same time.
-    # regarding pointer chain format analysis, each item starts with `$module.name+$offset`
-    # As a static base address, followed by the pointer chain offset, separated by `.`, the base address `offset` and subsequent
-    # offsets are both decimal numbers
     def scan_pointer_chain(self, param: FFIParam, pathname: Optional[str]):
         if pathname is None:
             ret = self._lib.ptrscan_scan_pointer_chain(self._ptr, param, None)
