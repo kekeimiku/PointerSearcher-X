@@ -109,8 +109,8 @@ class PointerScan:
             POINTER(FFIModule),
             c_size_t,
         ),
-        "ptrscan_set_offset_symbol": (c_int, POINTER(c_void_p), c_char_p),
-        "ptrscan_set_base_symbol": (c_int, POINTER(c_void_p), c_char_p),
+        "ptrscan_set_pointer_offset_symbol": (c_int, POINTER(c_void_p), c_char_p),
+        "ptrscan_set_base_offset_symbol": (c_int, POINTER(c_void_p), c_char_p),
         "ptrscan_list_modules": (
             c_int,
             POINTER(c_void_p),
@@ -190,13 +190,13 @@ class PointerScan:
         self._check_error(ret)
 
     # option default `.`
-    def set_offset_symbol(self, symbol: str):
-        ret = self._lib.ptrscan_set_offset_symbol(self._ptr, symbol.encode())
+    def set_pointer_offset_symbol(self, symbol: str):
+        ret = self._lib.ptrscan_set_pointer_offset_symbol(self._ptr, symbol.encode())
         self._check_error(ret)
 
     # option default `+`
-    def set_base_symbol(self, symbol: str):
-        ret = self._lib.ptrscan_set_base_symbol(self._ptr, symbol.encode())
+    def set_base_offset_symbol(self, symbol: str):
+        ret = self._lib.ptrscan_set_base_offset_symbol(self._ptr, symbol.encode())
         self._check_error(ret)
 
     # Get a list of modules that can be used as static base addresses

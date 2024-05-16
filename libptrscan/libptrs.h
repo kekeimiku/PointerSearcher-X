@@ -160,12 +160,12 @@ int ptrscan_set_modules(struct FFIPointerScan *ptr,
 /**
  * 设置指针链分隔符,默认用 `.` 分隔
  */
-int ptrscan_set_offset_symbol(struct FFIPointerScan *ptr, const char *symbol);
+int ptrscan_set_pointer_offset_symbol(struct FFIPointerScan *ptr, const char *symbol);
 
 /**
  * 设置基址分隔符,默认用 `+` 分隔
  */
-int ptrscan_set_base_symbol(struct FFIPointerScan *ptr, const char *symbol);
+int ptrscan_set_base_offset_symbol(struct FFIPointerScan *ptr, const char *symbol);
 
 /**
  * 在内存中创建指针数据

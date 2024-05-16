@@ -188,7 +188,7 @@ pub unsafe extern "C" fn ptrscan_set_modules(
 
 /// 设置指针链分隔符,默认用 `.` 分隔
 #[no_mangle]
-pub unsafe extern "C" fn ptrscan_set_offset_symbol(
+pub unsafe extern "C" fn ptrscan_set_pointer_offset_symbol(
     ptr: *mut FFIPointerScan,
     symbol: *const c_char,
 ) -> c_int {
@@ -201,7 +201,7 @@ pub unsafe extern "C" fn ptrscan_set_offset_symbol(
 
 /// 设置基址分隔符,默认用 `+` 分隔
 #[no_mangle]
-pub unsafe extern "C" fn ptrscan_set_base_symbol(
+pub unsafe extern "C" fn ptrscan_set_base_offset_symbol(
     ptr: *mut FFIPointerScan,
     symbol: *const c_char,
 ) -> c_int {
