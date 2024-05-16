@@ -139,39 +139,44 @@ int ptrscan_list_modules(struct FFIPointerScan *ptr,
                          const struct FFIModule **modules, uintptr_t *size);
 
 /**
- * 获取可以作为静态基址的模块列表，专门适配pince，唯一的区别只有
- * FFIModule.pathname 后面加了一个数字以表示索引
+ * 获取可以作为静态基址的模块列表
  */
 int ptrscan_list_modules_pince(struct FFIPointerScan *ptr,
                                const struct FFIModule **modules,
                                uintptr_t *size);
 
 /**
- * 在内存中创建指针数据
- * 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
- * `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个
- * `module.pathname`, 为了方便库使用者自己解析静态地址，规则是使用者自己订的。
- * 例如只传入文件名而不是整个路径，使用索引处理相同的模块名，
- * 扫描指针链会程序根据 `module.name` 输出静态基址部分的内容。
- * 如果你很懂内存，那也可以根据需要传入特定的地址范围，
- * 例如合并相同模块名的连续区域
+ * 设置扫描的模块,您可以自定义，也可以使用 `list_modules` 获取推荐的模块
+ * 如果您使用 `list_modules` 获取，您可能需要仍然需要自己处理一些数据
+ * `module.pathname`
+ * 是一个文件路径，对于库使用者，你应该根据需要处理这个，
+ * 它会作为指针链基址的名字输出 例如您可以只传入文件名而不是整个路径，
+ * 以及使用索引处理相同的模块名
+ * 您也可以合并相同模块名的连续区域
  */
-int ptrscan_create_pointer_map(struct FFIPointerScan *ptr,
-                               const struct FFIModule *modules, uintptr_t size);
+int ptrscan_set_modules(struct FFIPointerScan *ptr,
+                        const struct FFIModule *modules, uintptr_t size);
+
+/**
+ * 设置指针链分隔符,默认用 `.` 分隔
+ */
+int ptrscan_set_offset_symbol(struct FFIPointerScan *ptr, const char *symbol);
+
+/**
+ * 设置基址分隔符,默认用 `+` 分隔
+ */
+int ptrscan_set_base_symbol(struct FFIPointerScan *ptr, const char *symbol);
+
+/**
+ * 在内存中创建指针数据
+ */
+int ptrscan_create_pointer_map(struct FFIPointerScan *ptr);
 
 /**
  * 在文件中创建指针映射
- * 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
- * `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个
- * `module.pathname`, 为了方便库使用者自己解析静态地址，规则是使用者自己订的。
- * 例如只传入文件名而不是整个路径，使用索引处理相同的模块名，
- * 扫描指针链会程序根据 `module.name` 输出静态基址部分的内容。
- * 如果你很懂内存，那也可以根据需要传入特定的地址范围，
- * 例如合并相同模块名的连续区域
  */
 int ptrscan_create_pointer_map_file(struct FFIPointerScan *ptr,
-                                    const struct FFIModule *modules,
-                                    uintptr_t size, const char *pathname);
+                                    const char *pathname);
 
 /**
  * 加载指针映射文件到内存中

@@ -122,8 +122,8 @@ use private::{FromResidual, Try};
 /// 第一级偏移级别
 const CURR: usize = 0;
 
-/// 顺序查找的阀值
-const MIN: usize = 64;
+/// 缓存阀值
+const MIN: usize = 4096;
 
 /// 核心扫描参数
 struct CoreParam {

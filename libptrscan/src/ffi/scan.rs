@@ -22,7 +22,12 @@ macro_rules! try_scan {
     };
 }
 
-pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> Result<(), Error> {
+pub fn pointer_chain_scan(
+    map: &PointerMap,
+    w: impl Write,
+    param: UserParam,
+    symbol: &str,
+) -> Result<(), Error> {
     let mut buffer = BufWriter::with_capacity(0x100000, w);
     let PointerMap { points, map, modules } = map;
 
@@ -38,9 +43,9 @@ pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> 
                 match write!(buffer, "{name}+{:X}", addr - start)
                     .and(chain.data().try_for_each(|&o| {
                         if o >= 0 {
-                            write!(buffer, ".{o:X}")
+                            write!(buffer, "{symbol}{o:X}")
                         } else {
-                            write!(buffer, ".-{:X}", o.abs())
+                            write!(buffer, "{symbol}-{:X}", o.abs())
                         }
                     }))
                     .and(writeln!(buffer))
@@ -65,9 +70,9 @@ pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> 
                 match write!(buffer, "{name}+{:X}", addr - start)
                     .and(chain.data().try_for_each(|&o| {
                         if o >= 0 {
-                            write!(buffer, ".{o:X}")
+                            write!(buffer, "{symbol}{o:X}")
                         } else {
-                            write!(buffer, ".-{:X}", o.abs())
+                            write!(buffer, "{symbol}-{:X}", o.abs())
                         }
                     }))
                     .and(writeln!(buffer))
@@ -92,9 +97,9 @@ pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> 
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o:X}")
+                                write!(buffer, "{symbol}{o:X}")
                             } else {
-                                write!(buffer, ".-{:X}", o.abs())
+                                write!(buffer, "{symbol}-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -122,9 +127,9 @@ pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> 
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o:X}")
+                                write!(buffer, "{symbol}{o:X}")
                             } else {
-                                write!(buffer, ".-{:X}", o.abs())
+                                write!(buffer, "{symbol}-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -151,9 +156,9 @@ pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> 
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o:X}")
+                                write!(buffer, "{symbol}{o:X}")
                             } else {
-                                write!(buffer, ".-{:X}", o.abs())
+                                write!(buffer, "{symbol}-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -181,9 +186,9 @@ pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> 
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o:X}")
+                                write!(buffer, "{symbol}{o:X}")
                             } else {
-                                write!(buffer, ".-{:X}", o.abs())
+                                write!(buffer, "{symbol}-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -213,9 +218,9 @@ pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> 
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o:X}")
+                                write!(buffer, "{symbol}{o:X}")
                             } else {
-                                write!(buffer, ".-{:X}", o.abs())
+                                write!(buffer, "{symbol}-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))
@@ -246,9 +251,9 @@ pub fn pointer_chain_scan(map: &PointerMap, w: impl Write, param: UserParam) -> 
                     return match write!(buffer, "{name}+{:X}", addr - start)
                         .and(chain.data().try_for_each(|&o| {
                             if o >= 0 {
-                                write!(buffer, ".{o:X}")
+                                write!(buffer, "{symbol}{o:X}")
                             } else {
-                                write!(buffer, ".-{:X}", o.abs())
+                                write!(buffer, "{symbol}-{:X}", o.abs())
                             }
                         }))
                         .and(writeln!(buffer))

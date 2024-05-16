@@ -22,8 +22,11 @@ use crate::{
 pub struct FFIPointerScan {
     process: Option<Process>,
     pointer_map: Option<PointerMap>,
-    modules: Option<RangeMap<usize, CString>>,
-    modules_ptr: Option<Vec<FFIModule>>,
+    ffi_modules: Option<RangeMap<usize, CString>>,
+    ffi_modules_ptr: Option<Vec<FFIModule>>,
+    set_base_symbol: Option<String>,
+    set_offset_symbol: Option<String>,
+    set_modules: Option<RangeMap<usize, String>>,
 }
 
 impl FFIPointerScan {
@@ -31,8 +34,11 @@ impl FFIPointerScan {
         Self {
             process: None,
             pointer_map: None,
-            modules: None,
-            modules_ptr: None,
+            ffi_modules: None,
+            ffi_modules_ptr: None,
+            set_base_symbol: Some(String::from("+")),
+            set_offset_symbol: Some(String::from(".")),
+            set_modules: None,
         }
     }
 }
@@ -88,10 +94,10 @@ pub unsafe extern "C" fn ptrscan_list_modules(
         })
         .collect::<Result<_, NulError>>();
     let ffi_modules = try_result!(ffi_modules);
-    ptrscan.modules = Some(ffi_modules);
+    ptrscan.ffi_modules = Some(ffi_modules);
 
     let ffi_modules_ptr = ptrscan
-        .modules
+        .ffi_modules
         .as_ref()
         .unwrap_unchecked()
         .iter()
@@ -101,9 +107,9 @@ pub unsafe extern "C" fn ptrscan_list_modules(
             pathname: pathname.as_ptr(),
         })
         .collect();
-    ptrscan.modules_ptr = Some(ffi_modules_ptr);
+    ptrscan.ffi_modules_ptr = Some(ffi_modules_ptr);
 
-    let ffi_modules_ptr = ptrscan.modules_ptr.as_ref().unwrap_unchecked();
+    let ffi_modules_ptr = ptrscan.ffi_modules_ptr.as_ref().unwrap_unchecked();
     size.write(ffi_modules_ptr.len());
     modules.write(ffi_modules_ptr.as_ptr());
 
@@ -128,10 +134,10 @@ pub unsafe extern "C" fn ptrscan_list_modules_pince(
         })
         .collect::<Result<_, NulError>>();
     let ffi_modules = try_result!(ffi_modules);
-    ptrscan.modules = Some(ffi_modules);
+    ptrscan.ffi_modules = Some(ffi_modules);
 
     let ffi_modules_ptr = ptrscan
-        .modules
+        .ffi_modules
         .as_ref()
         .unwrap_unchecked()
         .iter()
@@ -141,33 +147,30 @@ pub unsafe extern "C" fn ptrscan_list_modules_pince(
             pathname: pathname.as_ptr(),
         })
         .collect();
-    ptrscan.modules_ptr = Some(ffi_modules_ptr);
+    ptrscan.ffi_modules_ptr = Some(ffi_modules_ptr);
 
-    let ffi_modules_ptr = ptrscan.modules_ptr.as_ref().unwrap_unchecked();
+    let ffi_modules_ptr = ptrscan.ffi_modules_ptr.as_ref().unwrap_unchecked();
     size.write(ffi_modules_ptr.len());
     modules.write(ffi_modules_ptr.as_ptr());
 
     SUCCESS
 }
 
-/// 在内存中创建指针数据
-/// 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
-/// `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个
-/// `module.pathname`, 为了方便库使用者自己解析静态地址，规则是使用者自己订的。
-/// 例如只传入文件名而不是整个路径，使用索引处理相同的模块名，
-/// 扫描指针链会程序根据 `module.name` 输出静态基址部分的内容。
-/// 如果你很懂内存，那也可以根据需要传入特定的地址范围，
-/// 例如合并相同模块名的连续区域
+/// 设置扫描的模块,您可以自定义，也可以使用 `list_modules` 获取推荐的模块
+/// 如果您使用 `list_modules` 获取，您可能需要仍然需要自己处理一些数据
+/// `module.pathname`
+/// 是一个文件路径，对于库使用者，你应该根据需要处理这个，
+/// 它会作为指针链基址的名字输出 例如您可以只传入文件名而不是整个路径，
+/// 以及使用索引处理相同的模块名
+/// 您也可以合并相同模块名的连续区域
 #[no_mangle]
-pub unsafe extern "C" fn ptrscan_create_pointer_map(
+pub unsafe extern "C" fn ptrscan_set_modules(
     ptr: *mut FFIPointerScan,
     modules: *const FFIModule,
     size: usize,
 ) -> c_int {
     let ptrscan = try_null!(ptr.as_mut());
-    let process = try_option!(ptrscan.process.as_ref());
 
-    let unknown_maps = try_result!(process.list_unknown_maps());
     let module_maps = slice::from_raw_parts(modules, size)
         .iter()
         .map(|&FFIModule { start, end, pathname }| {
@@ -176,6 +179,46 @@ pub unsafe extern "C" fn ptrscan_create_pointer_map(
         })
         .collect::<Result<_, Utf8Error>>();
     let module_maps = try_result!(module_maps);
+
+    ptrscan.set_modules = Some(module_maps);
+
+    SUCCESS
+}
+
+/// 设置指针链分隔符,默认用 `.` 分隔
+#[no_mangle]
+pub unsafe extern "C" fn ptrscan_set_offset_symbol(
+    ptr: *mut FFIPointerScan,
+    symbol: *const c_char,
+) -> c_int {
+    let ptrscan = try_null!(ptr.as_mut());
+    let symbol = try_result!(CStr::from_ptr(symbol).to_str());
+    ptrscan.set_offset_symbol = Some(symbol.to_string());
+
+    SUCCESS
+}
+
+/// 设置基址分隔符,默认用 `+` 分隔
+#[no_mangle]
+pub unsafe extern "C" fn ptrscan_set_base_symbol(
+    ptr: *mut FFIPointerScan,
+    symbol: *const c_char,
+) -> c_int {
+    let ptrscan = try_null!(ptr.as_mut());
+    let symbol = try_result!(CStr::from_ptr(symbol).to_str());
+    ptrscan.set_base_symbol = Some(symbol.to_string());
+
+    SUCCESS
+}
+
+/// 在内存中创建指针数据
+#[no_mangle]
+pub unsafe extern "C" fn ptrscan_create_pointer_map(ptr: *mut FFIPointerScan) -> c_int {
+    let ptrscan = try_null!(ptr.as_mut());
+    let process = try_option!(ptrscan.process.as_ref());
+
+    let module_maps = try_option!(&ptrscan.set_modules).clone();
+    let unknown_maps = try_result!(process.list_unknown_maps());
 
     let pointer_map = try_result!(process.create_pointer_map(module_maps, unknown_maps));
     ptrscan.pointer_map = Some(pointer_map);
@@ -184,33 +227,16 @@ pub unsafe extern "C" fn ptrscan_create_pointer_map(
 }
 
 /// 在文件中创建指针映射
-/// 它是根据传入的基本模块地址范围 `module.start` 以及 `module.end` 创建的。
-/// `module.pathname` 是一个文件路径，对于库使用者，你应该根据需要处理这个
-/// `module.pathname`, 为了方便库使用者自己解析静态地址，规则是使用者自己订的。
-/// 例如只传入文件名而不是整个路径，使用索引处理相同的模块名，
-/// 扫描指针链会程序根据 `module.name` 输出静态基址部分的内容。
-/// 如果你很懂内存，那也可以根据需要传入特定的地址范围，
-/// 例如合并相同模块名的连续区域
 #[no_mangle]
 pub unsafe extern "C" fn ptrscan_create_pointer_map_file(
     ptr: *mut FFIPointerScan,
-    modules: *const FFIModule,
-    size: usize,
     pathname: *const c_char,
 ) -> c_int {
     let ptrscan = try_null!(ptr.as_mut());
     let process = try_option!(ptrscan.process.as_ref());
     let path = try_result!(CStr::from_ptr(pathname).to_str());
-
+    let module_maps = try_option!(&ptrscan.set_modules).clone();
     let unknown_maps = try_result!(process.list_unknown_maps());
-    let module_maps = slice::from_raw_parts(modules, size)
-        .iter()
-        .map(|&FFIModule { start, end, pathname }| {
-            let pathname = CStr::from_ptr(pathname).to_str()?.to_string();
-            Ok((start..end, pathname))
-        })
-        .collect::<Result<_, Utf8Error>>();
-    let module_maps = try_result!(module_maps);
 
     let _ = try_result!(process.create_pointer_map_file(module_maps, unknown_maps, path));
 
@@ -259,13 +285,15 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
     let ptrscan = try_null!(ptr.as_ref());
     let pointer_map = try_option!(ptrscan.pointer_map.as_ref());
 
+    let symbol = ptrscan.set_offset_symbol.as_ref().unwrap_unchecked();
+
     if pathname.is_null() {
         let stdout = io::stdout();
-        let _ = try_result!(pointer_chain_scan(pointer_map, stdout, param));
+        let _ = try_result!(pointer_chain_scan(pointer_map, stdout, param, symbol));
     } else {
         let pathname = try_result!(CStr::from_ptr(try_null!(pathname.as_ref())).to_str());
         let file = try_result!(File::options().append(true).create_new(true).open(pathname));
-        let _ = try_result!(pointer_chain_scan(pointer_map, file, param));
+        let _ = try_result!(pointer_chain_scan(pointer_map, file, param, symbol));
     }
 
     SUCCESS
