@@ -22,6 +22,7 @@ use crate::{
 pub struct FFIPointerScan {
     process: Option<Process>,
     pointer_map: Option<PointerMap>,
+    stop: bool,
     ffi_modules: Option<RangeMap<usize, CString>>,
     ffi_modules_ptr: Option<Vec<FFIModule>>,
     set_base_symbol: Option<String>,
@@ -34,6 +35,7 @@ impl FFIPointerScan {
         Self {
             process: None,
             pointer_map: None,
+            stop: false,
             ffi_modules: None,
             ffi_modules_ptr: None,
             set_base_symbol: Some(String::from("+")),
@@ -284,6 +286,7 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
     };
 
     let ptrscan = try_null!(ptr.as_ref());
+    let exit = ptrscan.stop;
     let pointer_map = try_option!(ptrscan.pointer_map.as_ref());
 
     let base_symbol = ptrscan.set_base_symbol.as_ref().unwrap_unchecked();
@@ -295,6 +298,7 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
             pointer_map,
             stdout,
             param,
+            &exit,
             base_symbol,
             offset_symbol
         ));
@@ -305,10 +309,20 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
             pointer_map,
             file,
             param,
+            &exit,
             base_symbol,
             offset_symbol
         ));
     }
+
+    SUCCESS
+}
+
+// 停止 创建指针映射/扫描 它应该在另一个线程中调用
+#[no_mangle]
+pub unsafe extern "C" fn ptrscan_scan_stop(ptr: *mut FFIPointerScan) -> c_int {
+    let ptrscan = try_null!(ptr.as_mut());
+    ptrscan.stop = true;
 
     SUCCESS
 }

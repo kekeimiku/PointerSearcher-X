@@ -27,6 +27,7 @@ pub fn pointer_chain_scan(
     map: &PointerMap,
     w: impl Write,
     param: UserParam,
+    is_stop: &bool,
     base_symbol: &str,
     offset_symbol: &str,
 ) -> Result<(), Error> {
@@ -38,6 +39,9 @@ pub fn pointer_chain_scan(
         match (node, last, max) {
             (None, None, None) => {
                 let mut f = |chain: Chain| {
+                    if *is_stop {
+                        return ControlFlow::Break(Ok(()));
+                    }
                     let addr = chain.addr();
                     let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
                     else {
@@ -81,7 +85,7 @@ pub fn pointer_chain_scan(
             (None, None, Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max {
+                    if n >= max || *is_stop {
                         return ControlFlow::Break(Ok(()));
                     }
                     let addr = chain.addr();
@@ -133,6 +137,9 @@ pub fn pointer_chain_scan(
             }
             (None, Some(last), None) => {
                 let mut f = |chain: Chain| {
+                    if *is_stop {
+                        return ControlFlow::Break(Ok(()));
+                    }
                     if chain.last().is_some_and(|o| last.eq(o)) {
                         let addr = chain.addr();
                         let Some((Range { start, .. }, name)) =
@@ -180,7 +187,7 @@ pub fn pointer_chain_scan(
             (None, Some(last), Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max {
+                    if n >= max || *is_stop {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.last().is_some_and(|o| last.eq(o)) {
@@ -235,6 +242,9 @@ pub fn pointer_chain_scan(
             }
             (Some(node), None, None) => {
                 let mut f = |chain: Chain| {
+                    if *is_stop {
+                        return ControlFlow::Break(Ok(()));
+                    }
                     if chain.len() >= node {
                         let addr = chain.addr();
                         let Some((Range { start, .. }, name)) =
@@ -282,7 +292,7 @@ pub fn pointer_chain_scan(
             (Some(node), None, Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max {
+                    if n >= max || *is_stop {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.len() >= node {
@@ -337,6 +347,9 @@ pub fn pointer_chain_scan(
             }
             (Some(node), Some(last), None) => {
                 let mut f = |chain: Chain| {
+                    if *is_stop {
+                        return ControlFlow::Break(Ok(()));
+                    }
                     if chain
                         .last()
                         .is_some_and(|o| chain.len() >= node && last.eq(o))
@@ -387,7 +400,7 @@ pub fn pointer_chain_scan(
             (Some(node), Some(last), Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max {
+                    if n >= max || *is_stop {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain
@@ -448,6 +461,9 @@ pub fn pointer_chain_scan(
         match (node, last, max) {
             (None, None, None) => {
                 let mut f = |chain: Chain| {
+                    if *is_stop {
+                        return ControlFlow::Break(Ok(()));
+                    }
                     let addr = chain.addr();
                     let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
                     else {
@@ -472,7 +488,7 @@ pub fn pointer_chain_scan(
             (None, None, Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max {
+                    if n >= max || *is_stop {
                         return ControlFlow::Break(Ok(()));
                     }
                     let addr = chain.addr();
@@ -501,6 +517,9 @@ pub fn pointer_chain_scan(
             }
             (None, Some(last), None) => {
                 let mut f = |chain: Chain| {
+                    if *is_stop {
+                        return ControlFlow::Break(Ok(()));
+                    }
                     if chain.last().is_some_and(|o| last.eq(o)) {
                         let addr = chain.addr();
                         let Some((Range { start, .. }, name)) =
@@ -529,7 +548,7 @@ pub fn pointer_chain_scan(
             (None, Some(last), Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max {
+                    if n >= max || *is_stop {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.last().is_some_and(|o| last.eq(o)) {
@@ -562,6 +581,9 @@ pub fn pointer_chain_scan(
             }
             (Some(node), None, None) => {
                 let mut f = |chain: Chain| {
+                    if *is_stop {
+                        return ControlFlow::Break(Ok(()));
+                    }
                     if chain.len() >= node {
                         let addr = chain.addr();
                         let Some((Range { start, .. }, name)) =
@@ -590,7 +612,7 @@ pub fn pointer_chain_scan(
             (Some(node), None, Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max {
+                    if n >= max || *is_stop {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.len() >= node {
@@ -623,6 +645,9 @@ pub fn pointer_chain_scan(
             }
             (Some(node), Some(last), None) => {
                 let mut f = |chain: Chain| {
+                    if *is_stop {
+                        return ControlFlow::Break(Ok(()));
+                    }
                     if chain
                         .last()
                         .is_some_and(|o| chain.len() >= node && last.eq(o))
@@ -654,7 +679,7 @@ pub fn pointer_chain_scan(
             (Some(node), Some(last), Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max {
+                    if n >= max || *is_stop {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain
