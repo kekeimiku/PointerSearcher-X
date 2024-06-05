@@ -70,7 +70,7 @@ pub unsafe extern "C" fn get_last_error(code: c_int) -> *const c_char {
     } else if code == CALL_ERROR {
         // cbindgen 还没支持 c"message" 一类的c字符串...
         const {
-            let bytes = concat!("call error", "\0").as_bytes();
+            let bytes = concat!("function call error", "\0").as_bytes();
             CStr::from_bytes_with_nul_unchecked(bytes).as_ptr()
         }
     } else if code == NO_NULL {
