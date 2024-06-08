@@ -4,3 +4,4 @@ Cargo.lock
 **/.DS_Store
 .cargo
 RELEASE
+build.sh
