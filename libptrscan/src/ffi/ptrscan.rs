@@ -286,7 +286,6 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
     };
 
     let ptrscan = try_null!(ptr.as_ref());
-    let exit = ptrscan.stop;
     let pointer_map = try_option!(ptrscan.pointer_map.as_ref());
 
     let base_symbol = ptrscan.set_base_symbol.as_ref().unwrap_unchecked();
@@ -298,7 +297,6 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
             pointer_map,
             stdout,
             param,
-            &exit,
             base_symbol,
             offset_symbol
         ));
@@ -309,7 +307,6 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
             pointer_map,
             file,
             param,
-            &exit,
             base_symbol,
             offset_symbol
         ));

@@ -23,436 +23,290 @@ macro_rules! try_scan {
     };
 }
 
+macro_rules! output_pointer_chain {
+    ($a:expr, $b:expr, $c:expr, $d:expr, $s1:expr, $s2:expr $(, $n:expr)?) => {{
+        let addr = $a.addr();
+        let Some((Range { start, .. }, name)) = $b.get_key_value_by_point(&addr) else {
+            // 正常永远不会走到这里
+            return ControlFlow::Continue(());
+        };
+        match write!($d, "{name}{}{:X}", $s1, addr - start)
+            .and($c.try_for_each(|&o| {
+                if o >= 0 {
+                    write!($d, "{}{o:X}", $s2)
+                } else {
+                    write!($d, "{}-{:X}", $s2, o.abs())
+                }
+            }))
+            .and(writeln!($d))
+        {
+            Ok(_) => {
+                $( $n += 1; )?
+                ControlFlow::Continue(())
+            },
+            Err(err) => ControlFlow::Break(Err(err)),
+        }
+    }};
+}
+
 pub fn pointer_chain_scan(
     map: &PointerMap,
-    w: impl Write,
+    writer: impl Write,
     param: UserParam,
-    is_stop: &bool,
     base_symbol: &str,
     offset_symbol: &str,
 ) -> Result<(), Error> {
-    let mut buffer = BufWriter::with_capacity(0x100000, w);
+    let mut buffer = BufWriter::with_capacity(0x100000, writer);
     let PointerMap { points, map, modules } = map;
 
     let UserParam { param, node, last, max, cycle } = param;
     if cycle {
         match (node, last, max) {
             (None, None, None) => {
-                let mut f = |chain: Chain| {
-                    if *is_stop {
-                        return ControlFlow::Break(Ok(()));
-                    }
-                    let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
-                    else {
-                        return ControlFlow::Continue(());
-                    };
-                    match chain.ref_cycle() {
-                        Some(mut iter) => {
-                            match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                .and(iter.try_for_each(|&o| {
-                                    if o >= 0 {
-                                        write!(buffer, "{offset_symbol}{o:X}")
-                                    } else {
-                                        write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                    }
-                                }))
-                                .and(writeln!(buffer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            }
-                        }
-                        None => {
-                            match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                .and(chain.data().try_for_each(|&o| {
-                                    if o >= 0 {
-                                        write!(buffer, "{offset_symbol}{o:X}")
-                                    } else {
-                                        write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                    }
-                                }))
-                                .and(writeln!(buffer))
-                            {
-                                Ok(_) => ControlFlow::Continue(()),
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            }
-                        }
-                    }
+                let mut f = |chain: Chain| match chain.ref_cycle() {
+                    Some(mut iter) => output_pointer_chain!(
+                        chain,
+                        modules,
+                        iter,
+                        buffer,
+                        base_symbol,
+                        offset_symbol
+                    ),
+                    None => output_pointer_chain!(
+                        chain,
+                        modules,
+                        chain.data(),
+                        buffer,
+                        base_symbol,
+                        offset_symbol
+                    ),
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (None, None, Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max || *is_stop {
+                    if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
-                    let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
-                    else {
-                        return ControlFlow::Continue(());
-                    };
-
                     match chain.ref_cycle() {
-                        Some(mut iter) => {
-                            match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                .and(iter.try_for_each(|&o| {
-                                    if o >= 0 {
-                                        write!(buffer, "{offset_symbol}{o:X}")
-                                    } else {
-                                        write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                    }
-                                }))
-                                .and(writeln!(buffer))
-                            {
-                                Ok(_) => {
-                                    n += 1;
-                                    ControlFlow::Continue(())
-                                }
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            }
-                        }
-                        None => {
-                            match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                .and(chain.data().try_for_each(|&o| {
-                                    if o >= 0 {
-                                        write!(buffer, "{offset_symbol}{o:X}")
-                                    } else {
-                                        write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                    }
-                                }))
-                                .and(writeln!(buffer))
-                            {
-                                Ok(_) => {
-                                    n += 1;
-                                    ControlFlow::Continue(())
-                                }
-                                Err(err) => ControlFlow::Break(Err(err)),
-                            }
-                        }
+                        Some(mut iter) => output_pointer_chain!(
+                            chain,
+                            modules,
+                            iter,
+                            buffer,
+                            base_symbol,
+                            offset_symbol,
+                            n
+                        ),
+                        None => output_pointer_chain!(
+                            chain,
+                            modules,
+                            chain.data(),
+                            buffer,
+                            base_symbol,
+                            offset_symbol,
+                            n
+                        ),
                     }
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (None, Some(last), None) => {
                 let mut f = |chain: Chain| {
-                    if *is_stop {
-                        return ControlFlow::Break(Ok(()));
-                    }
                     if chain.last().is_some_and(|o| last.eq(o)) {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
                         match chain.ref_cycle() {
-                            Some(mut iter) => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(iter.try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
-                            }
-                            None => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(chain.data().try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
-                            }
+                            Some(mut iter) => output_pointer_chain!(
+                                chain,
+                                modules,
+                                iter,
+                                buffer,
+                                base_symbol,
+                                offset_symbol
+                            ),
+                            None => output_pointer_chain!(
+                                chain,
+                                modules,
+                                chain.data(),
+                                buffer,
+                                base_symbol,
+                                offset_symbol
+                            ),
                         }
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (None, Some(last), Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max || *is_stop {
+                    if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.last().is_some_and(|o| last.eq(o)) {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
                         match chain.ref_cycle() {
                             Some(mut iter) => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(iter.try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
+                                output_pointer_chain!(
+                                    chain,
+                                    modules,
+                                    iter,
+                                    buffer,
+                                    base_symbol,
+                                    offset_symbol,
+                                    n
+                                )
                             }
                             None => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(chain.data().try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
+                                output_pointer_chain!(
+                                    chain,
+                                    modules,
+                                    chain.data(),
+                                    buffer,
+                                    base_symbol,
+                                    offset_symbol,
+                                    n
+                                )
                             }
                         }
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (Some(node), None, None) => {
                 let mut f = |chain: Chain| {
-                    if *is_stop {
-                        return ControlFlow::Break(Ok(()));
-                    }
                     if chain.len() >= node {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
                         match chain.ref_cycle() {
-                            Some(mut iter) => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(iter.try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
-                            }
-                            None => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(chain.data().try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
-                            }
+                            Some(mut iter) => output_pointer_chain!(
+                                chain,
+                                modules,
+                                iter,
+                                buffer,
+                                base_symbol,
+                                offset_symbol
+                            ),
+                            None => output_pointer_chain!(
+                                chain,
+                                modules,
+                                chain.data(),
+                                buffer,
+                                base_symbol,
+                                offset_symbol
+                            ),
                         }
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (Some(node), None, Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max || *is_stop {
+                    if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.len() >= node {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
                         match chain.ref_cycle() {
                             Some(mut iter) => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(iter.try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
+                                output_pointer_chain!(
+                                    chain,
+                                    modules,
+                                    iter,
+                                    buffer,
+                                    base_symbol,
+                                    offset_symbol,
+                                    n
+                                )
                             }
                             None => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(chain.data().try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
+                                output_pointer_chain!(
+                                    chain,
+                                    modules,
+                                    chain.data(),
+                                    buffer,
+                                    base_symbol,
+                                    offset_symbol,
+                                    n
+                                )
                             }
                         }
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (Some(node), Some(last), None) => {
                 let mut f = |chain: Chain| {
-                    if *is_stop {
-                        return ControlFlow::Break(Ok(()));
-                    }
                     if chain
                         .last()
                         .is_some_and(|o| chain.len() >= node && last.eq(o))
                     {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
                         match chain.ref_cycle() {
-                            Some(mut iter) => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(iter.try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
-                            }
-                            None => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(chain.data().try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => ControlFlow::Continue(()),
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
-                            }
+                            Some(mut iter) => output_pointer_chain!(
+                                chain,
+                                modules,
+                                iter,
+                                buffer,
+                                base_symbol,
+                                offset_symbol
+                            ),
+                            None => output_pointer_chain!(
+                                chain,
+                                modules,
+                                chain.data(),
+                                buffer,
+                                base_symbol,
+                                offset_symbol
+                            ),
                         }
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (Some(node), Some(last), Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max || *is_stop {
+                    if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain
                         .last()
                         .is_some_and(|o| chain.len() >= node && last.eq(o))
                     {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
                         match chain.ref_cycle() {
                             Some(mut iter) => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(iter.try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
+                                output_pointer_chain!(
+                                    chain,
+                                    modules,
+                                    iter,
+                                    buffer,
+                                    base_symbol,
+                                    offset_symbol,
+                                    n
+                                )
                             }
                             None => {
-                                return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                                    .and(chain.data().try_for_each(|&o| {
-                                        if o >= 0 {
-                                            write!(buffer, "{offset_symbol}{o:X}")
-                                        } else {
-                                            write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                        }
-                                    }))
-                                    .and(writeln!(buffer))
-                                {
-                                    Ok(_) => {
-                                        n += 1;
-                                        ControlFlow::Continue(())
-                                    }
-                                    Err(err) => ControlFlow::Break(Err(err)),
-                                };
+                                output_pointer_chain!(
+                                    chain,
+                                    modules,
+                                    chain.data(),
+                                    buffer,
+                                    base_symbol,
+                                    offset_symbol,
+                                    n
+                                )
                             }
                         }
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
@@ -461,260 +315,158 @@ pub fn pointer_chain_scan(
         match (node, last, max) {
             (None, None, None) => {
                 let mut f = |chain: Chain| {
-                    if *is_stop {
-                        return ControlFlow::Break(Ok(()));
-                    }
-                    let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
-                    else {
-                        return ControlFlow::Continue(());
-                    };
-                    match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                        .and(chain.data().try_for_each(|&o| {
-                            if o >= 0 {
-                                write!(buffer, "{offset_symbol}{o:X}")
-                            } else {
-                                write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                            }
-                        }))
-                        .and(writeln!(buffer))
-                    {
-                        Ok(_) => ControlFlow::Continue(()),
-                        Err(err) => ControlFlow::Break(Err(err)),
-                    }
+                    output_pointer_chain!(
+                        chain,
+                        modules,
+                        chain.data(),
+                        buffer,
+                        base_symbol,
+                        offset_symbol
+                    )
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (None, None, Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max || *is_stop {
+                    if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
-                    let addr = chain.addr();
-                    let Some((Range { start, .. }, name)) = modules.get_key_value_by_point(&addr)
-                    else {
-                        return ControlFlow::Continue(());
-                    };
-                    match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                        .and(chain.data().try_for_each(|&o| {
-                            if o >= 0 {
-                                write!(buffer, "{offset_symbol}{o:X}")
-                            } else {
-                                write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                            }
-                        }))
-                        .and(writeln!(buffer))
-                    {
-                        Ok(_) => {
-                            n += 1;
-                            ControlFlow::Continue(())
-                        }
-                        Err(err) => ControlFlow::Break(Err(err)),
-                    }
+                    output_pointer_chain!(
+                        chain,
+                        modules,
+                        chain.data(),
+                        buffer,
+                        base_symbol,
+                        offset_symbol,
+                        n
+                    )
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (None, Some(last), None) => {
                 let mut f = |chain: Chain| {
-                    if *is_stop {
-                        return ControlFlow::Break(Ok(()));
-                    }
                     if chain.last().is_some_and(|o| last.eq(o)) {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
-                        return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                            .and(chain.data().try_for_each(|&o| {
-                                if o >= 0 {
-                                    write!(buffer, "{offset_symbol}{o:X}")
-                                } else {
-                                    write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                }
-                            }))
-                            .and(writeln!(buffer))
-                        {
-                            Ok(_) => ControlFlow::Continue(()),
-                            Err(err) => ControlFlow::Break(Err(err)),
-                        };
+                        output_pointer_chain!(
+                            chain,
+                            modules,
+                            chain.data(),
+                            buffer,
+                            base_symbol,
+                            offset_symbol
+                        )
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (None, Some(last), Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max || *is_stop {
+                    if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.last().is_some_and(|o| last.eq(o)) {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
-                        return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                            .and(chain.data().try_for_each(|&o| {
-                                if o >= 0 {
-                                    write!(buffer, "{offset_symbol}{o:X}")
-                                } else {
-                                    write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                }
-                            }))
-                            .and(writeln!(buffer))
-                        {
-                            Ok(_) => {
-                                n += 1;
-                                ControlFlow::Continue(())
-                            }
-                            Err(err) => ControlFlow::Break(Err(err)),
-                        };
+                        output_pointer_chain!(
+                            chain,
+                            modules,
+                            chain.data(),
+                            buffer,
+                            base_symbol,
+                            offset_symbol,
+                            n
+                        )
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (Some(node), None, None) => {
                 let mut f = |chain: Chain| {
-                    if *is_stop {
-                        return ControlFlow::Break(Ok(()));
-                    }
                     if chain.len() >= node {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
-                        return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                            .and(chain.data().try_for_each(|&o| {
-                                if o >= 0 {
-                                    write!(buffer, "{offset_symbol}{o:X}")
-                                } else {
-                                    write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                }
-                            }))
-                            .and(writeln!(buffer))
-                        {
-                            Ok(_) => ControlFlow::Continue(()),
-                            Err(err) => ControlFlow::Break(Err(err)),
-                        };
+                        output_pointer_chain!(
+                            chain,
+                            modules,
+                            chain.data(),
+                            buffer,
+                            base_symbol,
+                            offset_symbol
+                        )
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (Some(node), None, Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max || *is_stop {
+                    if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.len() >= node {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
-                        return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                            .and(chain.data().try_for_each(|&o| {
-                                if o >= 0 {
-                                    write!(buffer, "{offset_symbol}{o:X}")
-                                } else {
-                                    write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                }
-                            }))
-                            .and(writeln!(buffer))
-                        {
-                            Ok(_) => {
-                                n += 1;
-                                ControlFlow::Continue(())
-                            }
-                            Err(err) => ControlFlow::Break(Err(err)),
-                        };
+                        output_pointer_chain!(
+                            chain,
+                            modules,
+                            chain.data(),
+                            buffer,
+                            base_symbol,
+                            offset_symbol,
+                            n
+                        )
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (Some(node), Some(last), None) => {
                 let mut f = |chain: Chain| {
-                    if *is_stop {
-                        return ControlFlow::Break(Ok(()));
-                    }
                     if chain
                         .last()
                         .is_some_and(|o| chain.len() >= node && last.eq(o))
                     {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
-                        return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                            .and(chain.data().try_for_each(|&o| {
-                                if o >= 0 {
-                                    write!(buffer, "{offset_symbol}{o:X}")
-                                } else {
-                                    write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                }
-                            }))
-                            .and(writeln!(buffer))
-                        {
-                            Ok(_) => ControlFlow::Continue(()),
-                            Err(err) => ControlFlow::Break(Err(err)),
-                        };
+                        output_pointer_chain!(
+                            chain,
+                            modules,
+                            chain.data(),
+                            buffer,
+                            base_symbol,
+                            offset_symbol
+                        )
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (Some(node), Some(last), Some(max)) => {
                 let mut n = 0;
                 let mut f = |chain: Chain| {
-                    if n >= max || *is_stop {
+                    if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain
                         .last()
                         .is_some_and(|o| chain.len() >= node && last.eq(o))
                     {
-                        let addr = chain.addr();
-                        let Some((Range { start, .. }, name)) =
-                            modules.get_key_value_by_point(&addr)
-                        else {
-                            return ControlFlow::Continue(());
-                        };
-                        return match write!(buffer, "{name}{base_symbol}{:X}", addr - start)
-                            .and(chain.data().try_for_each(|&o| {
-                                if o >= 0 {
-                                    write!(buffer, "{offset_symbol}{o:X}")
-                                } else {
-                                    write!(buffer, "{offset_symbol}-{:X}", o.abs())
-                                }
-                            }))
-                            .and(writeln!(buffer))
-                        {
-                            Ok(_) => {
-                                n += 1;
-                                ControlFlow::Continue(())
-                            }
-                            Err(err) => ControlFlow::Break(Err(err)),
-                        };
+                        output_pointer_chain!(
+                            chain,
+                            modules,
+                            chain.data(),
+                            buffer,
+                            base_symbol,
+                            offset_symbol,
+                            n
+                        )
+                    } else {
+                        ControlFlow::Continue(())
                     }
-                    ControlFlow::Continue(())
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
         }
-    }?;
-
-    Ok(())
+    }
 }
