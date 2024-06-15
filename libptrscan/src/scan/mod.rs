@@ -8,7 +8,7 @@ extern crate alloc;
 use alloc::{collections::BTreeMap, vec::Vec};
 use core::{
     iter,
-    ops::{Bound, ControlFlow},
+    ops::{Bound, ControlFlow, Range},
 };
 
 #[cfg(not(feature = "nightly"))]
@@ -129,13 +129,13 @@ const MIN: usize = 4096;
 struct CoreParam {
     depth: usize,
     addr: usize,
-    srange: (usize, usize),
+    srange: Range<usize>,
 }
 
 /// 核心扫描参数扩展 允许指定第一个偏移范围
 struct CoreParamExt {
     core: CoreParam,
-    lrange: (usize, usize),
+    lrange: Range<usize>,
 }
 
 /// 扫描参数
@@ -145,10 +145,10 @@ pub struct Param {
     /// 目标地址
     pub addr: usize,
     /// 核心偏移 向前偏移:向后偏移
-    pub srange: (usize, usize),
+    pub srange: Range<usize>,
     /// 第一级偏移可选 向前偏移:向后偏移
     /// 对于一级偏移极度不平衡的指针链 这个参数可以极大提高扫描速度
-    pub lrange: Option<(usize, usize)>,
+    pub lrange: Option<Range<usize>>,
 }
 
 /// 指针链
@@ -225,11 +225,9 @@ where
 {
     let CoreParam { depth, addr, srange } = param;
 
-    let min = addr.saturating_sub(srange.1);
-    let max = addr.saturating_add(srange.0);
+    let min = addr.saturating_sub(srange.end);
+    let max = addr.saturating_add(srange.start);
 
-    // 将 points 作为 BTreeSet 会很好，因为它有一个 range
-    // 方法，不幸的是，测试中它的性能可能不如 Vec，除非使用苹果芯片。
     let idx = points.binary_search(&min).unwrap_or_else(|x| x);
 
     if points
@@ -250,6 +248,7 @@ where
         for (&k, v) in map.range((Bound::Included(min), Bound::Included(max))) {
             data.push((k, addr.wrapping_sub(k) as isize));
             for &addr in v {
+                let srange = srange.clone();
                 let r = __try_chain_scan_core_1(
                     map,
                     points,
@@ -286,13 +285,17 @@ where
     let CoreParamExt { core: CoreParam { depth, addr, srange }, lrange } = param;
 
     let (min, max) = if curr != CURR {
-        (addr.saturating_sub(srange.1), addr.saturating_add(srange.0))
+        (
+            addr.saturating_sub(srange.end),
+            addr.saturating_add(srange.start),
+        )
     } else {
-        (addr.saturating_sub(lrange.1), addr.saturating_add(lrange.0))
+        (
+            addr.saturating_sub(lrange.end),
+            addr.saturating_add(lrange.start),
+        )
     };
 
-    // 将 points 作为 BTreeSet 会很好，因为它有一个 range
-    // 方法，不幸的是，测试中它的性能可能不如 Vec，除非使用苹果芯片。
     let idx = points.binary_search(&min).unwrap_or_else(|x| x);
 
     if points
@@ -313,6 +316,7 @@ where
         for (&k, v) in map.range((Bound::Included(min), Bound::Included(max))) {
             data.push((k, addr.wrapping_sub(k) as isize));
             for &addr in v {
+                let (srange, lrange) = (srange.clone(), lrange.clone());
                 let param = CoreParamExt { core: CoreParam { depth, addr, srange }, lrange };
                 let r = __try_chain_scan_ext_1(map, points, param, f, data, curr + 1);
                 match Try::branch(r) {
@@ -342,11 +346,9 @@ where
 {
     let CoreParam { depth, addr, srange } = param;
 
-    let min = addr.saturating_sub(srange.1);
-    let max = addr.saturating_add(srange.0);
+    let min = addr.saturating_sub(srange.end);
+    let max = addr.saturating_add(srange.start);
 
-    // 将 points 作为 BTreeSet 会很好，因为它有一个 range
-    // 方法，不幸的是，测试中它的性能可能不如 Vec，除非使用苹果芯片。
     let idx = points
         .iter()
         .position(|x| min.le(x))
@@ -370,6 +372,7 @@ where
         for (&k, v) in map.range((Bound::Included(min), Bound::Included(max))) {
             data.push((k, addr.wrapping_sub(k) as isize));
             for &addr in v {
+                let srange = srange.clone();
                 let r = __try_chain_scan_core_2(
                     map,
                     points,
@@ -406,13 +409,17 @@ where
     let CoreParamExt { core: CoreParam { depth, addr, srange }, lrange } = param;
 
     let (min, max) = if curr != CURR {
-        (addr.saturating_sub(srange.1), addr.saturating_add(srange.0))
+        (
+            addr.saturating_sub(srange.end),
+            addr.saturating_add(srange.start),
+        )
     } else {
-        (addr.saturating_sub(lrange.1), addr.saturating_add(lrange.0))
+        (
+            addr.saturating_sub(lrange.end),
+            addr.saturating_add(lrange.start),
+        )
     };
 
-    // 将 points 作为 BTreeSet 会很好，因为它有一个 range
-    // 方法，不幸的是，测试中它的性能可能不如 Vec，除非使用苹果芯片。
     let idx = points
         .iter()
         .position(|x| min.le(x))
@@ -436,6 +443,7 @@ where
         for (&k, v) in map.range((Bound::Included(min), Bound::Included(max))) {
             data.push((k, addr.wrapping_sub(k) as isize));
             for &addr in v {
+                let (srange, lrange) = (srange.clone(), lrange.clone());
                 let param = CoreParamExt { core: CoreParam { depth, addr, srange }, lrange };
                 let r = __try_chain_scan_ext_2(map, points, param, f, data, curr + 1);
                 match Try::branch(r) {

@@ -202,8 +202,8 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
 ) -> c_int {
     let FFIParam { addr, depth, srange, lrange, node, last, max, cycle, .. } = param;
 
-    let range = (srange.left, srange.right);
-    let lrange = lrange.as_ref().copied().map(|r| (r.left, r.right));
+    let srange = srange.left..srange.right;
+    let lrange = lrange.as_ref().copied().map(|r| r.left..r.right);
     let node = node.as_ref().copied();
     let last = last.as_ref().copied();
     let max = max.as_ref().copied();
@@ -214,7 +214,7 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
 
     #[rustfmt::skip]
     let param = UserParam {
-        param: Param { depth, addr, srange: range, lrange },
+        param: Param { depth, addr, srange, lrange },
         node, last, max, cycle
     };
 
