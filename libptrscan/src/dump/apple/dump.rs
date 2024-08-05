@@ -5,16 +5,13 @@ use core::{
 use std::{
     collections::BTreeMap,
     fs::File,
-    io::{BufWriter, Write},
+    io::{BufWriter, Error, Write},
     path::Path,
 };
 
-use machx::{
-    kern_return::KERN_SUCCESS, port::mach_port_name_t, vm::mach_vm_read_overwrite,
-    vm_types::mach_vm_address_t,
-};
+use machx::{kern_return::KERN_SUCCESS, port::mach_port_name_t, vm::mach_vm_read_overwrite};
 
-use super::{Error, Header, PointerMap, RangeMap, RangeSet, ARCH64, MAGIC};
+use super::{info::kern_error, Header, PointerMap, RangeMap, RangeSet, ARCH64, MAGIC};
 
 // 苹果的 mach_vm_read_overwrite 仅有精准模式，所以手动计算它
 struct ChunkIter {
@@ -45,7 +42,27 @@ impl Iterator for ChunkIter {
     }
 }
 
-// TODO: 可以轻松的转为并行，但不是现在
+#[inline]
+pub unsafe fn read_memory_exact(
+    task: mach_port_name_t,
+    addr: usize,
+    buf: &mut [u8],
+) -> Result<(), Error> {
+    let mut outsize = 0;
+    let kr = mach_vm_read_overwrite(
+        task,
+        addr as u64,
+        buf.len() as u64,
+        buf.as_mut_ptr() as u64,
+        &mut outsize,
+    );
+    if kr != KERN_SUCCESS {
+        return Err(kern_error(kr));
+    }
+    Ok(())
+}
+
+// TODO: 可以轻松转为并行，但不是现在
 pub fn create_pointer_map(
     task: mach_port_name_t,
     module_maps: RangeMap<usize, String>,
@@ -58,22 +75,13 @@ pub fn create_pointer_map(
 
     let mut addr_map = BTreeMap::new();
 
-    let mut buf = vec![0_u8; 0x100000];
+    let mut buf = vec![0_u8; 0x200000];
     for Range { start, end } in range_maps.iter() {
         let (start, size) = (start, end - start);
-        for (off, size) in ChunkIter::new(size, 0x100000) {
+        for (off, size) in ChunkIter::new(size, 0x200000) {
             let buf = &mut buf[..size];
-            let mut outsize = 0;
-            let kr = unsafe {
-                mach_vm_read_overwrite(
-                    task,
-                    (start + off) as u64,
-                    size as u64,
-                    buf.as_mut_ptr() as mach_vm_address_t,
-                    &mut outsize,
-                )
-            };
-            if kr != KERN_SUCCESS || outsize as usize != size {
+            if let Err(err) = unsafe { read_memory_exact(task, start + off, buf) } {
+                eprintln!("Warning: failed to read address 0x{:X}. {err}", start + off);
                 break;
             }
 
@@ -128,7 +136,7 @@ pub fn create_pointer_map_file(
         .collect::<RangeSet<usize>>();
 
     let file = File::options().append(true).create_new(true).open(path)?;
-    let mut buffer = BufWriter::with_capacity(0x100000, file);
+    let mut buffer = BufWriter::with_capacity(0x200000, file);
 
     buffer.write_all(header(module_maps.len() as u32).as_bytes())?;
 
@@ -142,22 +150,13 @@ pub fn create_pointer_map_file(
                 .and(buffer.write_all(name.as_bytes()))
         })?;
 
-    let mut buf = vec![0_u8; 0x100000];
+    let mut buf = vec![0_u8; 0x200000];
     for Range { start, end } in range_maps.iter() {
         let (start, size) = (start, end - start);
-        for (off, size) in ChunkIter::new(size, 0x100000) {
+        for (off, size) in ChunkIter::new(size, 0x200000) {
             let buf = &mut buf[..size];
-            let mut outsize = 0;
-            let kr = unsafe {
-                mach_vm_read_overwrite(
-                    task,
-                    (start + off) as u64,
-                    size as u64,
-                    buf.as_mut_ptr() as mach_vm_address_t,
-                    &mut outsize,
-                )
-            };
-            if kr != KERN_SUCCESS || outsize as usize != size {
+            if let Err(err) = unsafe { read_memory_exact(task, start + off, buf) } {
+                eprintln!("Warning: failed to read address 0x{:X}. {err}", start + off);
                 break;
             }
 

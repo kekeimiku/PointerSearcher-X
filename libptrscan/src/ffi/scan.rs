@@ -1,9 +1,5 @@
 use core::ops::{ControlFlow, Range};
-use std::{
-    fs::File,
-    io::{BufWriter, Error, Write},
-    path::Path,
-};
+use std::io::{BufWriter, Error, Write};
 
 use crate::{
     dump::PointerMap,
@@ -37,9 +33,9 @@ macro_rules! output_pointer_chain {
         match write!($d, "{name}+{:X}", addr - start)
             .and($c.try_for_each(|&o| {
                 if o >= 0 {
-                    write!($d, ".{o:X}")
+                    write!($d, "->{o:X}")
                 } else {
-                    write!($d, ".-{:X}", o.abs())
+                    write!($d, "->-{:X}", o.abs())
                 }
             }))
             .and(writeln!($d))
@@ -53,23 +49,28 @@ macro_rules! output_pointer_chain {
     }};
 }
 
+macro_rules! output_pointer_chain_cy {
+    ($f:expr, $chain:expr, $modules:expr, $buffer:expr $(, $n:ident)?) => {{
+        match $chain.ref_cycle() {
+            Some(mut iter) => output_pointer_chain!($chain, $modules, iter, $buffer $(, $n)?),
+            None => output_pointer_chain!($chain, $modules, $chain.data(), $buffer $(, $n)?),
+        }
+    }};
+}
+
 pub fn pointer_chain_scan(
     map: &PointerMap,
-    path: impl AsRef<Path>,
+    writer: impl Write,
     param: UserParam,
 ) -> Result<(), Error> {
-    let file = File::options().append(true).create_new(true).open(path)?;
-    let mut buffer = BufWriter::with_capacity(0x100000, file);
+    let mut buffer = BufWriter::with_capacity(0x100000, writer);
     let PointerMap { points, map, modules } = map;
 
     let UserParam { param, node, last, max, cycle } = param;
     if cycle {
         match (node, last, max) {
             (None, None, None) => {
-                let mut f = |chain: Chain| match chain.ref_cycle() {
-                    Some(mut iter) => output_pointer_chain!(chain, modules, iter, buffer),
-                    None => output_pointer_chain!(chain, modules, chain.data(), buffer),
-                };
+                let mut f = |chain: Chain| output_pointer_chain_cy!(f, chain, modules, buffer);
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (None, None, Some(max)) => {
@@ -78,20 +79,14 @@ pub fn pointer_chain_scan(
                     if n >= max {
                         return ControlFlow::Break(Ok(()));
                     }
-                    match chain.ref_cycle() {
-                        Some(mut iter) => output_pointer_chain!(chain, modules, iter, buffer, n),
-                        None => output_pointer_chain!(chain, modules, chain.data(), buffer, n),
-                    }
+                    output_pointer_chain_cy!(f, chain, modules, buffer, n)
                 };
                 try_scan!(try_pointer_chain_scan(map, points, param, &mut f))
             }
             (None, Some(last), None) => {
                 let mut f = |chain: Chain| {
                     if chain.last().is_some_and(|o| last.eq(o)) {
-                        match chain.ref_cycle() {
-                            Some(mut iter) => output_pointer_chain!(chain, modules, iter, buffer),
-                            None => output_pointer_chain!(chain, modules, chain.data(), buffer),
-                        }
+                        output_pointer_chain_cy!(f, chain, modules, buffer)
                     } else {
                         ControlFlow::Continue(())
                     }
@@ -105,14 +100,7 @@ pub fn pointer_chain_scan(
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.last().is_some_and(|o| last.eq(o)) {
-                        match chain.ref_cycle() {
-                            Some(mut iter) => {
-                                output_pointer_chain!(chain, modules, iter, buffer, n)
-                            }
-                            None => {
-                                output_pointer_chain!(chain, modules, chain.data(), buffer, n)
-                            }
-                        }
+                        output_pointer_chain_cy!(f, chain, modules, buffer, n)
                     } else {
                         ControlFlow::Continue(())
                     }
@@ -122,10 +110,7 @@ pub fn pointer_chain_scan(
             (Some(node), None, None) => {
                 let mut f = |chain: Chain| {
                     if chain.len() >= node {
-                        match chain.ref_cycle() {
-                            Some(mut iter) => output_pointer_chain!(chain, modules, iter, buffer),
-                            None => output_pointer_chain!(chain, modules, chain.data(), buffer),
-                        }
+                        output_pointer_chain_cy!(f, chain, modules, buffer)
                     } else {
                         ControlFlow::Continue(())
                     }
@@ -139,14 +124,7 @@ pub fn pointer_chain_scan(
                         return ControlFlow::Break(Ok(()));
                     }
                     if chain.len() >= node {
-                        match chain.ref_cycle() {
-                            Some(mut iter) => {
-                                output_pointer_chain!(chain, modules, iter, buffer, n)
-                            }
-                            None => {
-                                output_pointer_chain!(chain, modules, chain.data(), buffer, n)
-                            }
-                        }
+                        output_pointer_chain_cy!(f, chain, modules, buffer, n)
                     } else {
                         ControlFlow::Continue(())
                     }
@@ -159,10 +137,7 @@ pub fn pointer_chain_scan(
                         .last()
                         .is_some_and(|o| chain.len() >= node && last.eq(o))
                     {
-                        match chain.ref_cycle() {
-                            Some(mut iter) => output_pointer_chain!(chain, modules, iter, buffer),
-                            None => output_pointer_chain!(chain, modules, chain.data(), buffer),
-                        }
+                        output_pointer_chain_cy!(f, chain, modules, buffer)
                     } else {
                         ControlFlow::Continue(())
                     }
@@ -179,14 +154,7 @@ pub fn pointer_chain_scan(
                         .last()
                         .is_some_and(|o| chain.len() >= node && last.eq(o))
                     {
-                        match chain.ref_cycle() {
-                            Some(mut iter) => {
-                                output_pointer_chain!(chain, modules, iter, buffer, n)
-                            }
-                            None => {
-                                output_pointer_chain!(chain, modules, chain.data(), buffer, n)
-                            }
-                        }
+                        output_pointer_chain_cy!(f, chain, modules, buffer, n)
                     } else {
                         ControlFlow::Continue(())
                     }

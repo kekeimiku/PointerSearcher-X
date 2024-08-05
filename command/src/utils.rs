@@ -1,7 +1,7 @@
 use std::{
     borrow::Cow,
     fmt::Display,
-    io::Write,
+    io::{self, Write},
     sync::{
         atomic::{AtomicBool, Ordering},
         Arc,
@@ -20,7 +20,7 @@ impl Spinner {
         let still_spinning = Arc::new(AtomicBool::new(true));
         let spinner_chars = ['-', '\\', '|', '/'];
         let msg = msg.into();
-        let mut stdout = anstream::stdout();
+        let mut stdout = io::stdout();
         let time = Instant::now();
         let ssp = still_spinning.clone();
         let handle = thread::spawn(move || {

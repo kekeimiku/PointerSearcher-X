@@ -1,14 +1,14 @@
 use std::{
     collections::BTreeMap,
     fs::File,
-    io::{BufWriter, Write},
+    io::{BufWriter, Error, Write},
     mem,
     ops::{Bound, Range},
     os::unix::fs::FileExt,
     path::Path,
 };
 
-use super::{Error, Header, PointerMap, RangeMap, RangeSet, ARCH64, MAGIC};
+use super::{Header, PointerMap, RangeMap, RangeSet, ARCH64, MAGIC};
 
 // TODO: 可以轻松的转为并行，但不是现在
 pub fn create_pointer_map(
@@ -27,8 +27,12 @@ pub fn create_pointer_map(
     for Range { start, end } in range_maps.iter() {
         let (start, size) = (start, end - start);
         for off in (0..size).step_by(0x100000) {
-            let Ok(size) = mem.read_at(&mut buf, (start + off) as u64) else {
-                break;
+            let size = match mem.read_at(&mut buf, (start + off) as u64) {
+                Ok(n) => n,
+                Err(err) => {
+                    eprintln!("Warning: failed to read address 0x{:X}. {err}", start + off);
+                    break;
+                }
             };
 
             for (k, v) in buf[..size]
@@ -100,10 +104,13 @@ pub fn create_pointer_map_file(
     for Range { start, end } in range_maps.iter() {
         let (start, size) = (start, end - start);
         for off in (0..size).step_by(0x100000) {
-            let Ok(size) = mem.read_at(&mut buf, (start + off) as u64) else {
-                break;
+            let size = match mem.read_at(&mut buf, (start + off) as u64) {
+                Ok(n) => n,
+                Err(err) => {
+                    eprintln!("Warning: failed to read address 0x{:X}. {err}", start + off);
+                    break;
+                }
             };
-
             for (k, v) in buf[..size]
                 .windows(mem::size_of::<usize>())
                 .enumerate()

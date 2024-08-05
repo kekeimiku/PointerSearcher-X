@@ -2,7 +2,6 @@
 name = "command"
 version = "0.1.0"
 edition = "2021"
-build = "build.rs"
 
 [[bin]]
 name = "ptrscan"
@@ -16,8 +15,3 @@ features = ["help"]
 [dependencies.rayon]
 version = "1.10.0"
 default-features = false
-
-[dependencies.anstream]
-version = "0.6.14"
-default-features = false
-features = ["auto", "wincon"]

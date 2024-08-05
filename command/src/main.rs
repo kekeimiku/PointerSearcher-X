@@ -18,8 +18,6 @@ fn main() {
         cmd::TopCommandEnum::CmpPointerChain(this) => this.init(),
         cmd::TopCommandEnum::TestPointerChain(this) => this.init(),
     } {
-        use std::io::Write;
-        let mut stderr = anstream::stderr();
-        writeln!(stderr, "\n\x1b[31m error: {err} \x1b[0m").unwrap();
+        eprintln!("\n\x1b[31m error: {err} \x1b[0m")
     }
 }

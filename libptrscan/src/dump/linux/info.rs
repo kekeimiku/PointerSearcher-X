@@ -1,6 +1,6 @@
 use std::{
     fs::{self, File},
-    io::Read,
+    io::{Error, Read},
     path::Path,
 };
 
@@ -73,7 +73,7 @@ impl<'a> Iterator for MapIter<'a> {
     }
 }
 
-pub fn list_image_maps(pid: i32) -> Result<RangeMap<usize, String>, std::io::Error> {
+pub fn list_image_maps(pid: i32) -> Result<RangeMap<usize, String>, Error> {
     let contents = fs::read_to_string(format!("/proc/{pid}/maps"))?;
     let maps = MapIter::new(&contents);
 
@@ -102,7 +102,7 @@ pub fn list_image_maps(pid: i32) -> Result<RangeMap<usize, String>, std::io::Err
     Ok(image_module_maps)
 }
 
-pub fn list_unknown_maps(pid: i32) -> Result<RangeSet<usize>, std::io::Error> {
+pub fn list_unknown_maps(pid: i32) -> Result<RangeSet<usize>, Error> {
     let contents = fs::read_to_string(format!("/proc/{pid}/maps"))?;
     let maps = MapIter::new(&contents);
 

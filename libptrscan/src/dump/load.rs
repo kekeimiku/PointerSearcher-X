@@ -5,7 +5,7 @@ use core::{
 use std::{
     collections::BTreeMap,
     fs::File,
-    io::{Cursor, Error, ErrorKind, Read},
+    io::{Cursor, Error, Read},
     path::Path,
 };
 
@@ -21,7 +21,7 @@ pub fn load_pointer_map_file(pathname: impl AsRef<Path>) -> Result<PointerMap, E
 
     // TODO 检查文件合法性
     if &header.magic != MAGIC || header.arch != ARCH64 {
-        return Err(Error::new(ErrorKind::Other, "invalid pointer_map file"));
+        return Err(Error::other("invalid pointer_map file"));
     }
 
     let mut modules = RangeMap::new();
@@ -31,7 +31,7 @@ pub fn load_pointer_map_file(pathname: impl AsRef<Path>) -> Result<PointerMap, E
         let (start, end, size): (usize, usize, usize) = unsafe { mem::transmute(buf) };
         let mut buf = vec![0_u8; size];
         cursor.get_mut().read_exact(&mut buf)?;
-        let name = unsafe { String::from_utf8_unchecked(buf) };
+        let name = String::from_utf8(buf).unwrap();
         modules.insert(start..end, name);
     }
 

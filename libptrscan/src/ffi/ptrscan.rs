@@ -1,9 +1,10 @@
 use core::{
-    ffi::{c_char, c_int},
+    ffi::{c_char, c_int, CStr},
     slice,
 };
 use std::{
-    ffi::{CStr, CString, NulError},
+    ffi::{CString, NulError},
+    fs::File,
     str::Utf8Error,
 };
 
@@ -218,14 +219,12 @@ pub unsafe extern "C" fn ptrscan_scan_pointer_chain(
         node, last, max, cycle
     };
 
-    try_result!(pointer_chain_scan(pointer_map, pathname, param));
+    let file = try_result!(File::options().append(true).create_new(true).open(pathname));
+    try_result!(pointer_chain_scan(pointer_map, file, param));
 
     SUCCESS
 }
 
-/// 读取内存
-/// 内部维护了进程句柄，使用这个库中的读取内存函数可以直接复用内部进程句柄，
-/// 当然你自己重新创建一个进程句柄不用这个函数也没什么问题
 #[no_mangle]
 pub unsafe extern "C" fn ptrscan_read_memory_exact(
     ptr: *mut FFIPointerScan,

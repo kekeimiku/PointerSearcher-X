@@ -533,7 +533,7 @@ pub struct PointerChain(pub (String, usize, Vec<isize>));
 
 pub fn parse_pointer_chain(value: &str) -> Option<(String, usize, Vec<isize>)> {
     let (module_name, b) = value.rsplit_once('+')?;
-    let mut iter = b.split('.');
+    let mut iter = b.split("->");
     let module_offset = iter
         .next()
         .and_then(|s| usize::from_str_radix(s.trim_start_matches("0x"), 16).ok())?;

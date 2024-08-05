@@ -13,14 +13,12 @@ mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::Process;
 
-mod error;
 mod load;
 mod rangemap;
 
 use core::{mem, slice};
 use std::collections::BTreeMap;
 
-pub use error::Error;
 pub use load::load_pointer_map_file;
 pub use rangemap::{RangeMap, RangeSet};
 
@@ -34,7 +32,7 @@ pub(crate) const MAGIC: &[u8; 4] = b"@PTR";
 // pub(crate) const ARCH32: u32 = 1;
 pub(crate) const ARCH64: u32 = 2;
 
-#[repr(packed)]
+#[repr(C, packed)]
 pub struct Header {
     pub magic: [u8; 4],
     pub arch: u32,
