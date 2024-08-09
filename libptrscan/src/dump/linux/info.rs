@@ -6,13 +6,12 @@ use std::{
 
 use super::{RangeMap, RangeSet};
 
+#[allow(dead_code)]
 struct Map<'a> {
     start: usize,
     end: usize,
     flags: &'a str,
-    #[allow(dead_code)]
     offset: usize,
-    #[allow(dead_code)]
     dev: &'a str,
     inode: usize,
     name: Option<&'a str>,
@@ -35,9 +34,10 @@ impl Map<'_> {
         &self.flags[1..2] == "w"
     }
 
-    // fn is_exec(&self) -> bool {
-    //     &self.flags[2..3] == "x"
-    // }
+    #[allow(dead_code)]
+    fn is_exec(&self) -> bool {
+        &self.flags[2..3] == "x"
+    }
 
     fn name(&self) -> Option<&str> {
         self.name
@@ -73,27 +73,41 @@ impl<'a> Iterator for MapIter<'a> {
     }
 }
 
+const REGIONS: [&str; 3] = ["[anon:libc_malloc]", "[stack]", "[heap]"];
+const BSS: &str = "[anon:.bss]";
+
+#[inline]
+fn is_a(s: &str) -> bool {
+    s.get(0..7).is_some_and(|s| s.eq("/memfd:")) || s.starts_with("/dev/")
+}
+
+fn is_elf(s: &str) -> bool {
+    let path = Path::new(s);
+    if path.is_file() {
+        let mut buf = [0; 6];
+        File::open(path)
+            .and_then(|mut f| f.read_exact(&mut buf))
+            .is_ok_and(|_| [0x7f, b'E', b'L', b'F', 2, 1].eq(&buf))
+    } else {
+        false
+    }
+}
+
 pub fn list_image_maps(pid: i32) -> Result<RangeMap<usize, String>, Error> {
     let contents = fs::read_to_string(format!("/proc/{pid}/maps"))?;
-    let maps = MapIter::new(&contents);
+    let maps = MapIter::new(&contents).collect::<Vec<_>>();
 
     let mut image_module_maps = RangeMap::new();
-    let mut buf = [0; 8];
 
-    for map in maps.filter(|m| m.is_read() && m.is_write()) {
-        if let Some(name) = map.name() {
-            if map.inode != 0 {
-                if !name.get(0..7).is_some_and(|s| s.eq("/memfd:")) && !name.starts_with("/dev/") {
-                    let path = Path::new(name);
-                    if path.is_file() {
-                        // TODO 判断文件是否是 elf64 小端
-                        let is_elf = File::open(path)
-                            .and_then(|mut f| f.read_exact(&mut buf))
-                            .is_ok_and(|_| [0x7f, b'E', b'L', b'F', 2, 1].eq(&buf[0..6]));
-                        if is_elf {
-                            image_module_maps.insert(map.start()..map.end(), name.to_string());
-                        }
-                    }
+    for (a, b) in maps.iter().zip(maps.iter().skip(1)) {
+        if a.is_read() && a.is_write() {
+            if let Some(module) = a.name().filter(|s| a.inode != 0 && !is_a(s) && is_elf(s)) {
+                image_module_maps.insert(a.start()..a.end(), module.to_string());
+
+                if b.name()
+                    .is_some_and(|s| s == BSS && b.is_read() && b.is_write())
+                {
+                    image_module_maps.insert(b.start()..b.end(), format!("{module}:bss"));
                 }
             }
         }
@@ -107,8 +121,6 @@ pub fn list_unknown_maps(pid: i32) -> Result<RangeSet<usize>, Error> {
     let maps = MapIter::new(&contents);
 
     let mut unknown_maps = RangeSet::new();
-
-    const REGIONS: [&str; 4] = ["[anon:.bss]", "[anon:libc_malloc]", "[stack]", "[heap]"];
 
     for map in maps.filter(|m| m.is_read() && m.is_write()) {
         if map.name().is_some_and(|name| REGIONS.contains(&name)) || map.name().is_none() {

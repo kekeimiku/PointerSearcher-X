@@ -228,7 +228,7 @@ pub struct TestPointerChain {
 
 #[cfg(target_os = "android")]
 fn filter_modules(m: &&Module) -> bool {
-    const N_ELFS: [&str; 3] = ["oat", "dex", "odex"];
+    const N_ELFS: [&str; 6] = ["oat", "dex", "odex", "oat:bss", "dex:bss", "odex:bss"];
     let path = Path::new(&m.pathname);
     path.starts_with("/data")
         && !path

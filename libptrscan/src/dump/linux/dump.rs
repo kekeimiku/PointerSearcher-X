@@ -23,10 +23,10 @@ pub fn create_pointer_map(
 
     let mut addr_map = BTreeMap::new();
 
-    let mut buf = vec![0_u8; 0x100000];
+    let mut buf = vec![0_u8; 0x200000];
     for Range { start, end } in range_maps.iter() {
         let (start, size) = (start, end - start);
-        for off in (0..size).step_by(0x100000) {
+        for off in (0..size).step_by(0x200000) {
             let size = match mem.read_at(&mut buf, (start + off) as u64) {
                 Ok(n) => n,
                 Err(err) => {
@@ -86,7 +86,7 @@ pub fn create_pointer_map_file(
         .collect::<RangeSet<usize>>();
 
     let file = File::options().append(true).create_new(true).open(path)?;
-    let mut buffer = BufWriter::with_capacity(0x100000, file);
+    let mut buffer = BufWriter::with_capacity(0x200000, file);
 
     buffer.write_all(header(module_maps.len() as u32).as_bytes())?;
 
@@ -100,10 +100,10 @@ pub fn create_pointer_map_file(
                 .and(buffer.write_all(name.as_bytes()))
         })?;
 
-    let mut buf = vec![0_u8; 0x100000];
+    let mut buf = vec![0_u8; 0x200000];
     for Range { start, end } in range_maps.iter() {
         let (start, size) = (start, end - start);
-        for off in (0..size).step_by(0x100000) {
+        for off in (0..size).step_by(0x200000) {
             let size = match mem.read_at(&mut buf, (start + off) as u64) {
                 Ok(n) => n,
                 Err(err) => {
