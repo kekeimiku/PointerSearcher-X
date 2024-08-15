@@ -53,7 +53,6 @@ pub mod private {
         fn from_residual(residual: ControlFlow<B, Infallible>) -> Self {
             match residual {
                 ControlFlow::Break(b) => ControlFlow::Break(b),
-                _ => unsafe { core::hint::unreachable_unchecked() },
             }
         }
     }
@@ -107,7 +106,6 @@ pub mod private {
         fn from_residual(residual: Result<Infallible, E>) -> Self {
             match residual {
                 Err(e) => Err(From::from(e)),
-                _ => unsafe { core::hint::unreachable_unchecked() },
             }
         }
     }

@@ -13,13 +13,13 @@ mod windows;
 #[cfg(target_os = "windows")]
 pub use windows::Process;
 
-mod load;
+mod loader;
 mod rangemap;
 
 use core::{mem, slice};
 use std::collections::BTreeMap;
 
-pub use load::load_pointer_map_file;
+pub use loader::load_pointer_map_file;
 pub use rangemap::{RangeMap, RangeSet};
 
 pub struct PointerMap {

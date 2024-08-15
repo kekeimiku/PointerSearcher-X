@@ -12,10 +12,5 @@ crate-type = ["cdylib", "staticlib"]
 version = "0.4.9"
 default-features = false
 
-[target.'cfg(all(target_arch = "x86_64", any(target_os = "linux", target_os = "android")))'.dependencies.iced-x86]
-version = "1.21.0"
-default-features = false
-features = ["decoder", "no_std"]
-
 [features]
 nightly = []
