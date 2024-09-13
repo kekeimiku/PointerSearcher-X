@@ -55,6 +55,7 @@ where
     }
 }
 
+#[derive(Clone)]
 pub struct RangeMap<K, V>(BTreeMap<RangeWrapper<K>, V>);
 
 impl<K, V> RangeMap<K, V>

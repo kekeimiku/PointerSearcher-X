@@ -29,7 +29,7 @@ pub struct PointerMap {
 }
 
 pub(crate) const MAGIC: &[u8; 4] = b"@PTR";
-// pub(crate) const ARCH32: u32 = 1;
+pub(crate) const ARCH32: u32 = 1;
 pub(crate) const ARCH64: u32 = 2;
 
 #[repr(C, packed)]
