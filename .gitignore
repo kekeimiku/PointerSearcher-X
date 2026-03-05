@@ -1,7 +1,1 @@
-/target
-/build
-Cargo.lock
 **/.DS_Store
-.cargo
-RELEASE
-build.sh
